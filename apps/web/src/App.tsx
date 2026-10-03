@@ -159,14 +159,8 @@ export function App() {
     setShowAuthModal(true);
   };
 
-  const handleLaunchDemo = (role: string = 'DUENO') => {
-    api.login({ email: 'dueno@elbigote.com', password: 'Dueno123!' })
-      .then(res => {
-        handleAuthSuccess(res);
-      })
-      .catch(() => {
-        navigate('/app/agenda');
-      });
+  const handleLaunchDemo = () => {
+    handleLoginClick();
   };
 
   const handleAuthSuccess = (data: { user: any; tenant: any; sucursales: any[] }) => {
@@ -289,12 +283,15 @@ export function App() {
       {/* 6. Legacy / Admin Redirects */}
       <Route path="/admin" element={<Navigate to="/app/superadmin" replace />} />
 
-      {/* 6. Main Backoffice App */}
+      {/* 6. Main Backoffice App (Protected Route) */}
       <Route
         path="/app/*"
         element={
-          <div className="min-h-screen bg-[#FAFAFA] text-[#09090B] flex flex-col font-sans selection:bg-[#18181B] selection:text-white">
-            <Navbar
+          !api.getAuthToken() && !currentUser ? (
+            <Navigate to="/login" replace />
+          ) : (
+            <div className="min-h-screen bg-[#FAFAFA] text-[#09090B] flex flex-col font-sans selection:bg-[#18181B] selection:text-white">
+              <Navbar
               tenants={tenants}
               currentTenant={currentTenant}
               onSelectTenant={selectTenant}
@@ -407,6 +404,7 @@ export function App() {
               SYSTECH Studio Platform • Barber POS & Multi-Tenant Management Suite • Cumplimiento LFPDPPP México
             </footer>
           </div>
+          )
         }
       />
 

@@ -91,12 +91,6 @@ export const LandingView: React.FC<LandingViewProps> = ({
           {/* Actions */}
           <div className="flex items-center gap-2.5">
             <button
-              onClick={() => onLaunchDemo('DUENO')}
-              className="px-3 py-1.5 text-xs font-semibold text-stone-700 hover:text-stone-900 hover:bg-stone-100 rounded-lg transition"
-            >
-              Demo en Vivo
-            </button>
-            <button
               onClick={onLogin}
               className="px-3.5 py-1.5 text-xs font-semibold text-stone-900 border border-stone-300 hover:bg-stone-50 rounded-lg transition"
             >
@@ -138,10 +132,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
             <span>Comenzar Prueba Gratis (14 Días)</span>
           </button>
           <button
-            onClick={() => onLaunchDemo('DUENO')}
+            onClick={onLogin}
             className="w-full sm:w-auto px-7 py-3 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-900 font-semibold text-sm transition flex items-center justify-center gap-2 shadow-sm"
           >
-            <span>Explorar Demo Interactiva</span>
+            <span>Iniciar Sesión</span>
             <ChevronRight className="w-4 h-4 text-stone-500" />
           </button>
         </div>
@@ -683,10 +677,10 @@ export const LandingView: React.FC<LandingViewProps> = ({
             Comenzar Prueba Gratis (14 Días)
           </button>
           <button
-            onClick={() => onLaunchDemo('DUENO')}
+            onClick={onLogin}
             className="w-full sm:w-auto px-8 py-3 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-900 font-bold text-sm shadow-sm transition"
           >
-            Probar Demo en Vivo
+            Iniciar Sesión
           </button>
         </div>
       </section>

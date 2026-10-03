@@ -91,23 +91,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   };
 
-  const handleQuickDemoLogin = (email: string, pass: string) => {
-    setLoginEmail(email);
-    setLoginPassword(pass);
-    setError(null);
-    setLoading(true);
-
-    api.login({ email, password: pass })
-      .then(res => {
-        onSuccess(res);
-        onClose();
-      })
-      .catch(err => {
-        setError(err.message || 'Error en acceso rápido');
-      })
-      .finally(() => setLoading(false));
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/40 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in font-sans">
       <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative my-8">
@@ -211,60 +194,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
 
-              {/* Fast 1-Click Demo Accounts */}
-              <div className="pt-4 border-t border-stone-100">
-                <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">
-                  Acceso Rápido para Pruebas (1-Clic)
-                </span>
-                <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('dueno@elbigote.com', 'Dueno123!')}
-                    className="p-2 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200/80 text-left font-medium text-stone-800 transition flex items-center gap-1.5"
-                  >
-                    <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <div className="truncate">
-                      <div className="font-semibold leading-tight">Dueño (El Bigote)</div>
-                      <div className="text-[10px] text-stone-500">Plan PRO</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('gerente@elbigote.com', 'Gerente123!')}
-                    className="p-2 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200/80 text-left font-medium text-stone-800 transition flex items-center gap-1.5"
-                  >
-                    <User className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                    <div className="truncate">
-                      <div className="font-semibold leading-tight">Gerente (Condesa)</div>
-                      <div className="text-[10px] text-stone-500">Operaciones</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('barbero@elbigote.com', 'Barbero123!')}
-                    className="p-2 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200/80 text-left font-medium text-stone-800 transition flex items-center gap-1.5"
-                  >
-                    <Scissors className="w-3.5 h-3.5 text-stone-600 shrink-0" />
-                    <div className="truncate">
-                      <div className="font-semibold leading-tight">Barbero (Carlos)</div>
-                      <div className="text-[10px] text-stone-500">Mi Agenda & POS</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickDemoLogin('admin@systech.com', 'Admin@Systech2026!')}
-                    className="p-2 rounded-lg bg-stone-50 hover:bg-stone-100 border border-stone-200/80 text-left font-medium text-stone-800 transition flex items-center gap-1.5"
-                  >
-                    <ShieldAlert className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-                    <div className="truncate">
-                      <div className="font-semibold leading-tight">Super Admin</div>
-                      <div className="text-[10px] text-stone-500">Métricas SaaS</div>
-                    </div>
-                  </button>
-                </div>
+              {/* Registration toggle */}
+              <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-500">
+                <span>¿No tienes cuenta aún?</span>
+                <button
+                  type="button"
+                  onClick={() => setMode('register')}
+                  className="font-bold text-stone-900 hover:underline"
+                >
+                  Registrar mi Barbería (14 Días Gratis) →
+                </button>
               </div>
             </form>
           ) : (

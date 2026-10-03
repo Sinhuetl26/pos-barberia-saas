@@ -115,24 +115,34 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Tenant Selector & Branch */}
           <div className="flex items-center gap-2">
-            {/* Tenant switcher */}
-            <div className="relative">
-              <select
-                value={currentTenant?.id || ''}
-                onChange={(e) => {
-                  const t = tenants.find(x => x.id === e.target.value);
-                  if (t) onSelectTenant(t);
-                }}
-                className="bg-white border border-stone-200 hover:border-stone-300 text-stone-900 text-xs rounded-lg pl-3 pr-7 py-1.5 font-medium focus:outline-none appearance-none cursor-pointer transition shadow-sm"
-              >
-                {tenants.map(t => (
-                  <option key={t.id} value={t.id} className="text-stone-900">
-                    {t.nombre} ({t.plan}) {t.estado !== 'ACTIVO' ? `— [${t.estado}]` : ''}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-stone-500 absolute right-2.5 top-2.5 pointer-events-none" />
-            </div>
+            {/* Tenant display or Super Admin switcher */}
+            {currentRole === 'SUPER_ADMIN' && tenants.length > 1 ? (
+              <div className="relative">
+                <select
+                  value={currentTenant?.id || ''}
+                  onChange={(e) => {
+                    const t = tenants.find(x => x.id === e.target.value);
+                    if (t) onSelectTenant(t);
+                  }}
+                  className="bg-white border border-stone-200 hover:border-stone-300 text-stone-900 text-xs rounded-lg pl-3 pr-7 py-1.5 font-medium focus:outline-none appearance-none cursor-pointer transition shadow-sm"
+                >
+                  {tenants.map(t => (
+                    <option key={t.id} value={t.id} className="text-stone-900">
+                      {t.nombre} ({t.plan}) {t.estado !== 'ACTIVO' ? `— [${t.estado}]` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-stone-500 absolute right-2.5 top-2.5 pointer-events-none" />
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100/70 border border-stone-200 rounded-lg text-xs font-semibold text-stone-900">
+                <Building2 className="w-3.5 h-3.5 text-stone-500" />
+                <span>{currentTenant?.nombre || 'Mi Barbería'}</span>
+                <span className="text-[10px] bg-stone-900 text-white px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">
+                  {currentTenant?.plan || 'PRO'}
+                </span>
+              </div>
+            )}
 
             {/* Branch selector */}
             {sucursales.length > 1 && currentRole !== 'SUPER_ADMIN' && (
@@ -214,20 +224,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="hidden sm:inline">Nueva Barbería</span>
             </button>
 
-            {/* Role Switcher */}
-            <div className="relative">
-              <select
-                value={currentRole}
-                onChange={(e) => onSelectRole(e.target.value as UserRole)}
-                className="bg-white border border-stone-300 text-xs font-semibold text-stone-900 rounded-lg pl-2.5 pr-6 py-1.5 focus:outline-none cursor-pointer hover:border-stone-400 transition appearance-none shadow-sm"
-              >
-                <option value="DUENO">Dueño</option>
-                <option value="GERENTE">Gerente</option>
-                <option value="BARBERO">Barbero</option>
-                <option value="SUPER_ADMIN">Super Admin</option>
-                <option value="CLIENTE_FINAL">Cliente Final</option>
-              </select>
-              <ChevronDown className="w-3 h-3 text-stone-500 absolute right-2 top-2.5 pointer-events-none" />
+            {/* Authenticated User Profile Badge */}
+            <div className="flex items-center gap-2 px-2.5 py-1 bg-stone-100 rounded-lg border border-stone-200 text-xs font-medium text-stone-800">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+              <div className="truncate max-w-[120px] sm:max-w-[160px]">
+                <span className="font-semibold block leading-tight truncate">{currentUser?.nombre || 'Usuario'}</span>
+                <span className="text-[10px] text-stone-500 block leading-tight">
+                  {currentRole === 'DUENO' ? 'Dueño' : currentRole === 'GERENTE' ? 'Gerente' : currentRole === 'BARBERO' ? 'Barbero' : currentRole === 'SUPER_ADMIN' ? 'Super Admin' : 'Cliente'}
+                </span>
+              </div>
             </div>
 
             {/* Logout button */}
