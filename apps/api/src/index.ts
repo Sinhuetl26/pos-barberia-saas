@@ -122,7 +122,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Start Server
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NO_LISTEN !== 'true') {
   app.listen(port, () => {
     console.log(`SYSTECH API Multi-Tenant (Modular Architecture) listening on port ${port}`);
     // A7 & A8: Start Background Scheduler for reminders and dunning

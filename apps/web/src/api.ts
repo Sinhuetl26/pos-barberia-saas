@@ -122,11 +122,30 @@ class ApiService {
     direccion?: string;
     logoUrl?: string;
     slug?: string;
+    slogan?: string;
+    descripcion?: string;
+    portadaUrl?: string;
+    instagram?: string;
+    facebook?: string;
+    tiktok?: string;
+    whatsappPublico?: string;
   }) {
     return this.request<any>('/tenant/settings', {
       method: 'PUT',
       body: JSON.stringify(data)
     });
+  }
+
+  printCorteHtml(corteId: string) {
+    const url = `${API_BASE}/cortes-caja/${corteId}/comprobante-html`;
+    const win = window.open(url, '_blank');
+    if (!win) window.location.href = url;
+  }
+
+  printCitaCarta(codigo: string) {
+    const url = `${API_BASE}/public/cita/${codigo}/imprimir-carta?autoprint=true`;
+    const win = window.open(url, '_blank');
+    if (!win) window.location.href = url;
   }
 
   logout() {

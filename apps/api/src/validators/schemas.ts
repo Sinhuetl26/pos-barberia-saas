@@ -65,11 +65,34 @@ export const createBarberoSchema = z.object({
   nombre: z.string().trim().min(2, 'Nombre del barbero requerido'),
   telefono: z.string().trim().optional().nullable(),
   email: z.string().trim().email().optional().nullable().or(z.literal('')),
+  avatarUrl: z.string().optional().nullable(),
+  especialidad: z.string().optional().nullable(),
+  descripcion: z.string().optional().nullable(),
+  visibleEnWeb: z.boolean().optional().default(true),
   comisionServiciosPct: z.coerce.number().min(0).max(100).default(50),
   comisionProductosPct: z.coerce.number().min(0).max(100).default(10),
   diasDescanso: z.string().default('Domingo'),
   horarioInicio: z.string().default('09:00'),
-  horarioFin: z.string().default('20:00')
+  horarioFin: z.string().default('20:00'),
+  password: z.string().min(6).optional().nullable(),
+  crearAcceso: z.boolean().optional().default(false)
+});
+
+// Barber update schema
+export const updateBarberoSchema = z.object({
+  nombre: z.string().trim().min(2).optional(),
+  telefono: z.string().trim().optional().nullable(),
+  email: z.string().trim().email().optional().nullable().or(z.literal('')),
+  avatarUrl: z.string().optional().nullable(),
+  especialidad: z.string().optional().nullable(),
+  descripcion: z.string().optional().nullable(),
+  visibleEnWeb: z.boolean().optional(),
+  comisionServiciosPct: z.coerce.number().min(0).max(100).optional(),
+  comisionProductosPct: z.coerce.number().min(0).max(100).optional(),
+  diasDescanso: z.string().optional(),
+  horarioInicio: z.string().optional(),
+  horarioFin: z.string().optional(),
+  activo: z.boolean().optional()
 });
 
 // Product or service creation schema
@@ -96,7 +119,8 @@ export const openCashShiftSchema = z.object({
 export const closeCashShiftSchema = z.object({
   corteId: z.string().min(1, 'corteId requerido'),
   conteoEfectivoReal: z.coerce.number().min(0, 'El conteo debe ser mayor o igual a 0'),
-  notasCierre: z.string().optional().nullable()
+  notasCierre: z.string().optional().nullable(),
+  desglose: z.any().optional().nullable()
 });
 
 /**

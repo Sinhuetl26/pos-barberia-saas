@@ -302,7 +302,21 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res) => {
 authRouter.put('/tenant/settings', requireAuth, requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
-    const { nombre, telefono, emailContacto, direccion, logoUrl, slug } = req.body;
+    const {
+      nombre,
+      telefono,
+      emailContacto,
+      direccion,
+      logoUrl,
+      slug,
+      slogan,
+      descripcion,
+      portadaUrl,
+      instagram,
+      facebook,
+      tiktok,
+      whatsappPublico
+    } = req.body;
 
     const dataToUpdate: any = {};
     if (nombre) dataToUpdate.nombre = nombre;
@@ -310,10 +324,19 @@ authRouter.put('/tenant/settings', requireAuth, requireRole('DUENO', 'GERENTE'),
     if (emailContacto !== undefined) dataToUpdate.emailContacto = emailContacto;
     if (direccion !== undefined) dataToUpdate.direccion = direccion;
     if (logoUrl !== undefined) dataToUpdate.logoUrl = logoUrl;
+    if (slogan !== undefined) dataToUpdate.slogan = slogan;
+    if (descripcion !== undefined) dataToUpdate.descripcion = descripcion;
+    if (portadaUrl !== undefined) dataToUpdate.portadaUrl = portadaUrl;
+    if (instagram !== undefined) dataToUpdate.instagram = instagram;
+    if (facebook !== undefined) dataToUpdate.facebook = facebook;
+    if (tiktok !== undefined) dataToUpdate.tiktok = tiktok;
+    if (whatsappPublico !== undefined) dataToUpdate.whatsappPublico = whatsappPublico;
+
     if (slug) {
-      const existing = await prisma.tenant.findUnique({ where: { slug } });
+      const cleanSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+      const existing = await prisma.tenant.findUnique({ where: { slug: cleanSlug } });
       if (!existing || existing.id === tenantId) {
-        dataToUpdate.slug = slug;
+        dataToUpdate.slug = cleanSlug;
       }
     }
 

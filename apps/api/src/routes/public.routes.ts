@@ -55,6 +55,13 @@ publicRouter.get('/barberia/:slug', async (req, res) => {
         emailContacto: true,
         direccion: true,
         logoUrl: true,
+        slogan: true,
+        descripcion: true,
+        portadaUrl: true,
+        instagram: true,
+        facebook: true,
+        tiktok: true,
+        whatsappPublico: true,
         plan: true,
         estado: true,
         sucursales: {
@@ -68,8 +75,18 @@ publicRouter.get('/barberia/:slug', async (req, res) => {
             horarioCierre: true,
             diasLaborales: true,
             barberos: {
-              where: { activo: true, eliminadoEn: null },
-              select: { id: true, nombre: true, avatarUrl: true, diasDescanso: true, horarioInicio: true, horarioFin: true }
+              where: { activo: true, eliminadoEn: null, visibleEnWeb: true },
+              select: {
+                id: true,
+                nombre: true,
+                avatarUrl: true,
+                especialidad: true,
+                descripcion: true,
+                visibleEnWeb: true,
+                diasDescanso: true,
+                horarioInicio: true,
+                horarioFin: true
+              }
             }
           }
         }
@@ -509,6 +526,373 @@ publicRouter.get('/cita/:codigo', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al buscar cita' });
+  }
+});
+
+// Printable Appointment Voucher in Official Letter Size (8.5" x 11")
+publicRouter.get('/cita/:codigo/imprimir-carta', async (req, res) => {
+  try {
+    const { codigo } = req.params;
+    const cita = await prisma.cita.findFirst({
+      where: {
+        OR: [{ codigoReserva: codigo }, { tokenCancelacion: codigo }, { id: codigo }]
+      },
+      include: {
+        cliente: true,
+        barbero: true,
+        sucursal: true,
+        tenant: true
+      }
+    });
+
+    if (!cita) {
+      return res.status(404).send('<h1>No se encontró ninguna cita con ese código</h1>');
+    }
+
+    const servicios = cita.serviciosJson ? JSON.parse(cita.serviciosJson) : [
+      { nombre: cita.nombreServicio || 'Servicio de Barbería', precio: Number(cita.precioEstimado) || 0, duracion: cita.duracionMinutos }
+    ];
+
+    const fechaObj = new Date(cita.fechaHora);
+    const fechaFormateada = fechaObj.toLocaleDateString('es-MX', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const horaFormateada = fechaObj.toLocaleTimeString('es-MX', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Comprobante de Cita - ${cita.codigoReserva || 'Cita'}</title>
+  <style>
+    @page {
+      size: letter portrait;
+      margin: 18mm 15mm 15mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #1c1917;
+      background: #fafaf9;
+      padding: 20px;
+    }
+    .sheet {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid #e7e5e4;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #1c1917;
+      padding-bottom: 20px;
+      margin-bottom: 25px;
+    }
+    .brand-title {
+      font-size: 26px;
+      font-weight: 800;
+      color: #0c0a09;
+      letter-spacing: -0.5px;
+      text-transform: uppercase;
+    }
+    .brand-slogan {
+      font-size: 13px;
+      color: #78716c;
+      margin-top: 4px;
+    }
+    .brand-contact {
+      font-size: 12px;
+      color: #57534e;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .folio-box {
+      text-align: right;
+      background: #f5f5f4;
+      border: 1px solid #d6d3d1;
+      border-radius: 8px;
+      padding: 12px 18px;
+    }
+    .folio-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #78716c;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .folio-code {
+      font-family: monospace;
+      font-size: 18px;
+      font-weight: 800;
+      color: #0c0a09;
+      margin-top: 3px;
+    }
+    .doc-banner {
+      background: #1c1917;
+      color: #ffffff;
+      text-align: center;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 25px;
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .info-card {
+      background: #fafaf9;
+      border: 1px solid #e7e5e4;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .info-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #a8a29e;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .info-value-big {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0c0a09;
+      text-transform: capitalize;
+    }
+    .info-sub {
+      font-size: 13px;
+      color: #57534e;
+      margin-top: 3px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 25px;
+    }
+    th {
+      background: #f5f5f4;
+      color: #44403c;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 10px 14px;
+      border-bottom: 2px solid #d6d3d1;
+    }
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e7e5e4;
+      font-size: 13px;
+      color: #292524;
+    }
+    .col-right {
+      text-align: right;
+    }
+    .total-row td {
+      font-weight: 800;
+      font-size: 16px;
+      color: #0c0a09;
+      border-top: 2px solid #1c1917;
+      border-bottom: none;
+      padding-top: 14px;
+    }
+    .policy-box {
+      border: 1px dashed #a8a29e;
+      border-radius: 8px;
+      padding: 14px 18px;
+      background: #fffbeb;
+      margin-bottom: 30px;
+    }
+    .policy-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .policy-desc {
+      font-size: 12px;
+      color: #78350f;
+      line-height: 1.5;
+    }
+    .footer {
+      border-top: 1px solid #e7e5e4;
+      padding-top: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #a8a29e;
+    }
+    .print-bar {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .btn-print {
+      background: #1c1917;
+      color: #ffffff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+    .btn-print:hover {
+      background: #292524;
+    }
+    @media print {
+      body {
+        padding: 0;
+        background: #ffffff;
+      }
+      .sheet {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="print-bar no-print">
+    <button class="btn-print" onclick="window.print()">
+      🖨️ Imprimir Comprobante Tamaño Carta (8.5" x 11")
+    </button>
+  </div>
+
+  <div class="sheet">
+    <div class="header">
+      <div>
+        <h1 class="brand-title">${cita.tenant?.nombre || 'Barbería'}</h1>
+        <div class="brand-slogan">${(cita.tenant as any)?.slogan || 'El arte del corte clásico y diseño de vanguardia'}</div>
+        <div class="brand-contact">
+          📍 ${cita.sucursal?.nombre || 'Sucursal Principal'} — ${cita.sucursal?.direccion || 'Centro'}<br>
+          📞 Tel / WhatsApp: ${cita.sucursal?.telefono || cita.tenant?.telefono || 'Disponible en recepción'}
+        </div>
+      </div>
+      <div class="folio-box">
+        <div class="folio-label">Folio de Reserva</div>
+        <div class="folio-code">${cita.codigoReserva || 'RES-000000'}</div>
+        <div style="font-size: 10px; color: #15803d; font-weight: 700; margin-top: 4px;">● CONFIRMADA</div>
+      </div>
+    </div>
+
+    <div class="doc-banner">
+      Comprobante Oficial de Reserva de Cita
+    </div>
+
+    <div class="details-grid">
+      <div class="info-card">
+        <div class="info-title">📅 Fecha y Hora Programada</div>
+        <div class="info-value-big">${fechaFormateada}</div>
+        <div class="info-sub" style="font-size: 15px; font-weight: 700; color: #1c1917; margin-top: 4px;">⏰ ${horaFormateada} (${cita.duracionMinutos} minutos)</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-title">👤 Cliente</div>
+        <div class="info-value-big">${cita.cliente?.nombre || 'Cliente'}</div>
+        <div class="info-sub">Tel: ${cita.cliente?.telefono ? '••• ••• ' + cita.cliente.telefono.slice(-4) : 'Registrado'}</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-title">✂️ Barbero Asignado</div>
+        <div class="info-value-big">${cita.barbero?.nombre || 'Barbero de Turno'}</div>
+        <div class="info-sub">${(cita.barbero as any)?.especialidad || 'Especialista en Estilo y Barbería'}</div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-title">🏢 Ubicación y Sucursal</div>
+        <div class="info-value-big">${cita.sucursal?.nombre || 'Sucursal Principal'}</div>
+        <div class="info-sub">${cita.sucursal?.direccion || 'Consultar recepción'}</div>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Servicio Solicitado</th>
+          <th style="width: 120px;">Duración Estimada</th>
+          <th class="col-right" style="width: 140px;">Precio Estimado</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${servicios.map((s: any) => `
+          <tr>
+            <td style="font-weight: 600;">${s.nombre || 'Servicio'}</td>
+            <td>${s.duracion || s.duracionMinutos || 30} min</td>
+            <td class="col-right font-mono" style="font-weight: 600;">$${Number(s.precio || s.precioVenta || 0).toFixed(2)} MXN</td>
+          </tr>
+        `).join('')}
+        <tr class="total-row">
+          <td colspan="2">Total Estimado a Liquidar en Recepción</td>
+          <td class="col-right">$${Number(cita.precioEstimado || 0).toFixed(2)} MXN</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="policy-box">
+      <div class="policy-title">📌 Recomendaciones y Políticas de Servicio</div>
+      <div class="policy-desc">
+        • <strong>Tolerancia:</strong> Por respeto al tiempo de todos los clientes, te sugerimos llegar 10 minutos antes de tu cita.<br>
+        • <strong>Cancelaciones y Cambios:</strong> Si necesitas cancelar o reagendar tu horario, cuentas con hasta 2 horas de anticipación ingresando con tu folio de reserva o avisando directamente por WhatsApp.<br>
+        • <strong>Formas de Pago:</strong> Aceptamos efectivo, tarjetas de débito/crédito y transferencias al finalizar tu servicio en caja.
+      </div>
+    </div>
+
+    <div class="footer">
+      <div>Emitido por sistema SYSTECH Barber Studio · Folio: ${cita.codigoReserva}</div>
+      <div>Fecha de Emisión: ${new Date().toLocaleDateString('es-MX')} ${new Date().toLocaleTimeString('es-MX')}</div>
+    </div>
+  </div>
+
+  <script>
+    // Auto-trigger print dialog if requested via ?autoprint=true
+    if (new URLSearchParams(window.location.search).get('autoprint') === 'true') {
+      window.onload = () => window.print();
+    }
+  </script>
+</body>
+</html>`;
+
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (error) {
+    console.error('Error al generar comprobante tamaño carta:', error);
+    res.status(500).send('Error al generar comprobante tamaño carta');
   }
 });
 

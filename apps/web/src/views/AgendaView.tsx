@@ -14,7 +14,8 @@ import {
   Phone,
   Copy,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Printer
 } from 'lucide-react';
 
 interface AgendaViewProps {
@@ -447,6 +448,17 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                             title="El cliente no se presentó a su cita"
                           >
                             No-Show
+                          </button>
+                        )}
+
+                        {cita.codigoReserva && (
+                          <button
+                            onClick={() => api.printCitaCarta(cita.codigoReserva!)}
+                            className="p-1 rounded text-stone-600 hover:text-stone-900 hover:bg-stone-200 text-[10px] font-semibold transition flex items-center gap-0.5"
+                            title="Imprimir Comprobante Tamaño Carta"
+                          >
+                            <Printer className="w-3 h-3" />
+                            <span>Carta</span>
                           </button>
                         )}
 

@@ -51,20 +51,24 @@ async function main() {
   const running = await isServerRunning();
   if (running) {
     console.log('✅ Servidor API detectado activo en http://localhost:3001');
-    console.log('🚀 Iniciando servidor API local para las pruebas...');
-    const isWin = process.platform === 'win32';
-    const command = isWin ? 'cmd.exe' : 'npm';
-    const args = isWin ? ['/c', 'npm', 'run', 'dev:api'] : ['run', 'dev:api'];
-
-    serverProcess = spawn(command, args, {
+  } else {
+    serverProcess = spawn(process.execPath, [distIndex], {
       cwd: rootDir,
       env: {
         ...process.env,
+        PATH: 'C:\\Program Files\\nodejs;' + (process.env.PATH || ''),
         PORT: '3001',
         NODE_ENV: 'test',
         DATABASE_URL: process.env.DATABASE_URL || 'file:./packages/database/prisma/dev.db'
       },
-      stdio: 'pipe'
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    serverProcess.stdout.on('data', (d) => {
+      // console.log(`[API] ${d}`);
+    });
+    serverProcess.stderr.on('data', (d) => {
+      console.error(`[API STDERR] ${d}`);
     });
 
     serverProcess.on('error', (err) => {

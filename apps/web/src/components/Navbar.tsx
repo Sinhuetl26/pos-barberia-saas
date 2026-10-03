@@ -377,6 +377,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {currentRole === 'DUENO' && (
                 <button
+                  onClick={() => onSelectView('landing-config')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
+                    currentView === 'landing-config'
+                      ? 'bg-stone-900 text-white font-semibold shadow-sm'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
+                  }`}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  Personalizar Web
+                </button>
+              )}
+
+              {currentRole === 'DUENO' && (
+                <button
                   onClick={() => onSelectView('reportes')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
                     currentView === 'reportes'

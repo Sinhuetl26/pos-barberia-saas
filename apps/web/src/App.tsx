@@ -21,6 +21,7 @@ import { CancelacionTokenView } from './views/CancelacionTokenView';
 import { AvisoPrivacidadView } from './views/AvisoPrivacidadView';
 import { TerminosCondicionesView } from './views/TerminosCondicionesView';
 import { CentroAyudaModal } from './views/CentroAyudaModal';
+import { PersonalizarLandingView } from './views/PersonalizarLandingView';
 
 export function App() {
   const navigate = useNavigate();
@@ -340,8 +341,18 @@ export function App() {
                     <BarberosView
                       currentSucursal={currentSucursal}
                       currentRole={currentRole}
+                      currentUser={currentUser}
                       plan={currentTenant?.plan || 'PRO'}
                       onNavigateToSubscription={() => navigate('/app/suscripcion')}
+                    />
+                  }
+                />
+                <Route
+                  path="landing-config"
+                  element={
+                    <PersonalizarLandingView
+                      currentTenant={currentTenant}
+                      onRefreshTenant={loadInitialData}
                     />
                   }
                 />

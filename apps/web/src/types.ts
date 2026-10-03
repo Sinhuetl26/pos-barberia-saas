@@ -10,6 +10,13 @@ export interface Tenant {
   emailContacto?: string;
   direccion?: string;
   logoUrl?: string;
+  slogan?: string;
+  descripcion?: string;
+  portadaUrl?: string;
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  whatsappPublico?: string;
   limiteSucursales: number;
   limiteBarberos: number;
   fechaCreacion?: string;
@@ -49,6 +56,7 @@ export interface Usuario {
   nombre: string;
   telefono?: string;
   sucursalId?: string;
+  barberoId?: string;
   activo?: boolean;
 }
 
@@ -59,6 +67,9 @@ export interface Barbero {
   telefono?: string;
   email?: string;
   avatarUrl?: string;
+  especialidad?: string;
+  descripcion?: string;
+  visibleEnWeb?: boolean;
   comisionServiciosPct: number;
   comisionProductosPct: number;
   diasDescanso: string;
@@ -167,8 +178,10 @@ export interface Comision {
   ventaId: string;
   barberoId: string;
   monto: number;
-  porcentaje: number;
+  propina?: number;
+  porcentaje?: number;
   pagada: boolean;
+  fechaCreacion?: string;
   fechaPago?: string;
   metodoPagoComision?: string;
   corteCajaId?: string;

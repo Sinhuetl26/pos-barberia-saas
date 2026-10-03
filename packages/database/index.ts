@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import path from 'path';
+import * as path from 'path';
 
 const currentDir = typeof __dirname !== 'undefined'
   ? __dirname

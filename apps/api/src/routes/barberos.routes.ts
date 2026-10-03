@@ -45,6 +45,8 @@ barberosRouter.get('/', async (req: AuthenticatedRequest, res) => {
   }
 });
 
+import bcrypt from 'bcryptjs';
+
 // Create barber (C2: requireRole DUENO/GERENTE; A6: respects tenant.limiteBarberos)
 barberosRouter.post('/', requireRole('DUENO', 'GERENTE'), validateBody(createBarberoSchema), async (req: AuthenticatedRequest, res) => {
   try {
@@ -55,11 +57,17 @@ barberosRouter.post('/', requireRole('DUENO', 'GERENTE'), validateBody(createBar
       nombre,
       telefono,
       email,
+      avatarUrl,
+      especialidad,
+      descripcion,
+      visibleEnWeb = true,
       comisionServiciosPct = 50,
       comisionProductosPct = 10,
       diasDescanso = 'Domingo',
       horarioInicio = '09:00',
-      horarioFin = '20:00'
+      horarioFin = '20:00',
+      password,
+      crearAcceso
     } = req.body;
 
     const sucursal = await prisma.sucursal.findFirst({
@@ -88,6 +96,10 @@ barberosRouter.post('/', requireRole('DUENO', 'GERENTE'), validateBody(createBar
         nombre: nombre.trim(),
         telefono: telefono ? telefono.trim() : null,
         email: email ? email.trim() : null,
+        avatarUrl: avatarUrl ? avatarUrl.trim() : null,
+        especialidad: especialidad ? especialidad.trim() : null,
+        descripcion: descripcion ? descripcion.trim() : null,
+        visibleEnWeb: Boolean(visibleEnWeb),
         comisionServiciosPct: Number(comisionServiciosPct),
         comisionProductosPct: Number(comisionProductosPct),
         diasDescanso,
@@ -97,18 +109,40 @@ barberosRouter.post('/', requireRole('DUENO', 'GERENTE'), validateBody(createBar
       include: { sucursal: true }
     });
 
+    // Optionally create linked user account for the barber
+    if (crearAcceso && email && password) {
+      const existingUser = await prisma.usuario.findUnique({ where: { email: email.trim().toLowerCase() } });
+      if (!existingUser) {
+        const hash = await bcrypt.hash(password, 12);
+        await prisma.usuario.create({
+          data: {
+            tenantId,
+            sucursalId,
+            barberoId: barbero.id,
+            email: email.trim().toLowerCase(),
+            passwordHash: hash,
+            nombre: nombre.trim(),
+            telefono: telefono ? telefono.trim() : null,
+            rol: 'BARBERO',
+            activo: true
+          }
+        });
+      }
+    }
+
     res.json(barbero);
   } catch (error) {
     res.status(500).json({ error: 'Error al dar de alta barbero' });
   }
 });
 
-// Update barber (C2: requireRole DUENO/GERENTE)
-barberosRouter.put('/:id', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+// Update barber (DUENO/GERENTE can edit all; BARBERO can only edit their own public profile/bio/avatar)
+barberosRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
     const data = req.body;
+    const isOwnerOrManager = ['DUENO', 'GERENTE'].includes(req.ctx!.rol);
 
     const existing = await prisma.barbero.findFirst({
       where: { id, sucursal: { tenantId }, eliminadoEn: null }
@@ -117,12 +151,38 @@ barberosRouter.put('/:id', requireRole('DUENO', 'GERENTE'), async (req: Authenti
       return res.status(404).json({ code: 'NOT_FOUND', error: 'Barbero no encontrado en su barbería' });
     }
 
+    // Role checks
+    if (!isOwnerOrManager) {
+      // Only the barber themselves can update their own profile
+      const isSelf = existing.email === req.ctx!.email || (req.ctx as any).barberoId === id;
+      if (!isSelf) {
+        return res.status(403).json({ code: 'FORBIDDEN', error: 'No tienes permiso para modificar a otros barberos' });
+      }
+
+      // Barbero can only update bio, avatar, and specialty
+      const updatedSelf = await prisma.barbero.update({
+        where: { id },
+        data: {
+          avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : undefined,
+          especialidad: data.especialidad !== undefined ? data.especialidad : undefined,
+          descripcion: data.descripcion !== undefined ? data.descripcion : undefined,
+          telefono: data.telefono !== undefined ? data.telefono : undefined
+        }
+      });
+      return res.json(updatedSelf);
+    }
+
+    // Owner / Manager can update everything
     const barbero = await prisma.barbero.update({
       where: { id },
       data: {
         nombre: data.nombre ? data.nombre.trim() : undefined,
         telefono: data.telefono !== undefined ? data.telefono : undefined,
         email: data.email !== undefined ? data.email : undefined,
+        avatarUrl: data.avatarUrl !== undefined ? data.avatarUrl : undefined,
+        especialidad: data.especialidad !== undefined ? data.especialidad : undefined,
+        descripcion: data.descripcion !== undefined ? data.descripcion : undefined,
+        visibleEnWeb: data.visibleEnWeb !== undefined ? Boolean(data.visibleEnWeb) : undefined,
         comisionServiciosPct: data.comisionServiciosPct !== undefined ? Number(data.comisionServiciosPct) : undefined,
         comisionProductosPct: data.comisionProductosPct !== undefined ? Number(data.comisionProductosPct) : undefined,
         diasDescanso: data.diasDescanso,
