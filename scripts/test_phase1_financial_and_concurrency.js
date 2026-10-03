@@ -232,11 +232,15 @@ async function runPhase1Tests() {
   const tenantId = resLogin.data?.tenant?.id;
 
   if (sucursal && barbero) {
-    // Definir un horario futuro único para la prueba de carrera (aleatorio para evitar colisión con runs previos)
-    const randomDays = 20 + Math.floor(Math.random() * 50);
-    const randomHour = 10 + Math.floor(Math.random() * 8);
+    // Definir un horario futuro único garantizado que no sea domingo (día de descanso) ni ocupado
+    const randomDays = 30 + Math.floor(Math.random() * 60);
     const raceSlot = new Date(Date.now() + randomDays * 24 * 3600000);
-    raceSlot.setHours(randomHour, 0, 0, 0);
+    if (raceSlot.getDay() === 0) {
+      raceSlot.setDate(raceSlot.getDate() + 1); // Si cae en domingo, mover al lunes
+    }
+    const randomHour = 11 + Math.floor(Math.random() * 5); // 11:00 - 15:00
+    const randomMinute = Math.random() > 0.5 ? 0 : 30;
+    raceSlot.setHours(randomHour, randomMinute, 0, 0);
 
     console.log(`  Disparando 10 solicitudes de reserva simultáneas para el mismo horario (${raceSlot.toISOString()})...`);
 

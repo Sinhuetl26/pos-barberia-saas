@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { createBarberoSchema, validateBody } from '../validators/schemas';
 
 export const barberosRouter = Router();
@@ -45,8 +45,8 @@ barberosRouter.get('/', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// Create barber (respects plan limit: 3 on BASICO, unlimited on PRO)
-barberosRouter.post('/', validateBody(createBarberoSchema), async (req: AuthenticatedRequest, res) => {
+// Create barber (C2: requireRole DUENO/GERENTE; A6: respects tenant.limiteBarberos)
+barberosRouter.post('/', requireRole('DUENO', 'GERENTE'), validateBody(createBarberoSchema), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const tenant = req.ctx!.tenant;
@@ -73,10 +73,11 @@ barberosRouter.post('/', validateBody(createBarberoSchema), async (req: Authenti
       where: { sucursal: { tenantId }, eliminadoEn: null }
     });
 
-    if (tenant.plan === 'BASICO' && currentBarbersCount >= 3) {
+    const limit = tenant.limiteBarberos || (tenant.plan === 'PRO' ? 999 : 3);
+    if (currentBarbersCount >= limit) {
       return res.status(403).json({
         code: 'PLAN_LIMIT_REACHED',
-        error: 'El Plan Básico permite hasta 3 barberos. Haz upgrade a Plan Pro para barberos ilimitados.',
+        error: `Su plan permite hasta ${limit} barberos. Haz upgrade para barberos ilimitados.`,
         requiresUpgrade: true
       });
     }
@@ -102,8 +103,8 @@ barberosRouter.post('/', validateBody(createBarberoSchema), async (req: Authenti
   }
 });
 
-// Update barber
-barberosRouter.put('/:id', async (req: AuthenticatedRequest, res) => {
+// Update barber (C2: requireRole DUENO/GERENTE)
+barberosRouter.put('/:id', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;

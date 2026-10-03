@@ -29,17 +29,15 @@ authRouter.post('/login', validateBody(loginSchema), async (req, res) => {
       }
     });
 
+    // A13 FIX: Constant-time comparison to prevent timing enumeration
     if (!user) {
+      await bcrypt.compare(password, '$2a$12$e8uqgXhWJn5Qn5W35VqN0OX8rK8xQ1dE3/J1fQn9j1WnK8rK8xQ1d');
       return res.status(401).json({ code: 'INVALID_CREDENTIALS', error: 'Credenciales inválidas' });
     }
 
-    const isValidPassword = bcrypt.compareSync(password, user.passwordHash);
-    if (!isValidPassword) {
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!isValidPassword || !user.activo || user.eliminadoEn) {
       return res.status(401).json({ code: 'INVALID_CREDENTIALS', error: 'Credenciales inválidas' });
-    }
-
-    if (!user.activo) {
-      return res.status(403).json({ code: 'USER_INACTIVE', error: 'Usuario inactivo. Contacte al administrador.' });
     }
 
     const token = jwt.sign(
@@ -57,6 +55,7 @@ authRouter.post('/login', validateBody(loginSchema), async (req, res) => {
       }
     }).catch(() => {});
 
+    // M2 FIX: Sanitize tenant response to only needed fields
     res.json({
       token,
       user: {
@@ -68,7 +67,13 @@ authRouter.post('/login', validateBody(loginSchema), async (req, res) => {
         sucursalId: user.sucursalId,
         tenantId: user.tenantId
       },
-      tenant: user.tenant,
+      tenant: {
+        id: user.tenant.id,
+        nombre: user.tenant.nombre,
+        slug: user.tenant.slug,
+        plan: user.tenant.plan,
+        estado: user.tenant.estado
+      },
       sucursales: user.tenant.sucursales
     });
   } catch (error) {
@@ -109,124 +114,128 @@ authRouter.post('/register', validateBody(registerSchema), async (req, res) => {
     const monto = selectedPlan === 'PRO' ? 999 : 499;
 
     const dbPlan = await prisma.plan.findUnique({ where: { codigo: selectedPlan } });
+    const passwordHash = await bcrypt.hash(password, 12); // A13 FIX: Async bcrypt with 12 rounds
 
-    const tenant = await prisma.tenant.create({
-      data: {
-        nombre: nombreBarberia.trim(),
-        slug: uniqueSlug,
-        plan: selectedPlan,
-        planId: dbPlan?.id || null,
-        estado: 'ACTIVO',
-        emailContacto: cleanEmail,
-        telefono: telefono || null,
-        direccion: direccion || 'Matriz Principal',
-        limiteSucursales: selectedPlan === 'PRO' ? 999 : 1,
-        limiteBarberos: selectedPlan === 'PRO' ? 999 : 3
-      }
-    });
-
-    const suscripcion = await prisma.suscripcion.create({
-      data: {
-        tenantId: tenant.id,
-        montoMensual: monto,
-        estadoPago: 'active',
-        diasGracia: 3,
-        fechaUltimoCobro: new Date(),
-        fechaProximoCobro: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-      }
-    });
-
-    const sucursal = await prisma.sucursal.create({
-      data: {
-        tenantId: tenant.id,
-        nombre: 'Matriz Principal',
-        direccion: direccion || 'Dirección Comercial',
-        telefono: telefono || null,
-        horarioApertura: '09:00',
-        horarioCierre: '20:00',
-        diasLaborales: 'Lunes a Sábado'
-      }
-    });
-
-    const passwordHash = bcrypt.hashSync(password, 10);
-    const user = await prisma.usuario.create({
-      data: {
-        tenantId: tenant.id,
-        nombre: nombreDueno.trim(),
-        email: cleanEmail,
-        passwordHash,
-        rol: 'DUENO',
-        telefono: telefono || null,
-        sucursalId: sucursal.id
-      }
-    });
-
-    await prisma.barbero.create({
-      data: {
-        sucursalId: sucursal.id,
-        nombre: nombreDueno.trim(),
-        email: cleanEmail,
-        telefono: telefono || null,
-        comisionServiciosPct: 50.0,
-        comisionProductosPct: 10.0,
-        diasDescanso: 'Domingo',
-        horarioInicio: '09:00',
-        horarioFin: '20:00'
-      }
-    });
-
-    // Default catalog
-    await prisma.producto.createMany({
-      data: [
-        {
-          tenantId: tenant.id,
-          sucursalId: sucursal.id,
-          nombre: 'Corte Clásico Caballero',
-          tipo: 'SERVICIO',
-          categoria: 'Cortes',
-          duracionMinutos: 35,
-          precioVenta: 250,
-          costo: 0,
-          stockActual: 9999,
-          stockMinimo: 0,
-          sku: 'SRV-001'
-        },
-        {
-          tenantId: tenant.id,
-          sucursalId: sucursal.id,
-          nombre: 'Perfilado de Barba Ritual',
-          tipo: 'SERVICIO',
-          categoria: 'Barba',
-          duracionMinutos: 25,
-          precioVenta: 180,
-          costo: 0,
-          stockActual: 9999,
-          stockMinimo: 0,
-          sku: 'SRV-002'
-        },
-        {
-          tenantId: tenant.id,
-          sucursalId: sucursal.id,
-          nombre: 'Pomada / Cera Capilar Mate 100ml',
-          tipo: 'PRODUCTO',
-          categoria: 'Styling',
-          duracionMinutos: 0,
-          precioVenta: 220,
-          costo: 110,
-          stockActual: 24,
-          stockMinimo: 5,
-          sku: 'PRD-001'
+    // Execute complete onboarding atomically in a single transaction (M7)
+    const { tenant, user, sucursal } = await prisma.$transaction(async (tx) => {
+      const tenant = await tx.tenant.create({
+        data: {
+          nombre: nombreBarberia.trim(),
+          slug: uniqueSlug,
+          plan: selectedPlan,
+          planId: dbPlan?.id || null,
+          estado: 'ACTIVO',
+          emailContacto: cleanEmail,
+          telefono: telefono || null,
+          direccion: direccion || 'Matriz Principal',
+          limiteSucursales: selectedPlan === 'PRO' ? 999 : 1,
+          limiteBarberos: selectedPlan === 'PRO' ? 999 : 3
         }
-      ]
-    });
+      });
 
-    await prisma.auditoriaLog.create({
-      data: {
-        tenantId: tenant.id,
-        usuarioEmail: cleanEmail,
-        accion: 'REGISTRO_NUEVA_BARBERIA',
-        detalles: `Registro de barbería ${tenant.nombre} con plan ${selectedPlan}. Slug: /${tenant.slug}`
-      }
+      await tx.suscripcion.create({
+        data: {
+          tenantId: tenant.id,
+          montoMensual: monto,
+          estadoPago: 'active',
+          diasGracia: 3,
+          fechaUltimoCobro: new Date(),
+          fechaProximoCobro: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+        }
+      });
+
+      const sucursal = await tx.sucursal.create({
+        data: {
+          tenantId: tenant.id,
+          nombre: 'Matriz Principal',
+          direccion: direccion || 'Dirección Comercial',
+          telefono: telefono || null,
+          horarioApertura: '09:00',
+          horarioCierre: '20:00',
+          diasLaborales: 'Lunes a Sábado'
+        }
+      });
+
+      const user = await tx.usuario.create({
+        data: {
+          tenantId: tenant.id,
+          nombre: nombreDueno.trim(),
+          email: cleanEmail,
+          passwordHash,
+          rol: 'DUENO',
+          telefono: telefono || null,
+          sucursalId: sucursal.id
+        }
+      });
+
+      await tx.barbero.create({
+        data: {
+          sucursalId: sucursal.id,
+          nombre: nombreDueno.trim(),
+          email: cleanEmail,
+          telefono: telefono || null,
+          comisionServiciosPct: 50.0,
+          comisionProductosPct: 10.0,
+          diasDescanso: 'Domingo',
+          horarioInicio: '09:00',
+          horarioFin: '20:00'
+        }
+      });
+
+      await tx.producto.createMany({
+        data: [
+          {
+            tenantId: tenant.id,
+            sucursalId: sucursal.id,
+            nombre: 'Corte Clásico Caballero',
+            tipo: 'SERVICIO',
+            categoria: 'Cortes',
+            duracionMinutos: 35,
+            precioVenta: 250,
+            costo: 0,
+            stockActual: 9999,
+            stockMinimo: 0,
+            sku: 'SRV-001'
+          },
+          {
+            tenantId: tenant.id,
+            sucursalId: sucursal.id,
+            nombre: 'Perfilado de Barba Ritual',
+            tipo: 'SERVICIO',
+            categoria: 'Barba',
+            duracionMinutos: 25,
+            precioVenta: 180,
+            costo: 0,
+            stockActual: 9999,
+            stockMinimo: 0,
+            sku: 'SRV-002'
+          },
+          {
+            tenantId: tenant.id,
+            sucursalId: sucursal.id,
+            nombre: 'Pomada / Cera Capilar Mate 100ml',
+            tipo: 'PRODUCTO',
+            categoria: 'Styling',
+            duracionMinutos: 0,
+            precioVenta: 220,
+            costo: 110,
+            stockActual: 24,
+            stockMinimo: 5,
+            sku: 'PRD-001'
+          }
+        ]
+      });
+
+      await tx.auditoriaLog.create({
+        data: {
+          tenantId: tenant.id,
+          usuarioEmail: cleanEmail,
+          accion: 'REGISTRO_NUEVA_BARBERIA',
+          detalles: `Registro de barbería ${tenant.nombre} con plan ${selectedPlan}. Slug: /${tenant.slug}`
+        }
+      });
+
+      return { tenant, user, sucursal };
     });
 
     const token = jwt.sign(
@@ -247,8 +256,11 @@ authRouter.post('/register', validateBody(registerSchema), async (req, res) => {
         tenantId: tenant.id
       },
       tenant: {
-        ...tenant,
-        suscripcion
+        id: tenant.id,
+        nombre: tenant.nombre,
+        slug: tenant.slug,
+        plan: tenant.plan,
+        estado: tenant.estado
       },
       sucursales: [sucursal]
     });

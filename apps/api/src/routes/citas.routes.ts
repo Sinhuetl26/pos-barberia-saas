@@ -16,12 +16,20 @@ citasRouter.use(requireAuth);
 citasRouter.get('/', async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
-    const { fecha, sucursalId, barberoId, estado } = req.query as {
+    let { fecha, sucursalId, barberoId, estado } = req.query as {
       fecha?: string;
       sucursalId?: string;
       barberoId?: string;
       estado?: string;
     };
+
+    // C2: For BARBERO role, restrict appointments strictly to their own barber record
+    if (req.ctx!.rol === 'BARBERO') {
+      const ownBarber = await prisma.barbero.findFirst({
+        where: { sucursal: { tenantId }, email: req.ctx!.email }
+      });
+      barberoId = ownBarber ? ownBarber.id : 'unauthorized-barber-filter';
+    }
 
     let dateFilter = {};
     if (fecha) {
@@ -148,16 +156,20 @@ citasRouter.put('/:id/status', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ code: 'NOT_FOUND', error: 'Cita no encontrada en su barbería' });
     }
 
+    // A3 FIX: Idempotency check - only increment if status actually changed
+    const shouldIncrementNoShow = estado === 'NO_SHOW' && existingCita.estado !== 'NO_SHOW' && Boolean(existingCita.clienteId);
+    const shouldIncrementVisits = estado === 'COMPLETADA' && existingCita.estado !== 'COMPLETADA' && Boolean(existingCita.clienteId);
+
     const [cita] = await prisma.$transaction([
       prisma.cita.update({
         where: { id },
         data: { estado }
       }),
-      // Track customer lifecycle metrics
-      ...(estado === 'NO_SHOW' && existingCita.clienteId
+      // Track customer lifecycle metrics idempotently
+      ...(shouldIncrementNoShow
         ? [
             prisma.clienteFinal.update({
-              where: { id: existingCita.clienteId },
+              where: { id: existingCita.clienteId! },
               data: { noShows: { increment: 1 } }
             }),
             prisma.auditoriaLog.create({
@@ -170,10 +182,10 @@ citasRouter.put('/:id/status', async (req: AuthenticatedRequest, res) => {
             })
           ]
         : []),
-      ...(estado === 'COMPLETADA' && existingCita.clienteId
+      ...(shouldIncrementVisits
         ? [
             prisma.clienteFinal.update({
-              where: { id: existingCita.clienteId },
+              where: { id: existingCita.clienteId! },
               data: {
                 totalVisitas: { increment: 1 },
                 fechaUltimaVisita: new Date()

@@ -7,7 +7,13 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@systech/database';
 
-export const JWT_SECRET = process.env.JWT_SECRET || 'systech-secure-jwt-production-secret-colima-2026';
+const rawSecret = process.env.JWT_SECRET;
+if (!rawSecret || rawSecret.length < 32 || /change|example|systech-super|systech-secure/i.test(rawSecret)) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: JWT_SECRET inválido, inseguro o ausente en entorno de producción. Mínimo 32 caracteres y no usar valores por defecto.');
+  }
+}
+export const JWT_SECRET = rawSecret || 'systech-development-fallback-key-do-not-use-in-production-min32chars';
 
 export interface AuthContext {
   userId: string;
@@ -38,6 +44,15 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: string; tid: string; rol: string; email: string };
 
+    // Check user active status in database (A14)
+    const dbUser = await prisma.usuario.findUnique({
+      where: { id: payload.sub },
+      select: { id: true, activo: true, rol: true, eliminadoEn: true }
+    });
+    if (!dbUser || !dbUser.activo || dbUser.eliminadoEn) {
+      return res.status(401).json({ code: 'USUARIO_INACTIVO', error: 'Cuenta de usuario inactiva o deshabilitada' });
+    }
+
     let tenantId = payload.tid;
     let tenant = null;
 
@@ -55,9 +70,11 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
       return res.status(401).json({ code: 'TENANT_NOT_FOUND', error: 'El tenant especificado no existe o fue eliminado' });
     }
 
-    // Check if subscription is suspended
-    const originalUrl = req.originalUrl || req.url || '';
-    const isBillingOrAdmin = originalUrl.includes('/suscripcion') || originalUrl.includes('/admin') || originalUrl.includes('/auth') || payload.rol === 'SUPER_ADMIN';
+    // Check if subscription is suspended (C6 FIX: use exact baseUrl/path prefix instead of originalUrl.includes)
+    const pathToCheck = (req.baseUrl || req.path || '').toLowerCase();
+    const ALLOWED_SUSPENDED_PREFIXES = ['/api/suscripcion', '/api/admin', '/api/auth'];
+    const isBillingOrAdmin = ALLOWED_SUSPENDED_PREFIXES.some(prefix => pathToCheck === prefix || pathToCheck.startsWith(prefix + '/')) || payload.rol === 'SUPER_ADMIN';
+
     if (tenant.estado === 'SUSPENDIDO' && !isBillingOrAdmin) {
       return res.status(403).json({
         code: 'SUSCRIPCION_SUSPENDIDA',

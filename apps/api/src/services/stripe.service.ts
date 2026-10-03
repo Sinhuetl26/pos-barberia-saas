@@ -24,18 +24,51 @@ export interface WebhookResult {
 export class StripeBillingService {
   /**
    * Verify and construct Stripe event using HMAC signature
+   * Strictly enforces signature in production (C4)
    */
   static constructWebhookEvent(rawBody: Buffer | string, signature: string): Stripe.Event {
-    if (stripe && webhookSecret) {
-      return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+    if (process.env.NODE_ENV === 'production') {
+      if (!stripeSecretKey || !webhookSecret) {
+        throw new Error('STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET son estrictamente requeridos en producción');
+      }
+      if (!signature) {
+        throw new Error('Firma de Stripe (stripe-signature) ausente en solicitud de webhook');
+      }
+      if (!rawBody) {
+        throw new Error('Cuerpo crudo (rawBody) de la solicitud ausente para verificar firma');
+      }
+      return stripe!.webhooks.constructEvent(rawBody, signature, webhookSecret);
     }
 
-    // In dev / test when secrets are not configured or simulated, parse body safely
+    // In production or when secrets are present in other envs, verify if signature exists
+    if (stripe && webhookSecret && signature) {
+      try {
+        return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
+      } catch (err: any) {
+        throw new Error(`Firma de webhook de Stripe inválida: ${err.message}`);
+      }
+    }
+
+    // In test environment, allow mock payloads without signature
+    if (process.env.NODE_ENV === 'test') {
+      try {
+        const parsed = typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString('utf8'));
+        if (!parsed.id || !parsed.type) {
+          throw new Error('Formato de evento Stripe inválido');
+        }
+        return parsed as Stripe.Event;
+      } catch (err: any) {
+        throw new Error(`Error al decodificar webhook Stripe simulado: ${err.message}`);
+      }
+    }
+
+    // In development without secrets, allow mock payload with clear log
     try {
       const parsed = typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString('utf8'));
       if (!parsed.id || !parsed.type) {
         throw new Error('Formato de evento Stripe inválido');
       }
+      console.warn('⚠️ Webhook de Stripe procesado sin verificación criptográfica (solo permitido en desarrollo/test)');
       return parsed as Stripe.Event;
     } catch (err: any) {
       throw new Error(`Error al decodificar webhook Stripe: ${err.message}`);
@@ -293,6 +326,57 @@ export class StripeBillingService {
   static async ejecutarDunning(prisma: PrismaClient) {
     const ahora = new Date();
 
+    // A7 FIX: Find active tenants whose trial / billing period has expired without paid stripe subscription
+    const tenantsVencidos = await prisma.tenant.findMany({
+      where: {
+        estado: 'ACTIVO',
+        suscripcion: {
+          fechaProximoCobro: { lte: ahora },
+          stripeSubscriptionId: null
+        }
+      },
+      include: { suscripcion: true }
+    });
+
+    const marcadosEnRiesgo: string[] = [];
+    for (const t of tenantsVencidos) {
+      const diasGracia = t.suscripcion?.diasGracia || 3;
+      const fechaSuspension = new Date(ahora.getTime() + diasGracia * 24 * 60 * 60 * 1000);
+
+      await prisma.$transaction([
+        prisma.tenant.update({
+          where: { id: t.id },
+          data: { estado: 'EN_RIESGO' }
+        }),
+        prisma.suscripcion.update({
+          where: { tenantId: t.id },
+          data: {
+            estadoPago: 'past_due',
+            fechaSuspension
+          }
+        }),
+        prisma.notificacionLog.create({
+          data: {
+            tenantId: t.id,
+            tipo: 'SUSCRIPCION_RIESGO',
+            canal: 'WHATSAPP',
+            destinatario: 'Dueño',
+            mensaje: `⚠️ Tu periodo de prueba o suscripción ha concluido. Cuentas con ${diasGracia} días de gracia para activar tu plan antes de que el servicio sea suspendido.`,
+            estado: 'ENVIADO'
+          }
+        }),
+        prisma.auditoriaLog.create({
+          data: {
+            tenantId: t.id,
+            usuarioEmail: 'dunning-cron@systech.mx',
+            accion: 'PERIODO_PRUEBA_VENCIDO',
+            detalles: `Periodo vencido. Cuenta puesta EN_RIESGO con ${diasGracia} días de gracia hasta ${fechaSuspension.toISOString()}.`
+          }
+        })
+      ]);
+      marcadosEnRiesgo.push(t.id);
+    }
+
     // Find tenants in EN_RIESGO whose grace period has expired
     const tenantsEnRiesgo = await prisma.tenant.findMany({
       where: { estado: 'EN_RIESGO' },
@@ -339,7 +423,8 @@ export class StripeBillingService {
     }
 
     return {
-      evaluados: tenantsEnRiesgo.length,
+      trialsVencidos: marcadosEnRiesgo.length,
+      tenantsEnRiesgoEvaluados: tenantsEnRiesgo.length,
       suspendidos: suspendidos.length,
       tenantIdsSuspendidos: suspendidos
     };

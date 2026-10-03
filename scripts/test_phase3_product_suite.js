@@ -83,7 +83,10 @@ async function runTests() {
   // 2. Multi-Service Public Booking & Token Generation
   console.log('\n--- 2. Multi-Service Public Booking & Secure Tokens ---');
   const serviceIds = services.slice(0, 2).map(s => s.id);
-  const futureDate = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000); // 15 days future
+  const futureDate = new Date(Date.now() + 16 * 24 * 60 * 60 * 1000); // 16 days future (Monday)
+  if (futureDate.getDay() === 0) {
+    futureDate.setDate(futureDate.getDate() + 1);
+  }
   futureDate.setHours(11, 0, 0, 0);
 
   const bookingRes = await makeRequest('/api/public/reservar', 'POST', {

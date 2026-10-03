@@ -192,8 +192,69 @@ publicRouter.post('/reservar', async (req, res) => {
       return res.status(400).json({ code: 'INVALID_BRANCH', error: 'Sucursal no válida para esta barbería.' });
     }
 
-    // Resolve Barber (Support "cualquiera")
+    const slotStart = new Date(fechaHora);
+    if (isNaN(slotStart.getTime()) || slotStart <= new Date()) {
+      return res.status(400).json({ code: 'PAST_DATE', error: 'La fecha y hora de la cita debe ser futura.' });
+    }
+
+    // M4 & M5 FIX: Authoritative pricing and duration strictly from DB services
+    const idsToSearch: string[] = Array.isArray(servicioIds) && servicioIds.length > 0
+      ? servicioIds
+      : (servicioId ? [servicioId] : []);
+
+    let dbServices: any[] = [];
+    if (idsToSearch.length > 0) {
+      dbServices = await prisma.producto.findMany({
+        where: { id: { in: idsToSearch }, tenantId, tipo: 'SERVICIO', eliminadoEn: null }
+      });
+    }
+
+    if (dbServices.length === 0) {
+      const defaultService = await prisma.producto.findFirst({
+        where: { tenantId, tipo: 'SERVICIO', eliminadoEn: null }
+      });
+      if (defaultService) {
+        dbServices = [defaultService];
+      }
+    }
+
+    if (dbServices.length === 0) {
+      return res.status(400).json({ code: 'SERVICE_REQUIRED', error: 'No se encontraron servicios válidos disponibles para reservar.' });
+    }
+
+    const calculated = calculateMultiServiceTotals(
+      dbServices.map(s => ({
+        id: s.id,
+        nombre: s.nombre,
+        duracionMinutos: s.duracionMinutos || 30,
+        precioVenta: Number(s.precioVenta)
+      }))
+    );
+    const finalDuracion = calculated.totalMinutos;
+    const finalPrecio = calculated.totalPrecio;
+    const finalNombreServicio = dbServices.map(s => s.nombre).join(' + ');
+    const serviciosResumen = calculated.serviciosResumen;
+
+    // A10 FIX: Validate branch opening and closing hours
+    const openParts = (sucursal.horarioApertura || '09:00').split(':').map(Number);
+    const closeParts = (sucursal.horarioCierre || '20:00').split(':').map(Number);
+    const openMinutes = openParts[0] * 60 + (openParts[1] || 0);
+    const closeMinutes = closeParts[0] * 60 + (closeParts[1] || 0);
+    const slotMinutes = slotStart.getHours() * 60 + slotStart.getMinutes();
+    const slotEndMinutes = slotMinutes + finalDuracion;
+
+    if (slotMinutes < openMinutes || slotEndMinutes > closeMinutes) {
+      return res.status(400).json({
+        code: 'OUTSIDE_HOURS',
+        error: `El horario seleccionado está fuera del horario de atención (${sucursal.horarioApertura} - ${sucursal.horarioCierre})`
+      });
+    }
+
+    // Resolve Barber (A11 FIX: Support "cualquiera" by finding first available barber)
     let targetBarberoId = barberoId;
+    const days = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+    const slotDayName = days[slotStart.getDay()];
+
     if (!targetBarberoId || targetBarberoId === 'cualquiera') {
       const activeBarbers = await prisma.barbero.findMany({
         where: { sucursalId, activo: true, eliminadoEn: null }
@@ -201,51 +262,57 @@ publicRouter.post('/reservar', async (req, res) => {
       if (activeBarbers.length === 0) {
         return res.status(400).json({ code: 'NO_BARBERS', error: 'No hay barberos disponibles en esta sucursal.' });
       }
-      targetBarberoId = activeBarbers[0].id;
+
+      let foundBarberId = null;
+      for (const b of activeBarbers) {
+        if (b.diasDescanso && b.diasDescanso.includes(slotDayName)) continue;
+
+        const hasConflict = await prisma.cita.findFirst({
+          where: {
+            barberoId: b.id,
+            estado: { notIn: ['CANCELADA', 'NO_SHOW'] },
+            fechaHora: {
+              gte: new Date(slotStart.getTime() - 240 * 60000),
+              lte: new Date(slotStart.getTime() + (finalDuracion + 10) * 60000)
+            }
+          }
+        });
+        if (!hasConflict) {
+          foundBarberId = b.id;
+          break;
+        }
+      }
+
+      targetBarberoId = foundBarberId || activeBarbers[0].id;
     } else {
       const barbero = await prisma.barbero.findFirst({ where: { id: targetBarberoId, sucursalId, activo: true } });
       if (!barbero) {
         return res.status(400).json({ code: 'INVALID_BARBER', error: 'El barbero seleccionado no está disponible en esta sucursal.' });
       }
-    }
 
-    const slotStart = new Date(fechaHora);
-    if (isNaN(slotStart.getTime()) || slotStart <= new Date()) {
-      return res.status(400).json({ code: 'PAST_DATE', error: 'La fecha y hora de la cita debe ser futura.' });
-    }
-
-    // Resolve Multi-Services or Single Service
-    let finalNombreServicio = 'Corte Clásico';
-    let finalDuracion = 30;
-    let finalPrecio = 250;
-    let serviciosResumen: any[] = [];
-
-    const idsToSearch: string[] = Array.isArray(servicioIds) && servicioIds.length > 0
-      ? servicioIds
-      : (servicioId ? [servicioId] : []);
-
-    if (idsToSearch.length > 0) {
-      const dbServices = await prisma.producto.findMany({
-        where: { id: { in: idsToSearch }, tenantId, tipo: 'SERVICIO', eliminadoEn: null }
-      });
-
-      if (dbServices.length > 0) {
-        const calculated = calculateMultiServiceTotals(
-          dbServices.map(s => ({
-            id: s.id,
-            nombre: s.nombre,
-            duracionMinutos: s.duracionMinutos || 30,
-            precioVenta: Number(s.precioVenta)
-          }))
-        );
-
-        finalDuracion = calculated.totalMinutos;
-        finalPrecio = calculated.totalPrecio;
-        finalNombreServicio = dbServices.map(s => s.nombre).join(' + ');
-        serviciosResumen = calculated.serviciosResumen;
+      // A10 FIX: Validate barber rest day
+      if (barbero.diasDescanso && barbero.diasDescanso.includes(slotDayName)) {
+        return res.status(400).json({
+          code: 'BARBER_REST_DAY',
+          error: `El barbero ${barbero.nombre} no labora los días ${slotDayName}.`
+        });
       }
-    } else {
-      finalDuracion = Math.max(15, Math.min(240, parseInt(duracionMinutos as any) || 30));
+    }
+
+    // A10 FIX: Check for BloqueoHorario
+    const hasBlock = await prisma.bloqueoHorario.findFirst({
+      where: {
+        sucursalId,
+        barberoId: targetBarberoId,
+        fechaInicio: { lte: new Date(slotStart.getTime() + finalDuracion * 60000) },
+        fechaFin: { gte: slotStart }
+      }
+    });
+    if (hasBlock) {
+      return res.status(400).json({
+        code: 'BARBER_BLOCKED',
+        error: 'El barbero cuenta con un bloqueo de horario en ese intervalo.'
+      });
     }
 
     const slotEnd = new Date(slotStart.getTime() + (finalDuracion + 10) * 60000); // slot + 10 min buffer
@@ -394,20 +461,26 @@ publicRouter.get('/cita/:codigo', async (req, res) => {
       return res.status(404).json({ error: 'No se encontró ninguna cita con ese código' });
     }
 
+    // C7 FIX: Never leak tokenCancelacion or private notes to public short-code query
     res.json({
       codigoReserva: cita.codigoReserva,
-      tokenCancelacion: cita.tokenCancelacion,
       fechaHora: cita.fechaHora,
       duracionMinutos: cita.duracionMinutos,
       nombreServicio: cita.nombreServicio,
       servicios: cita.serviciosJson ? JSON.parse(cita.serviciosJson) : [],
       precioEstimado: cita.precioEstimado,
       estado: cita.estado,
-      notas: cita.notas,
       cliente: { nombre: cita.cliente?.nombre || 'Cliente' },
       barbero: { nombre: cita.barbero?.nombre || 'Barbero' },
-      sucursal: cita.sucursal,
-      barberia: cita.tenant
+      sucursal: {
+        nombre: cita.sucursal?.nombre,
+        direccion: cita.sucursal?.direccion,
+        telefono: cita.sucursal?.telefono
+      },
+      barberia: {
+        nombre: cita.tenant?.nombre,
+        slug: cita.tenant?.slug
+      }
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al buscar cita' });
@@ -491,18 +564,35 @@ publicRouter.post('/cita/token/:token/cancelar', async (req, res) => {
   }
 });
 
-// Backward-compatible short-code cancel
+// C7 FIX: Require cryptographic token for cancellation; disallow unauthorized short-code cancel
 publicRouter.post('/cita/:codigo/cancelar', async (req, res) => {
   try {
     const { codigo } = req.params;
-    const cita = await prisma.cita.findFirst({ where: { codigoReserva: codigo } });
-    if (!cita) return res.status(404).json({ error: 'Cita no encontrada' });
+    const token = req.headers['x-cancel-token'] || req.body?.tokenCancelacion;
+
+    if (!token) {
+      return res.status(401).json({
+        code: 'TOKEN_REQUIRED',
+        error: 'Por seguridad, para cancelar una cita se requiere el token criptográfico enviado en su confirmación.'
+      });
+    }
+
+    const cita = await prisma.cita.findFirst({
+      where: { codigoReserva: codigo, tokenCancelacion: String(token) },
+      include: { tenant: true, sucursal: true }
+    });
+    if (!cita) return res.status(404).json({ error: 'Cita no encontrada o token inválido' });
 
     if (cita.estado === 'CANCELADA') {
       return res.status(400).json({ error: 'La cita ya se encuentra cancelada' });
     }
     if (cita.estado === 'COMPLETADA') {
       return res.status(400).json({ error: 'No se puede cancelar una cita ya completada' });
+    }
+
+    const policy = canCancelAppointment(cita.fechaHora, 2);
+    if (!policy.allowed) {
+      return res.status(400).json({ code: 'CANCELLATION_POLICY_VIOLATION', error: policy.reason });
     }
 
     const updated = await prisma.cita.update({

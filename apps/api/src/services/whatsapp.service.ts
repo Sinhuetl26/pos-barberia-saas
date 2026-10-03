@@ -26,8 +26,13 @@ export interface EnviarMensajeResultado {
 }
 
 export class WhatsAppService {
-  private static apiToken = process.env.WHATSAPP_API_TOKEN || '';
-  private static phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  private static getApiToken(): string {
+    return process.env.META_WA_ACCESS_TOKEN || process.env.WHATSAPP_API_TOKEN || '';
+  }
+
+  private static getPhoneNumberId(): string {
+    return process.env.META_WA_PHONE_NUMBER_ID || process.env.WHATSAPP_PHONE_NUMBER_ID || '';
+  }
 
   /**
    * Cleans and normalizes phone number to international E.164 (Mexico 52 default)
@@ -224,16 +229,18 @@ export class WhatsAppService {
       : undefined;
 
     // 4. If Meta Cloud API credentials are configured, send via Cloud API
-    const hasCloudApi = Boolean(this.apiToken && this.phoneNumberId);
+    const apiToken = this.getApiToken();
+    const phoneNumberId = this.getPhoneNumberId();
+    const hasCloudApi = Boolean(apiToken && phoneNumberId);
 
     if (hasCloudApi && isPhoneNumber) {
       try {
         const response = await fetch(
-          `https://graph.facebook.com/v18.0/${this.phoneNumberId}/messages`,
+          `https://graph.facebook.com/v21.0/${phoneNumberId}/messages`,
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${this.apiToken}`,
+              'Authorization': `Bearer ${apiToken}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
@@ -315,7 +322,7 @@ export class WhatsAppService {
       }
     }
 
-    // 5. Honest Fallback when Cloud API is not configured: Register as LINK_GENERADO
+    // 5. C9 FIX: Honest state - when Cloud API is not active, save LINK_GENERADO (not fake ENVIADO)
     const log = await prisma.notificacionLog.create({
       data: {
         tenantId,
@@ -323,7 +330,7 @@ export class WhatsAppService {
         canal: 'WHATSAPP',
         destinatario: isPhoneNumber ? telNormalizado : destinatario,
         mensaje,
-        estado: 'ENVIADO' // Marked as sent/ready for direct 1-click dispatch
+        estado: 'LINK_GENERADO'
       }
     });
 

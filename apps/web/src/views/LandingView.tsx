@@ -511,7 +511,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Soporte prioritario VIP por WhatsApp 24/7</span>
+                    <span>Soporte técnico prioritario por WhatsApp</span>
                   </div>
                 </div>
               </div>
@@ -638,7 +638,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               },
               {
                 q: "¿Mis datos y la información de mis clientes están seguros?",
-                a: "Totalmente. Cumplimos con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) en México. Cada barbería cuenta con aislamiento estricto de base de datos para que nadie más pueda ver tus ventas ni clientes."
+                a: "Totalmente. Tu información está protegida con cifrado en tránsito y reposo, y arquitectura multi-inquilino segura para que cada barbería acceda únicamente a sus propios datos, ventas y clientes."
               }
             ].map((faq, index) => (
               <div key={index} className="border border-stone-200 rounded-xl overflow-hidden bg-stone-50/50">

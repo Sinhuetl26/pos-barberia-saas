@@ -1,4 +1,4 @@
-// Prisma schema for SYSTECH Barber SaaS Platform
+// Prisma schema for SYSTECH Barber SaaS Platform - PostgreSQL Production Schema
 // Multi-tenant Barber Management System - Production Ready Architecture
 
 generator client {
@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -380,10 +380,6 @@ model AuditoriaLog {
 
   @@index([tenantId, fecha])
 }
-
-// ----------------------------------------------------------------------
-// NUEVOS MODELOS PARA EL ROADMAP DE PRODUCCIÓN (FASE 1)
-// ----------------------------------------------------------------------
 
 model Cupon {
   id            String    @id @default(uuid())

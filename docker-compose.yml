@@ -13,14 +13,12 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-systech}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-systech_secret_2026}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD es requerido en .env}
       POSTGRES_DB: ${POSTGRES_DB:-systech_db}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U systech -d systech_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-systech} -d ${POSTGRES_DB:-systech_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -30,8 +28,6 @@ services:
     image: redis:7-alpine
     container_name: systech_redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -55,9 +51,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://${POSTGRES_USER:-systech}:${POSTGRES_PASSWORD:-systech_secret_2026}@postgres:5432/${POSTGRES_DB:-systech_db}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-systech}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-systech_db}?schema=public
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: ${JWT_SECRET:-systech-production-jwt-secret-key-change-this-in-prod}
+      JWT_SECRET: ${JWT_SECRET:?Error: JWT_SECRET es requerido en .env (minimo 32 caracteres)}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-systech-refresh-secret-key-change-this-in-prod}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:3000,https://app.systech.mx}
       APP_URL: ${APP_URL:-http://localhost:5173}

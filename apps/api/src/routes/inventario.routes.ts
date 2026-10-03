@@ -5,12 +5,12 @@
 
 import { Router } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { createProductSchema, validateBody } from '../validators/schemas';
 
 export const inventarioRouter = Router();
 
-// Protect only product and inventory routes with requireAuth
+// Protect product and inventory routes with requireAuth
 inventarioRouter.use(['/productos', '/inventario'], requireAuth);
 
 // Get catalog (Products & Services)
@@ -44,8 +44,8 @@ inventarioRouter.get('/productos', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// Create product or service
-inventarioRouter.post('/productos', validateBody(createProductSchema), async (req: AuthenticatedRequest, res) => {
+// Create product or service (C2: requireRole DUENO, GERENTE)
+inventarioRouter.post('/productos', requireRole('DUENO', 'GERENTE'), validateBody(createProductSchema), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const {
@@ -107,8 +107,8 @@ inventarioRouter.post('/productos', validateBody(createProductSchema), async (re
   }
 });
 
-// Update product or service
-inventarioRouter.put('/productos/:id', async (req: AuthenticatedRequest, res) => {
+// Update product or service (C2: requireRole DUENO, GERENTE)
+inventarioRouter.put('/productos/:id', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
@@ -141,27 +141,61 @@ inventarioRouter.put('/productos/:id', async (req: AuthenticatedRequest, res) =>
   }
 });
 
-// Manual Kardex Adjustment
-inventarioRouter.post('/inventario/movimiento', async (req: AuthenticatedRequest, res) => {
+// Manual Kardex Adjustment (C2: requireRole DUENO, GERENTE; A15: strict validation)
+inventarioRouter.post('/inventario/movimiento', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { productoId, tipoMovimiento, cantidad, motivo } = req.body;
+
+    const ALLOWED_TIPOS = ['ENTRADA_COMPRA', 'MERMA_DEVOLUCION', 'AJUSTE_INVENTARIO', 'USO_INTERNO'];
+    if (!ALLOWED_TIPOS.includes(tipoMovimiento)) {
+      return res.status(400).json({
+        code: 'INVALID_TYPE',
+        error: `Tipo de movimiento inválido. Permitidos: ${ALLOWED_TIPOS.join(', ')}`
+      });
+    }
+
+    const parsedQty = parseInt(cantidad);
+    if (isNaN(parsedQty)) {
+      return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'La cantidad debe ser un número entero válido' });
+    }
 
     const prod = await prisma.producto.findFirst({
       where: { id: productoId, tenantId, eliminadoEn: null }
     });
     if (!prod) return res.status(404).json({ code: 'NOT_FOUND', error: 'Producto no encontrado en su barbería' });
 
-    const qty = parseInt(cantidad) || 0;
     const stockAnterior = prod.stockActual;
     let stockNuevo = stockAnterior;
 
     if (tipoMovimiento === 'ENTRADA_COMPRA') {
-      stockNuevo = stockAnterior + qty;
-    } else if (tipoMovimiento === 'MERMA_DEVOLUCION') {
-      stockNuevo = Math.max(0, stockAnterior - Math.abs(qty));
+      if (parsedQty <= 0) {
+        return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'La cantidad para entrada debe ser mayor a 0' });
+      }
+      stockNuevo = stockAnterior + parsedQty;
+    } else if (tipoMovimiento === 'MERMA_DEVOLUCION' || tipoMovimiento === 'USO_INTERNO') {
+      if (parsedQty <= 0) {
+        return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'La cantidad a descontar debe ser mayor a 0' });
+      }
+      if (stockAnterior < parsedQty) {
+        return res.status(400).json({
+          code: 'INSUFFICIENT_STOCK',
+          error: `Stock insuficiente. Stock actual: ${stockAnterior}, requerido: ${parsedQty}`
+        });
+      }
+      stockNuevo = stockAnterior - parsedQty;
     } else if (tipoMovimiento === 'AJUSTE_INVENTARIO') {
-      stockNuevo = qty;
+      if (parsedQty < 0) {
+        return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'El stock ajustado no puede ser negativo' });
+      }
+      stockNuevo = parsedQty;
+    }
+
+    // Resolve sucursalId (A15: avoid empty string)
+    let sucursalId = prod.sucursalId;
+    if (!sucursalId) {
+      const defaultSuc = await prisma.sucursal.findFirst({ where: { tenantId, eliminadoEn: null } });
+      sucursalId = defaultSuc?.id || null;
     }
 
     const [updatedProd, kardex] = await prisma.$transaction([
@@ -172,13 +206,13 @@ inventarioRouter.post('/inventario/movimiento', async (req: AuthenticatedRequest
       prisma.kardexMovimiento.create({
         data: {
           tenantId,
-          sucursalId: prod.sucursalId || '',
+          sucursalId: sucursalId || '',
           productoId,
           tipoMovimiento,
           cantidad: stockNuevo - stockAnterior,
           stockAnterior,
           stockNuevo,
-          motivo
+          motivo: motivo || `Ajuste manual ${tipoMovimiento}`
         }
       })
     ]);

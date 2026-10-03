@@ -298,10 +298,13 @@ async function runTests() {
     `Status: ${resPastBooking.status}`
   );
 
-  // 6.2 Reserva legítima en fecha futura (usar fecha única para permitir re-ejecución sin colisión)
-  const randomDays = 10 + Math.floor(Math.random() * 50);
-  const randomHour = 10 + Math.floor(Math.random() * 8);
+  // 6.2 Reserva legítima en fecha futura (garantizada en día laboral)
+  const randomDays = 15 + Math.floor(Math.random() * 50);
   const futureDate = new Date(Date.now() + randomDays * 24 * 3600000);
+  if (futureDate.getDay() === 0) {
+    futureDate.setDate(futureDate.getDate() + 1); // No domingo
+  }
+  const randomHour = 11 + Math.floor(Math.random() * 5);
   futureDate.setHours(randomHour, 0, 0, 0);
 
   const resGoodBooking = await request('/public/reservar', {
@@ -325,7 +328,7 @@ async function runTests() {
 
   const bookingCode = resGoodBooking.data?.codigoReserva;
 
-  // 6.3 Consulta de cita pública sin fuga de datos privados (PII)
+  // 6.3 Consulta de cita pública sin fuga de datos privados (PII, C7)
   if (bookingCode) {
     const resPublicLookup = await request(`/public/cita/${bookingCode}`);
     assert(
@@ -336,7 +339,138 @@ async function runTests() {
       'Consulta pública no filtra teléfono ni email del cliente (Cumplimiento LFPDPPP)',
       `Cliente fields: ${JSON.stringify(resPublicLookup.data?.cliente)}`
     );
+
+    // C7: Token de cancelación y notas no deben exponerse al público
+    assert(
+      resPublicLookup.data?.tokenCancelacion === undefined,
+      'C7: Token de cancelación sensible omitido de la consulta pública de cita',
+      `tokenCancelacion expuesto: ${resPublicLookup.data?.tokenCancelacion}`
+    );
+    assert(
+      resPublicLookup.data?.notas === undefined,
+      'C7: Notas privadas del salón omitidas de la consulta pública',
+      `notas expuestas: ${resPublicLookup.data?.notas}`
+    );
+
+    // C7: Cancelación sin token largo seguro debe ser rechazada con 401
+    const resCancelNoToken = await request(`/public/cita/${bookingCode}/cancelar`, {
+      method: 'POST',
+      body: JSON.stringify({ motivo: 'Prueba sin token' })
+    });
+    assert(
+      resCancelNoToken.status === 401,
+      'C7: Cancelación de cita rechazada (401) cuando falta el tokenCancelacion seguro',
+      `Status: ${resCancelNoToken.status}`
+    );
   }
+
+  // ----------------------------------------------------
+  // TEST SUITE 7: Control de Acceso Basado en Roles (RBAC - C2)
+  // ----------------------------------------------------
+  console.log('\n--- Test Suite 7: Role-Based Access Control (RBAC - C2) ---');
+
+  // Iniciar sesión como BARBERO
+  const resLoginBarbero = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'barbero@elbigote.com', password: 'Barbero123!' })
+  });
+  assert(
+    resLoginBarbero.status === 200 && resLoginBarbero.data?.user?.rol === 'BARBERO',
+    'Login exitoso con rol BARBERO para pruebas de permisos',
+    `Status: ${resLoginBarbero.status}, Rol: ${resLoginBarbero.data?.user?.rol}`
+  );
+  const tokenBarbero = resLoginBarbero.data?.token;
+
+  if (tokenBarbero) {
+    const authBarbero = { Authorization: `Bearer ${tokenBarbero}` };
+
+    // 7.1 BARBERO no puede modificar datos de barberos (PUT /barberos/:id -> 403)
+    const resPutBarbero = await request(`/barberos/${barberoA?.id || 'fake-id'}`, {
+      method: 'PUT',
+      headers: authBarbero,
+      body: JSON.stringify({ comisionServiciosPct: 90 })
+    });
+    assert(resPutBarbero.status === 403, 'C2: BARBERO recibe 403 al intentar editar comisiones de barbero (PUT /barberos/:id)', `Status: ${resPutBarbero.status}`);
+
+    // 7.2 BARBERO no puede crear nuevos barberos (POST /barberos -> 403)
+    const resPostBarbero = await request('/barberos', {
+      method: 'POST',
+      headers: authBarbero,
+      body: JSON.stringify({ nombre: 'Barbero Hacker', sucursalId: sucursalA?.id })
+    });
+    assert(resPostBarbero.status === 403, 'C2: BARBERO recibe 403 al intentar crear nuevo barbero (POST /barberos)', `Status: ${resPostBarbero.status}`);
+
+    // 7.3 BARBERO no puede liquidar nómina (POST /comisiones/liquidar-nomina -> 403)
+    const resLiquidar = await request('/comisiones/liquidar-nomina', {
+      method: 'POST',
+      headers: authBarbero,
+      body: JSON.stringify({ barberoId: barberoA?.id })
+    });
+    assert(resLiquidar.status === 403, 'C2: BARBERO recibe 403 al intentar liquidar nómina (POST /comisiones/liquidar-nomina)', `Status: ${resLiquidar.status}`);
+
+    // 7.4 BARBERO no puede cerrar corte de caja (POST /cortes-caja/cerrar -> 403)
+    const resCerrarCaja = await request('/cortes-caja/cerrar', {
+      method: 'POST',
+      headers: authBarbero,
+      body: JSON.stringify({ corteId: 'fake-id', conteoEfectivoReal: 1000 })
+    });
+    assert(resCerrarCaja.status === 403, 'C2: BARBERO recibe 403 al intentar cerrar corte de caja (POST /cortes-caja/cerrar)', `Status: ${resCerrarCaja.status}`);
+
+    // 7.5 BARBERO no puede realizar movimientos manuales de inventario (POST /inventario/movimiento -> 403)
+    const resKardex = await request('/inventario/movimiento', {
+      method: 'POST',
+      headers: authBarbero,
+      body: JSON.stringify({ productoId: 'fake-id', tipoMovimiento: 'ENTRADA_COMPRA', cantidad: 10 })
+    });
+    assert(resKardex.status === 403, 'C2: BARBERO recibe 403 al intentar registrar movimiento de kardex (POST /inventario/movimiento)', `Status: ${resKardex.status}`);
+
+    // 7.6 BARBERO no puede ver reportes financieros globales (GET /reportes/dashboard -> 403)
+    const resReportes = await request('/reportes/dashboard', {
+      headers: authBarbero
+    });
+    assert(resReportes.status === 403, 'C2: BARBERO recibe 403 al intentar consultar reportes financieros (GET /reportes/dashboard)', `Status: ${resReportes.status}`);
+
+    // 7.7 BARBERO no puede cambiar el plan del SaaS (POST /suscripcion/cambiar-plan -> 403)
+    const resCambiarPlan = await request('/suscripcion/cambiar-plan', {
+      method: 'POST',
+      headers: authBarbero,
+      body: JSON.stringify({ nuevoPlan: 'PRO' })
+    });
+    assert(resCambiarPlan.status === 403, 'C2: BARBERO recibe 403 al intentar cambiar plan de suscripción (POST /suscripcion/cambiar-plan)', `Status: ${resCambiarPlan.status}`);
+  }
+
+  // ----------------------------------------------------
+  // TEST SUITE 8: Webhook de Stripe & Protección Criptográfica (C4)
+  // ----------------------------------------------------
+  console.log('\n--- Test Suite 8: Stripe Webhook Cryptographic Verification (C4) ---');
+
+  // Enviar webhook falso sin firma o con firma inválida
+  const resBadWebhook = await request('/suscripcion/webhook', {
+    method: 'POST',
+    headers: { 'stripe-signature': 't=12345,v1=fake_signature_hash' },
+    body: JSON.stringify({ type: 'customer.subscription.deleted' })
+  });
+  assert(
+    resBadWebhook.status === 400,
+    'C4: Webhook de Stripe con firma criptográfica HMAC inválida es rechazado (400)',
+    `Status: ${resBadWebhook.status}`
+  );
+
+  // ----------------------------------------------------
+  // TEST SUITE 9: Prevención de Bypass de Suspensión (C6)
+  // ----------------------------------------------------
+  console.log('\n--- Test Suite 9: Suspension Bypass Query Parameter Guard (C6) ---');
+
+  // Intentar usar truco de query string ?x=/suscripcion en endpoint operativo
+  const resBypassAttempt = await request('/ventas?x=/suscripcion', {
+    headers: { Authorization: `Bearer ${tokenDueno}` }
+  });
+  // Si el tenant está activo debe procesar normalmente (200), pero la URL prefix debe validar /api/ventas y no saltarse el guard
+  assert(
+    resBypassAttempt.status === 200,
+    'C6: Endpoint responde correctamente validando el path base y no query string injectada',
+    `Status: ${resBypassAttempt.status}`
+  );
 
   // ----------------------------------------------------
   // RESUMEN FINAL

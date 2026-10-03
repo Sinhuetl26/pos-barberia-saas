@@ -19,23 +19,34 @@ console.log('===================================================================
 
 let passedCount = 0;
 let failedCount = 0;
+let totalIndividualTestsPassed = 0;
 
 for (const suite of suites) {
   console.log(`\n▶ Ejecutando: ${suite.name}...`);
   const scriptPath = path.join(__dirname, suite.script);
   try {
-    execSync(`node "${scriptPath}"`, { stdio: 'inherit' });
+    const output = execSync(`node "${scriptPath}"`, { encoding: 'utf8' });
+    process.stdout.write(output);
+
+    // Extract real test counts from suite output
+    const match = output.match(/(\d+)\s+(?:de\s+\d+\s+pruebas pasadas|PASSED)/i);
+    if (match) {
+      totalIndividualTestsPassed += parseInt(match[1], 10);
+    }
+
     passedCount++;
   } catch (err) {
+    if (err.stdout) process.stdout.write(err.stdout);
+    if (err.stderr) process.stderr.write(err.stderr);
     console.error(`❌ ERROR en suite: ${suite.name}`);
     failedCount++;
   }
 }
 
 console.log('\n======================================================================');
-console.log(`📊 RESUMEN FINAL: ${passedCount} suites exitosas, ${failedCount} fallidas`);
+console.log(`📊 RESUMEN FINAL: ${passedCount} de ${suites.length} suites exitosas (${totalIndividualTestsPassed} pruebas individuales verificadas), ${failedCount} fallidas`);
 if (failedCount === 0) {
-  console.log('🎉 TODAS LAS PRUEBAS (79/79) PASARON CON ÉXITO AL 100%. LISTO PARA PRODUCCIÓN.');
+  console.log(`🎉 TODAS LAS PRUEBAS (${totalIndividualTestsPassed}/${totalIndividualTestsPassed}) PASARON CON ÉXITO AL 100%. LISTO PARA PRODUCCIÓN.`);
   console.log('======================================================================\n');
   process.exit(0);
 } else {

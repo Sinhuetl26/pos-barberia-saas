@@ -46,6 +46,9 @@ export function calculateCashShiftSummary(
   let totalVentas = 0;
 
   for (const v of ventas) {
+    // A5 FIX: Filter out cancelled sales
+    if ((v as any).estado === 'CANCELADA') continue;
+
     const saleTotal = parseAmount(v.total);
     const tip = parseAmount(v.propina);
     totalVentas += saleTotal;

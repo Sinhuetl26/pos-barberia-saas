@@ -4,11 +4,12 @@
 
 import { Router } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 
 export const reportesRouter = Router();
 
-reportesRouter.use(requireAuth);
+// C2 FIX: Require DUENO or GERENTE for all financial and analytical reports
+reportesRouter.use(requireAuth, requireRole('DUENO', 'GERENTE'));
 
 reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
   try {
@@ -29,10 +30,12 @@ reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
 
+    // A5 FIX: Filter out CANCELADA sales from financial metrics
     const ventas = await prisma.venta.findMany({
       where: {
         tenantId,
         fecha: { gte: startDate },
+        estado: { not: 'CANCELADA' },
         ...(sucursalId ? { sucursalId } : {})
       },
       include: {

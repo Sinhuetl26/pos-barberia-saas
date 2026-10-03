@@ -119,18 +119,24 @@ export class FacturacionCfdiService {
       }
     }
 
-    // Dev/Sandbox simulation response
+    // C8 FIX: Never simulate CFDI in production
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('FACTURAPI_KEY ausente: No es posible timbrar comprobantes fiscales digitales (CFDI 4.0) en entorno de producción sin la clave del PAC.');
+    }
+
+    // Dev/Sandbox simulation response - clearly flagged as without fiscal validity
     const mockUuid = `4a9b2c1d-8e7f-4123-9abc-${Date.now().toString(16)}`;
     return {
       success: true,
-      provider: 'SIMULACION_CFDI_40',
+      provider: 'SIMULACION_DEV_SIN_VALIDEZ_FISCAL',
+      leyendaFiscal: 'COMPROBANTE SIMULADO EN ENTORNO DE DESARROLLO - SIN VALIDEZ FISCAL ANTE EL SAT',
       uuid: mockUuid,
       rfcEmisor: 'SYS20260101A1',
       rfcReceptor: receptor.rfc.toUpperCase(),
       total: Number(venta.total),
       folio: `FAC-${venta.folio}`,
       fechaTimbrado: new Date().toISOString(),
-      selloSat: 'sello_sat_simulado_verificable_en_validador',
+      selloSat: 'sello_sat_simulado_solo_desarrollo',
       cadenaOriginal: `||4.0|${mockUuid}|${new Date().toISOString()}|01|${venta.total}||`
     };
   }

@@ -4,7 +4,7 @@
 
 import { Router } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { openCashShiftSchema, closeCashShiftSchema, validateBody } from '../validators/schemas';
 import { calculateCashShiftSummary } from '../services/cash.service';
 
@@ -33,7 +33,7 @@ cortesRouter.get('/', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// Open Cash Register Shift
+// Open Cash Register Shift (Authorized cashier or owner)
 cortesRouter.post('/abrir', validateBody(openCashShiftSchema), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
@@ -74,7 +74,8 @@ cortesRouter.post('/abrir', validateBody(openCashShiftSchema), async (req: Authe
 });
 
 // Close Cash Register Shift (Blind Cash Count Reconciliation)
-cortesRouter.post('/cerrar', validateBody(closeCashShiftSchema), async (req: AuthenticatedRequest, res) => {
+// C2 FIX: Require DUENO or GERENTE role to close cash shift
+cortesRouter.post('/cerrar', requireRole('DUENO', 'GERENTE'), validateBody(closeCashShiftSchema), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { corteId, conteoEfectivoReal, notasCierre } = req.body;
@@ -87,11 +88,13 @@ cortesRouter.post('/cerrar', validateBody(closeCashShiftSchema), async (req: Aut
       return res.status(400).json({ error: 'Caja no encontrada o ya cerrada' });
     }
 
+    // A5 FIX: Filter out CANCELADA sales so they do not artificially inflate cash/card
     const ventas = await prisma.venta.findMany({
       where: {
         tenantId,
         sucursalId: corte.sucursalId,
-        fecha: { gte: corte.fechaApertura }
+        fecha: { gte: corte.fechaApertura },
+        estado: { not: 'CANCELADA' }
       }
     });
 

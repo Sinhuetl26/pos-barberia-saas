@@ -24,6 +24,7 @@ import { reportesRouter } from './routes/reportes.routes';
 import { suscripcionRouter } from './routes/suscripcion.routes';
 import { sucursalesRouter } from './routes/sucursales.routes';
 import { clientesRouter } from './routes/clientes.routes';
+import { CronService } from './services/cron.service';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -101,6 +102,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 if (process.env.NODE_ENV !== 'test') {
   app.listen(port, () => {
     console.log(`SYSTECH API Multi-Tenant (Modular Architecture) listening on port ${port}`);
+    // A7 & A8: Start Background Scheduler for reminders and dunning
+    CronService.init(prisma);
   });
 }
 

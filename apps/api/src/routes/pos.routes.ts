@@ -5,7 +5,7 @@
 
 import { Router } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { createSaleSchema, validateBody } from '../validators/schemas';
 import { calculateSaleTotals } from '../services/pricing.service';
 
@@ -43,6 +43,26 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       return res.status(404).json({ code: 'BARBER_NOT_FOUND', error: 'Barbero no encontrado o no pertenece a esta barbería' });
     }
 
+    // C5 FIX: Validate clienteId belongs strictly to this tenant
+    if (clienteId) {
+      const validCliente = await prisma.clienteFinal.findFirst({
+        where: { id: clienteId, tenantId }
+      });
+      if (!validCliente) {
+        return res.status(404).json({ code: 'INVALID_CLIENTE', error: 'El cliente no pertenece a esta barbería' });
+      }
+    }
+
+    // C5 FIX: Validate citaId belongs strictly to this tenant
+    if (citaId) {
+      const validCita = await prisma.cita.findFirst({
+        where: { id: citaId, tenantId }
+      });
+      if (!validCita) {
+        return res.status(404).json({ code: 'INVALID_CITA', error: 'La cita no pertenece a esta barbería' });
+      }
+    }
+
     const comisionServPct = Number(barbero.comisionServiciosPct || 50);
     const comisionProdPct = Number(barbero.comisionProductosPct || 10);
 
@@ -63,16 +83,33 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       comisionProdPct
     );
 
-    const countVentas = await prisma.venta.count({
-      where: { tenantId, sucursalId }
-    });
-    const serie = 'A';
-    const folioConsecutivo = countVentas + 1;
-    const folio = `${serie}-${String(folioConsecutivo).padStart(6, '0')}`;
     const lowStockAlerts: any[] = [];
 
     // Transaction execution
     const result = await prisma.$transaction(async (tx) => {
+      // A1 FIX: Calculate folio with atomic Secuencia upsert to guarantee collision-free consecutive folios
+      const secuencia = await tx.secuencia.upsert({
+        where: {
+          tenantId_sucursalId_tipo: {
+            tenantId,
+            sucursalId,
+            tipo: 'VENTA'
+          }
+        },
+        update: {
+          ultimoValor: { increment: 1 }
+        },
+        create: {
+          tenantId,
+          sucursalId,
+          tipo: 'VENTA',
+          ultimoValor: (await tx.venta.count({ where: { tenantId, sucursalId } })) + 1
+        }
+      });
+      const serie = 'A';
+      const folioConsecutivo = secuencia.ultimoValor;
+      const folio = `${serie}-${String(folioConsecutivo).padStart(6, '0')}`;
+
       const venta = await tx.venta.create({
         data: {
           tenantId,
@@ -109,39 +146,52 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
         }
       });
 
-      // Stock deduction and Kardex
+      // A2 FIX: Atomic Stock deduction with live check to prevent negative inventory
       for (const item of calculation.preparedItems) {
         if (item.tipoItem === 'PRODUCTO') {
-          const currentProd = productMap.get(item.productoId);
-          if (currentProd) {
-            const stockAnterior = currentProd.stockActual;
-            const stockNuevo = stockAnterior - item.cantidad;
+          const liveProd = await tx.producto.findFirst({
+            where: { id: item.productoId, tenantId }
+          });
+          if (!liveProd) {
+            const err: any = new Error(`Producto ${item.nombreItem} no encontrado`);
+            err.statusCode = 404;
+            throw err;
+          }
 
-            await tx.producto.update({
-              where: { id: item.productoId },
-              data: { stockActual: stockNuevo }
-            });
+          if (liveProd.stockActual < item.cantidad) {
+            const err: any = new Error(`Stock insuficiente para "${liveProd.nombre}". Existencias actuales: ${liveProd.stockActual}, Solicitadas: ${item.cantidad}`);
+            err.statusCode = 400;
+            err.code = 'INSUFFICIENT_STOCK';
+            throw err;
+          }
 
-            await tx.kardexMovimiento.create({
-              data: {
-                tenantId,
-                sucursalId,
-                productoId: item.productoId,
-                tipoMovimiento: 'VENTA_POS',
-                cantidad: -item.cantidad,
-                stockAnterior,
-                stockNuevo,
-                motivo: `Venta ${folio}`
-              }
-            });
+          const stockAnterior = liveProd.stockActual;
+          const stockNuevo = stockAnterior - item.cantidad;
 
-            if (stockNuevo <= currentProd.stockMinimo) {
-              lowStockAlerts.push({
-                nombre: currentProd.nombre,
-                stockNuevo,
-                stockMinimo: currentProd.stockMinimo
-              });
+          await tx.producto.update({
+            where: { id: liveProd.id },
+            data: { stockActual: { decrement: item.cantidad } }
+          });
+
+          await tx.kardexMovimiento.create({
+            data: {
+              tenantId,
+              sucursalId,
+              productoId: liveProd.id,
+              tipoMovimiento: 'VENTA_POS',
+              cantidad: -item.cantidad,
+              stockAnterior,
+              stockNuevo,
+              motivo: `Venta ${folio}`
             }
+          });
+
+          if (stockNuevo <= liveProd.stockMinimo) {
+            lowStockAlerts.push({
+              nombre: liveProd.nombre,
+              stockNuevo,
+              stockMinimo: liveProd.stockMinimo
+            });
           }
         }
       }
@@ -158,26 +208,18 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
         }
       });
 
+      // C5 FIX: Update appointment only if belonging to tenant
       if (citaId) {
-        await tx.cita.update({
-          where: { id: citaId },
+        await tx.cita.updateMany({
+          where: { id: citaId, tenantId },
           data: { estado: 'COMPLETADA' }
         });
       }
 
+      // A3 & C5 FIX: Update customer stats ONCE (single increment of totalVisitas)
       if (clienteId) {
-        await tx.clienteFinal.update({
-          where: { id: clienteId },
-          data: {
-            totalVisitas: { increment: 1 },
-            fechaUltimaVisita: new Date()
-          }
-        });
-      }
-
-      if (clienteId) {
-        await tx.clienteFinal.update({
-          where: { id: clienteId },
+        await tx.clienteFinal.updateMany({
+          where: { id: clienteId, tenantId },
           data: {
             gastoTotal: { increment: calculation.total },
             totalVisitas: { increment: 1 },
@@ -210,12 +252,18 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
     });
   } catch (error: any) {
     console.error('Error al procesar venta:', error);
-    res.status(500).json({ error: error.message || 'Error al procesar la venta en el POS' });
+    const status = error.statusCode || 500;
+    const code = error.code || (status === 400 ? 'BAD_REQUEST' : 'SERVER_ERROR');
+    res.status(status).json({
+      code,
+      error: error.message || 'Error al procesar la venta en el POS'
+    });
   }
 });
 
 // Cancel / Return Sale with stock, Kardex, and commission reversal
-posRouter.post('/:id/cancelar', async (req: AuthenticatedRequest, res) => {
+// C2 FIX: Require DUENO or GERENTE; A4 FIX: Block cancellation if commissions are paid
+posRouter.post('/:id/cancelar', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const userEmail = req.ctx!.email;
@@ -234,6 +282,15 @@ posRouter.post('/:id/cancelar', async (req: AuthenticatedRequest, res) => {
     if (!venta) return res.status(404).json({ error: 'Venta no encontrada en su barbería' });
     if (venta.estado === 'CANCELADA') {
       return res.status(400).json({ error: 'Esta venta ya se encuentra cancelada' });
+    }
+
+    // A4 FIX: Block cancellation if commission is already paid/liquidated
+    const comisionPagada = venta.comisiones?.some(c => c.pagada);
+    if (comisionPagada) {
+      return res.status(400).json({
+        code: 'COMMISSION_ALREADY_PAID',
+        error: 'No se puede cancelar una venta cuya comisión ya fue liquidada a nómina.'
+      });
     }
 
     await prisma.$transaction(async (tx) => {
@@ -282,12 +339,13 @@ posRouter.post('/:id/cancelar', async (req: AuthenticatedRequest, res) => {
         where: { ventaId: venta.id }
       });
 
-      // 4. Reverse customer spending if applicable
+      // 4. Reverse customer spending and visits if applicable (A4)
       if (venta.clienteId) {
         await tx.clienteFinal.update({
           where: { id: venta.clienteId },
           data: {
-            gastoTotal: { decrement: venta.total }
+            gastoTotal: { decrement: venta.total },
+            totalVisitas: { decrement: 1 }
           }
         });
       }
@@ -309,7 +367,8 @@ posRouter.post('/:id/cancelar', async (req: AuthenticatedRequest, res) => {
       folio: venta.folio
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Error al cancelar la venta' });
+    console.error('Error al cancelar venta:', error);
+    res.status(500).json({ code: 'SERVER_ERROR', error: error.message || 'Error al cancelar la venta' });
   }
 });
 
@@ -317,12 +376,20 @@ posRouter.post('/:id/cancelar', async (req: AuthenticatedRequest, res) => {
 posRouter.get('/', async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
-    const { sucursalId, barberoId, fechaInicio, fechaFin } = req.query as {
+    let { sucursalId, barberoId, fechaInicio, fechaFin } = req.query as {
       sucursalId?: string;
       barberoId?: string;
       fechaInicio?: string;
       fechaFin?: string;
     };
+
+    // C2: For BARBERO role, restrict sales strictly to their own barber record
+    if (req.ctx!.rol === 'BARBERO') {
+      const ownBarber = await prisma.barbero.findFirst({
+        where: { sucursal: { tenantId }, email: req.ctx!.email }
+      });
+      barberoId = ownBarber ? ownBarber.id : 'unauthorized-barber-filter';
+    }
 
     let dateQuery = {};
     if (fechaInicio && fechaFin) {

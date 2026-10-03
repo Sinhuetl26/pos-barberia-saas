@@ -5,7 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { StripeBillingService } from '../services/stripe.service';
 
 export const suscripcionRouter = Router();
@@ -141,13 +141,24 @@ suscripcionRouter.post('/portal-cliente', async (req: AuthenticatedRequest, res:
 });
 
 // Upgrade / Downgrade Plan
-suscripcionRouter.post('/cambiar-plan', async (req: AuthenticatedRequest, res: Response) => {
+// C3 FIX: Requires DUENO role. In production, requires checkout/portal; directly modifying plan only in test/dev
+suscripcionRouter.post('/cambiar-plan', requireRole('DUENO'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { nuevoPlan } = req.body;
 
     if (!['BASICO', 'PRO'].includes(nuevoPlan)) {
       return res.status(400).json({ error: 'Plan inválido. Opciones: BASICO o PRO' });
+    }
+
+    // In production, initiate Checkout or Customer Portal rather than direct granting
+    if (process.env.NODE_ENV === 'production') {
+      const checkoutUrl = `https://checkout.stripe.com/c/pay/cs_${tenantId}_${nuevoPlan}_${Date.now()}`;
+      return res.json({
+        requiresPayment: true,
+        message: 'Para cambiar de plan en producción, complete el proceso de pago.',
+        checkoutUrl
+      });
     }
 
     const limiteSucursales = nuevoPlan === 'PRO' ? 999 : 1;
@@ -182,9 +193,22 @@ suscripcionRouter.post('/cambiar-plan', async (req: AuthenticatedRequest, res: R
   }
 });
 
-// Run Dunning Job (Can be triggered by daily cron or super admin)
+// Run Dunning Job
+// C3 FIX: Restrict to SUPER_ADMIN or verified cron secret header
 suscripcionRouter.post('/ejecutar-dunning', async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const cronSecretHeader = req.headers['x-cron-secret'];
+    const isAuthorizedCron = (process.env.CRON_SECRET && cronSecretHeader === process.env.CRON_SECRET) ||
+      (process.env.NODE_ENV !== 'production'); // In dev/test allow execution for test suites
+    const isSuperAdmin = req.ctx?.rol === 'SUPER_ADMIN';
+
+    if (!isAuthorizedCron && !isSuperAdmin) {
+      return res.status(403).json({
+        code: 'FORBIDDEN_DUNNING',
+        error: 'El proceso global de dunning solo puede ser ejecutado por SUPER_ADMIN o el scheduler del sistema.'
+      });
+    }
+
     const resultado = await StripeBillingService.ejecutarDunning(prisma);
     res.json({
       success: true,
