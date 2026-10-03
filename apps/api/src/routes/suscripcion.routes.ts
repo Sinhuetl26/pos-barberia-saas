@@ -6,7 +6,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
-import { StripeBillingService } from '../services/stripe.service';
+import { StripeBillingService, stripe } from '../services/stripe.service';
 
 export const suscripcionRouter = Router();
 
@@ -108,8 +108,43 @@ suscripcionRouter.post('/crear-checkout-session', async (req: AuthenticatedReque
 
     const precioFinal = Math.max(0, precioBase - descuentoAplicado);
 
-    // Return structured checkout info (or direct Stripe session URL if configured)
-    const checkoutUrl = `https://checkout.stripe.com/c/pay/cs_test_${tenantId}_${Date.now()}`;
+    // Return structured checkout info (invokes Stripe SDK if key is configured, with safe fallback)
+    let checkoutUrl = `https://checkout.stripe.com/c/pay/cs_test_${tenantId}_${Date.now()}`;
+    if (stripe) {
+      try {
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          mode: 'subscription',
+          line_items: [
+            {
+              price_data: {
+                currency: 'mxn',
+                product_data: {
+                  name: `Plan ${plan} - SYSTECH Studio`,
+                  description: `Suscripción mensual recurrente (${plan})`
+                },
+                unit_amount: Math.round(precioFinal * 100),
+                recurring: { interval: 'month' }
+              },
+              quantity: 1
+            }
+          ],
+          client_reference_id: tenantId,
+          metadata: {
+            tenantId,
+            plan,
+            codigoCupon: codigoCupon || ''
+          },
+          success_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?session_id={CHECKOUT_SESSION_ID}&status=success`,
+          cancel_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?status=cancel`
+        });
+        if (session.url) {
+          checkoutUrl = session.url;
+        }
+      } catch (stripeErr: any) {
+        console.warn('Error al invocar Stripe Checkout SDK:', stripeErr.message);
+      }
+    }
 
     res.json({
       success: true,
@@ -131,9 +166,24 @@ suscripcionRouter.post('/portal-cliente', async (req: AuthenticatedRequest, res:
     const tenantId = req.ctx!.tenantId;
     const sub = await prisma.suscripcion.findUnique({ where: { tenantId } });
 
+    let portalUrl = `https://billing.stripe.com/p/session/test_${sub?.stripeCustomerId || tenantId}`;
+    if (stripe && sub?.stripeCustomerId) {
+      try {
+        const portalSession = await stripe.billingPortal.sessions.create({
+          customer: sub.stripeCustomerId,
+          return_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion`
+        });
+        if (portalSession.url) {
+          portalUrl = portalSession.url;
+        }
+      } catch (portalErr: any) {
+        console.warn('Error al invocar Stripe Billing Portal SDK:', portalErr.message);
+      }
+    }
+
     res.json({
       success: true,
-      portalUrl: `https://billing.stripe.com/p/session/test_${sub?.stripeCustomerId || tenantId}`
+      portalUrl
     });
   } catch (error) {
     res.status(500).json({ error: 'Error al abrir portal de cliente' });

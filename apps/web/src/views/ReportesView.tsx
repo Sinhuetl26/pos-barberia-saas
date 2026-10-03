@@ -45,9 +45,14 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ currentSucursal }) =
     }
   };
 
-  const handleExportCsv = () => {
-    const url = api.exportarVentasCsv();
-    window.open(url, '_blank');
+  const handleExportCsv = async () => {
+    try {
+      await api.exportarVentasCsv();
+      setToastMessage('Reporte CSV descargado con éxito.');
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (e: any) {
+      alert(`Error al descargar CSV: ${e.message}`);
+    }
   };
 
   const handleSendWeeklySummary = async () => {

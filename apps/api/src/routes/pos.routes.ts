@@ -24,10 +24,39 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       citaId,
       metodoPago,
       detallesPago,
+      montoEfectivo,
+      montoTarjeta,
+      efectivoRecibido,
+      idempotencyKey,
       descuento = 0,
       propina = 0,
       items = []
     } = req.body;
+
+    const effIdempotency = idempotencyKey || (req.headers['idempotency-key'] as string | undefined);
+    if (effIdempotency) {
+      const existingSale = await prisma.venta.findFirst({
+        where: {
+          tenantId,
+          detallesPago: { contains: effIdempotency }
+        },
+        include: {
+          items: true,
+          barbero: true,
+          sucursal: true,
+          cliente: true
+        }
+      });
+      if (existingSale) {
+        return res.json({
+          success: true,
+          venta: existingSale,
+          replayed: true,
+          comisionGenerada: 0,
+          lowStockAlerts: []
+        });
+      }
+    }
 
     const sucursal = await prisma.sucursal.findFirst({
       where: { id: sucursalId, tenantId }
@@ -43,6 +72,22 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       return res.status(404).json({ code: 'BARBER_NOT_FOUND', error: 'Barbero no encontrado o no pertenece a esta barbería' });
     }
 
+    // P1.6 RBAC: If logged-in user is BARBERO, verify they only attribute sales to themselves
+    if (req.ctx!.rol === 'BARBERO') {
+      const userBarbero = await prisma.barbero.findFirst({
+        where: {
+          sucursal: { tenantId },
+          email: req.ctx!.email
+        }
+      });
+      if (userBarbero && barberoId !== userBarbero.id) {
+        return res.status(403).json({
+          code: 'FORBIDDEN',
+          error: 'Un barbero solo puede registrar ventas asignadas a sí mismo'
+        });
+      }
+    }
+
     // C5 FIX: Validate clienteId belongs strictly to this tenant
     if (clienteId) {
       const validCliente = await prisma.clienteFinal.findFirst({
@@ -53,13 +98,17 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       }
     }
 
-    // C5 FIX: Validate citaId belongs strictly to this tenant
+    // C5 & P1.8 FIX: Validate citaId belongs strictly to this tenant and check cancellation
+    let validCita: any = null;
     if (citaId) {
-      const validCita = await prisma.cita.findFirst({
+      validCita = await prisma.cita.findFirst({
         where: { id: citaId, tenantId }
       });
       if (!validCita) {
         return res.status(404).json({ code: 'INVALID_CITA', error: 'La cita no pertenece a esta barbería' });
+      }
+      if (validCita.estado === 'CANCELADA') {
+        return res.status(400).json({ code: 'CITA_CANCELLED', error: 'No se puede cobrar una cita cancelada' });
       }
     }
 
@@ -71,6 +120,17 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
     const dbProducts = await prisma.producto.findMany({
       where: { id: { in: productIds }, tenantId }
     });
+
+    // P1.9: Branch safety validation on products
+    for (const prod of dbProducts) {
+      if (prod.sucursalId && prod.sucursalId !== sucursalId) {
+        return res.status(400).json({
+          code: 'INVALID_SUCURSAL_PRODUCT',
+          error: `El producto "${prod.nombre}" no pertenece a la sucursal del cobro`
+        });
+      }
+    }
+
     const productMap = new Map(dbProducts.map(p => [p.id, p]));
 
     // Authoritative calculation using pricing service
@@ -82,6 +142,94 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       comisionServPct,
       comisionProdPct
     );
+
+    // P0.3: Authoritative payment validation on server
+    const total = calculation.total;
+    let paymentDetailsRecord: any = {};
+    const detallesObj = (typeof detallesPago === 'object' && detallesPago !== null) ? detallesPago : null;
+
+    if (metodoPago === 'EFECTIVO') {
+      const efectivoRecibidoNum = Number(
+        efectivoRecibido ??
+        detallesObj?.efectivoRecibido ??
+        montoEfectivo ??
+        total
+      );
+      if (efectivoRecibidoNum < total - 0.01) {
+        return res.status(400).json({
+          code: 'INSUFFICIENT_PAYMENT',
+          error: `El efectivo recibido ($${efectivoRecibidoNum.toFixed(2)}) es menor al total a pagar ($${total.toFixed(2)})`
+        });
+      }
+      const cambio = Math.max(0, Math.round((efectivoRecibidoNum - total) * 100) / 100);
+      paymentDetailsRecord = {
+        metodo: 'EFECTIVO',
+        efectivoRecibido: efectivoRecibidoNum,
+        montoEfectivo: total,
+        cambio,
+        total,
+        idempotencyKey: effIdempotency || undefined
+      };
+    } else if (metodoPago === 'MIXTO') {
+      const mEfectivo = Number(
+        montoEfectivo ??
+        detallesObj?.montoEfectivo ??
+        0
+      );
+      const mTarjeta = Number(
+        montoTarjeta ??
+        detallesObj?.montoTarjeta ??
+        0
+      );
+
+      if (mEfectivo < 0 || mTarjeta < 0) {
+        return res.status(400).json({
+          code: 'INVALID_PAYMENT',
+          error: 'Los montos en pago mixto no pueden ser negativos'
+        });
+      }
+
+      if (Math.abs((mEfectivo + mTarjeta) - total) > 0.05) {
+        return res.status(400).json({
+          code: 'PAYMENT_MISMATCH',
+          error: `En pago mixto, la suma de efectivo ($${mEfectivo.toFixed(2)}) y tarjeta ($${mTarjeta.toFixed(2)}) debe coincidir exactamente con el total ($${total.toFixed(2)})`
+        });
+      }
+
+      const efRecibido = Number(
+        efectivoRecibido ??
+        detallesObj?.efectivoRecibido ??
+        mEfectivo
+      );
+      if (efRecibido < mEfectivo - 0.01) {
+        return res.status(400).json({
+          code: 'INSUFFICIENT_CASH_PART',
+          error: `El efectivo recibido ($${efRecibido.toFixed(2)}) es menor a la porción en efectivo requerida ($${mEfectivo.toFixed(2)})`
+        });
+      }
+      const cambio = Math.max(0, Math.round((efRecibido - mEfectivo) * 100) / 100);
+      paymentDetailsRecord = {
+        metodo: 'MIXTO',
+        montoEfectivo: mEfectivo,
+        montoTarjeta: mTarjeta,
+        efectivoRecibido: efRecibido,
+        cambio,
+        total,
+        idempotencyKey: effIdempotency || undefined
+      };
+    } else if (metodoPago === 'TARJETA') {
+      paymentDetailsRecord = {
+        metodo: 'TARJETA',
+        total,
+        idempotencyKey: effIdempotency || undefined
+      };
+    } else if (metodoPago === 'TRANSFERENCIA') {
+      paymentDetailsRecord = {
+        metodo: 'TRANSFERENCIA',
+        total,
+        idempotencyKey: effIdempotency || undefined
+      };
+    }
 
     const lowStockAlerts: any[] = [];
 
@@ -126,7 +274,7 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
           propina: calculation.propina,
           total: calculation.total,
           metodoPago,
-          detallesPago: typeof detallesPago === 'object' ? JSON.stringify(detallesPago) : detallesPago,
+          detallesPago: JSON.stringify(paymentDetailsRecord),
           items: {
             create: calculation.preparedItems.map(p => ({
               productoId: p.productoId,
@@ -216,13 +364,14 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
         });
       }
 
-      // A3 & C5 FIX: Update customer stats ONCE (single increment of totalVisitas)
+      // A3, C5 & P1.8 FIX: Update customer stats idempotently (do not double increment if cita was already COMPLETADA)
       if (clienteId) {
+        const wasAlreadyCompleted = validCita && validCita.estado === 'COMPLETADA';
         await tx.clienteFinal.updateMany({
           where: { id: clienteId, tenantId },
           data: {
             gastoTotal: { increment: calculation.total },
-            totalVisitas: { increment: 1 },
+            ...(wasAlreadyCompleted ? {} : { totalVisitas: { increment: 1 } }),
             fechaUltimaVisita: new Date()
           }
         });

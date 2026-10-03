@@ -6,7 +6,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@systech/database';
-import { requireAuth, JWT_SECRET, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, JWT_SECRET, AuthenticatedRequest } from '../middleware/auth';
 import { loginSchema, registerSchema, validateBody } from '../validators/schemas';
 
 export const authRouter = Router();
@@ -298,8 +298,8 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// Update Tenant Settings
-authRouter.put('/tenant/settings', requireAuth, async (req: AuthenticatedRequest, res) => {
+// Update Tenant Settings (P1.6 FIX: requireRole DUENO, GERENTE)
+authRouter.put('/tenant/settings', requireAuth, requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { nombre, telefono, emailContacto, direccion, logoUrl, slug } = req.body;
@@ -342,7 +342,7 @@ authRouter.get('/onboarding/templates', (req, res) => {
   res.json(templates);
 });
 
-// Setup Wizard endpoint
+// Setup Wizard endpoint (P0.2 FIX: Strict validation, strong password requirement, async bcrypt, and response sanitization)
 authRouter.post('/onboarding/setup', async (req, res) => {
   try {
     const {
@@ -353,14 +353,36 @@ authRouter.post('/onboarding/setup', async (req, res) => {
       nombreDueno,
       nombreSucursal,
       direccionSucursal,
-      horarioApertura,
-      horarioCierre,
+      horarioApertura = '09:00',
+      horarioCierre = '20:00',
       plan = 'BASICO',
       serviciosSeleccionados = [],
       nombreBarbero = 'Barbero Principal',
       comisionServicios = 50,
       comisionProductosPct = 10
     } = req.body;
+
+    if (!nombreBarberia || typeof nombreBarberia !== 'string' || !nombreBarberia.trim()) {
+      return res.status(400).json({ code: 'VALIDATION_ERROR', error: 'El nombre de la barbería es obligatorio' });
+    }
+
+    if (!emailDueno || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailDueno.trim())) {
+      return res.status(400).json({ code: 'VALIDATION_ERROR', error: 'Correo electrónico del dueño inválido' });
+    }
+
+    if (!passwordDueno || typeof passwordDueno !== 'string' || passwordDueno.length < 8) {
+      return res.status(400).json({ code: 'VALIDATION_ERROR', error: 'La contraseña es obligatoria y debe tener al menos 8 caracteres' });
+    }
+
+    if (!nombreDueno || typeof nombreDueno !== 'string' || !nombreDueno.trim()) {
+      return res.status(400).json({ code: 'VALIDATION_ERROR', error: 'El nombre del dueño es obligatorio' });
+    }
+
+    const cleanEmail = emailDueno.trim().toLowerCase();
+    const existing = await prisma.usuario.findUnique({ where: { email: cleanEmail } });
+    if (existing) {
+      return res.status(409).json({ code: 'EMAIL_ALREADY_EXISTS', error: 'Ya existe una cuenta registrada con este correo electrónico' });
+    }
 
     const baseSlug = nombreBarberia
       .toLowerCase()
@@ -370,18 +392,19 @@ authRouter.post('/onboarding/setup', async (req, res) => {
     const slug = `${baseSlug}-${Math.floor(100 + Math.random() * 900)}`;
 
     const dbPlan = await prisma.plan.findUnique({ where: { codigo: plan } });
+    const passwordHash = await bcrypt.hash(passwordDueno, 12);
 
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
-          nombre: nombreBarberia,
+          nombre: nombreBarberia.trim(),
           slug,
           plan,
           planId: dbPlan?.id || null,
           estado: 'ACTIVO',
-          telefono,
-          emailContacto: emailDueno,
-          direccion: direccionSucursal,
+          telefono: telefono || null,
+          emailContacto: cleanEmail,
+          direccion: direccionSucursal || null,
           limiteSucursales: plan === 'PRO' ? 999 : 1,
           limiteBarberos: plan === 'PRO' ? 999 : 3
         }
@@ -392,55 +415,55 @@ authRouter.post('/onboarding/setup', async (req, res) => {
           tenantId: tenant.id,
           montoMensual: plan === 'PRO' ? 999 : 499,
           estadoPago: 'active',
-          fechaProximoCobro: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+          fechaProximoCobro: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
         }
       });
 
       const sucursal = await tx.sucursal.create({
         data: {
           tenantId: tenant.id,
-          nombre: nombreSucursal || 'Matriz',
-          direccion: direccionSucursal,
-          telefono,
-          horarioApertura: horarioApertura || '09:00',
-          horarioCierre: horarioCierre || '20:00'
+          nombre: nombreSucursal ? nombreSucursal.trim() : 'Matriz Principal',
+          direccion: direccionSucursal || null,
+          telefono: telefono || null,
+          horarioApertura,
+          horarioCierre
         }
       });
 
-      const passwordHash = bcrypt.hashSync(passwordDueno || 'Admin@Systech2026!', 10);
       const dueno = await tx.usuario.create({
         data: {
           tenantId: tenant.id,
-          nombre: nombreDueno || 'Dueño',
-          email: emailDueno,
+          nombre: nombreDueno.trim(),
+          email: cleanEmail,
           passwordHash,
           rol: 'DUENO',
-          telefono
+          telefono: telefono || null,
+          sucursalId: sucursal.id
         }
       });
 
       const barbero = await tx.barbero.create({
         data: {
           sucursalId: sucursal.id,
-          nombre: nombreBarbero,
-          comisionServiciosPct: comisionServicios,
-          comisionProductosPct: comisionProductosPct,
-          horarioInicio: horarioApertura || '09:00',
-          horarioFin: horarioCierre || '20:00'
+          nombre: nombreBarbero ? nombreBarbero.trim() : nombreDueno.trim(),
+          comisionServiciosPct: Number(comisionServicios) || 50,
+          comisionProductosPct: Number(comisionProductosPct) || 10,
+          horarioInicio: horarioApertura,
+          horarioFin: horarioCierre
         }
       });
 
-      for (const serv of serviciosSeleccionados) {
+      for (const serv of (Array.isArray(serviciosSeleccionados) ? serviciosSeleccionados : [])) {
         await tx.producto.create({
           data: {
             tenantId: tenant.id,
             sucursalId: sucursal.id,
-            nombre: serv.nombre,
+            nombre: serv.nombre || 'Servicio',
             tipo: 'SERVICIO',
             categoria: serv.categoria || 'Cortes',
-            duracionMinutos: serv.duracionMinutos || 30,
-            precioVenta: serv.precioVenta || 250,
-            costo: serv.costo || 0,
+            duracionMinutos: Number(serv.duracionMinutos) || 30,
+            precioVenta: Number(serv.precioVenta) || 250,
+            costo: Number(serv.costo) || 0,
             stockActual: 9999,
             stockMinimo: 0,
             sku: `SRV-${Math.floor(100 + Math.random() * 900)}`
@@ -451,13 +474,34 @@ authRouter.post('/onboarding/setup', async (req, res) => {
       await tx.auditoriaLog.create({
         data: {
           tenantId: tenant.id,
-          usuarioEmail: emailDueno,
+          usuarioEmail: cleanEmail,
           accion: 'ONBOARDING_COMPLETADO',
           detalles: `Configuración inicial completada. Plan: ${plan}`
         }
       });
 
-      return { tenant, sucursal, dueno, barbero };
+      return {
+        tenant: {
+          id: tenant.id,
+          nombre: tenant.nombre,
+          slug: tenant.slug,
+          plan: tenant.plan
+        },
+        sucursal: {
+          id: sucursal.id,
+          nombre: sucursal.nombre
+        },
+        dueno: {
+          id: dueno.id,
+          nombre: dueno.nombre,
+          email: dueno.email,
+          rol: dueno.rol
+        },
+        barbero: {
+          id: barbero.id,
+          nombre: barbero.nombre
+        }
+      };
     });
 
     res.json({

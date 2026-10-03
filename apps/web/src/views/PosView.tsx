@@ -34,6 +34,8 @@ export const PosView: React.FC<PosViewProps> = ({
   // Cart State
   const [cart, setCart] = useState<{ producto: Producto; cantidad: number; precioUnitario: number }[]>([]);
   const [selectedBarberoId, setSelectedBarberoId] = useState<string>('');
+  const [clientes, setClientes] = useState<any[]>([]);
+  const [selectedClienteId, setSelectedClienteId] = useState<string>('');
   const [selectedClienteNombre, setSelectedClienteNombre] = useState<string>('Público General');
   const [descuento, setDescuento] = useState<number>(0);
   const [propinaPct, setPropinaPct] = useState<number>(0);
@@ -136,6 +138,9 @@ export const PosView: React.FC<PosViewProps> = ({
   useEffect(() => {
     if (activeCita && productos.length > 0) {
       setSelectedBarberoId(activeCita.barberoId);
+      if (activeCita.clienteId) {
+        setSelectedClienteId(activeCita.clienteId);
+      }
       if (activeCita.cliente) {
         setSelectedClienteNombre(activeCita.cliente.nombre);
       }
@@ -150,12 +155,14 @@ export const PosView: React.FC<PosViewProps> = ({
 
   const loadData = async () => {
     try {
-      const [prods, barbs] = await Promise.all([
+      const [prods, barbs, clis] = await Promise.all([
         api.getProductos({ sucursalId: currentSucursal?.id }),
-        api.getBarberos(currentSucursal?.id)
+        api.getBarberos(currentSucursal?.id),
+        api.getClientes()
       ]);
       setProductos(prods);
       setBarberos(barbs);
+      setClientes(clis || []);
       if (barbs.length > 0 && !selectedBarberoId) {
         setSelectedBarberoId(barbs[0].id);
       }
@@ -230,6 +237,19 @@ export const PosView: React.FC<PosViewProps> = ({
   const handleProcessSale = async () => {
     if (!currentSucursal?.id) return;
 
+    if (metodoPago === 'EFECTIVO' && montoEfectivo < total) {
+      alert(`El efectivo recibido ($${montoEfectivo}) no alcanza para cubrir el total ($${total})`);
+      return;
+    }
+    if (metodoPago === 'MIXTO' && Math.abs(splitEfectivo + splitTarjeta - total) > 0.05) {
+      alert(`En pago mixto, la suma de efectivo ($${splitEfectivo}) y tarjeta ($${splitTarjeta}) debe ser igual al total ($${total})`);
+      return;
+    }
+
+    const idempotencyKey = (typeof crypto !== 'undefined' && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `pos-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
     try {
       const itemsPayload = cart.map(item => ({
         productoId: item.producto.id,
@@ -240,25 +260,39 @@ export const PosView: React.FC<PosViewProps> = ({
       const res = await api.createVenta({
         sucursalId: currentSucursal.id,
         barberoId: selectedBarberoId,
+        clienteId: selectedClienteId || null,
         clienteNombre: selectedClienteNombre,
         items: itemsPayload,
         metodoPago,
         descuento,
         propina: propinaCalculada,
-        montoEfectivo: metodoPago === 'EFECTIVO' ? montoEfectivo : metodoPago === 'MIXTO' ? splitEfectivo : null,
+        efectivoRecibido: metodoPago === 'EFECTIVO' ? montoEfectivo : metodoPago === 'MIXTO' ? splitEfectivo : null,
+        montoEfectivo: metodoPago === 'EFECTIVO' ? total : metodoPago === 'MIXTO' ? splitEfectivo : null,
         montoTarjeta: metodoPago === 'TARJETA' ? total : metodoPago === 'MIXTO' ? splitTarjeta : null,
+        idempotencyKey,
         citaId: activeCita?.id || null
       });
 
+      // P0.4 FIX: Confirm sale success immediately and clear cart
       setLastSale(res.venta);
       setShowPaymentModal(false);
-
-      // Load Ticket Data for print & whatsapp
-      const ticket = await api.getTicketVenta(res.venta.id);
-      setTicketData(ticket);
-
       clearCart();
       loadData();
+
+      // Attempt ticket preview without blocking sale completion
+      try {
+        const ticket = await api.getTicketVenta(res.venta.id);
+        setTicketData(ticket);
+      } catch (ticketErr) {
+        console.warn('No se pudo cargar la vista previa del ticket automáticamente:', ticketErr);
+        setTicketData({
+          venta: res.venta,
+          folio: res.venta.folio,
+          items: res.venta.items || [],
+          total: res.venta.total,
+          whatsappUrl: null
+        });
+      }
     } catch (e: any) {
       alert(`Error al cobrar: ${e.message}`);
     }
@@ -436,17 +470,37 @@ export const PosView: React.FC<PosViewProps> = ({
                 </select>
               </div>
 
-              {/* Customer */}
+              {/* Customer Selection (P1.7 FIX: Enlace real con Clientes CRM) */}
               <div>
                 <label className="block text-[10px] uppercase tracking-wider font-semibold text-stone-500 mb-1">
-                  Cliente
+                  Cliente CRM
                 </label>
-                <input
-                  type="text"
-                  value={selectedClienteNombre}
-                  onChange={(e) => setSelectedClienteNombre(e.target.value)}
-                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-1.5 text-xs text-stone-900 focus:outline-none focus:bg-white"
-                />
+                <select
+                  value={selectedClienteId}
+                  onChange={(e) => {
+                    const cid = e.target.value;
+                    setSelectedClienteId(cid);
+                    const found = clientes.find(c => c.id === cid);
+                    setSelectedClienteNombre(found ? found.nombre : 'Público General');
+                  }}
+                  className="w-full bg-stone-50 border border-stone-200 rounded-xl px-3 py-1.5 text-xs text-stone-900 focus:outline-none focus:bg-white mb-1.5"
+                >
+                  <option value="">Público General (Sin registrar)</option>
+                  {clientes.map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.nombre} {c.telefono ? `(${c.telefono})` : ''}
+                    </option>
+                  ))}
+                </select>
+                {!selectedClienteId && (
+                  <input
+                    type="text"
+                    value={selectedClienteNombre}
+                    onChange={(e) => setSelectedClienteNombre(e.target.value)}
+                    placeholder="Nombre del cliente mostrador"
+                    className="w-full bg-white border border-stone-200 rounded-xl px-3 py-1 text-xs text-stone-700 focus:outline-none focus:border-stone-900"
+                  />
+                )}
               </div>
             </div>
 
@@ -678,6 +732,18 @@ export const PosView: React.FC<PosViewProps> = ({
               </div>
             )}
 
+            {/* Validation warning if insufficient payment */}
+            {metodoPago === 'EFECTIVO' && montoEfectivo < total && (
+              <p className="text-[11px] text-rose-600 font-semibold mb-3">
+                ⚠️ El efectivo recibido (${montoEfectivo.toFixed(2)}) es menor al total a pagar (${total.toFixed(2)} MXN).
+              </p>
+            )}
+            {metodoPago === 'MIXTO' && Math.abs(splitEfectivo + splitTarjeta - total) > 0.05 && (
+              <p className="text-[11px] text-rose-600 font-semibold mb-3">
+                ⚠️ La suma (${(splitEfectivo + splitTarjeta).toFixed(2)}) debe coincidir exactamente con el total (${total.toFixed(2)} MXN).
+              </p>
+            )}
+
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
@@ -689,7 +755,11 @@ export const PosView: React.FC<PosViewProps> = ({
               <button
                 type="button"
                 onClick={handleProcessSale}
-                className="px-5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition shadow-sm"
+                disabled={
+                  (metodoPago === 'EFECTIVO' && montoEfectivo < total) ||
+                  (metodoPago === 'MIXTO' && Math.abs(splitEfectivo + splitTarjeta - total) > 0.05)
+                }
+                className="px-5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-xs transition shadow-sm"
               >
                 Confirmar Venta
               </button>
@@ -713,21 +783,21 @@ export const PosView: React.FC<PosViewProps> = ({
               className="bg-stone-50 text-stone-950 p-4 rounded-xl font-mono text-[11px] leading-tight border border-stone-200 shadow-xs mb-4 max-h-72 overflow-y-auto"
             >
               <div className="text-center font-bold text-xs tracking-wider mb-0.5">
-                {ticketData.venta.tenant.nombre.toUpperCase()}
+                {(ticketData.venta?.tenant?.nombre || 'BARBERÍA').toUpperCase()}
               </div>
               <div className="text-center text-[9px] text-stone-500 mb-2">
-                {ticketData.venta.sucursal.nombre} • Tel: {ticketData.venta.sucursal.telefono || '5500000000'}
+                {ticketData.venta?.sucursal?.nombre || 'Sucursal'} • Tel: {ticketData.venta?.sucursal?.telefono || '5500000000'}
               </div>
               <div className="border-t border-dashed border-stone-300 my-1" />
               <div className="flex justify-between text-[10px] text-stone-600">
-                <span>{ticketData.venta.folio}</span>
-                <span>{new Date(ticketData.venta.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{ticketData.venta?.folio || lastSale.folio}</span>
+                <span>{ticketData.venta?.fecha ? new Date(ticketData.venta.fecha).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
               </div>
-              <div className="text-[10px] text-stone-600">Barbero: {ticketData.venta.barbero.nombre}</div>
+              <div className="text-[10px] text-stone-600">Barbero: {ticketData.venta?.barbero?.nombre || 'Barbero'}</div>
               <div className="border-t border-dashed border-stone-300 my-1" />
               
               <div className="space-y-1 my-1.5">
-                {ticketData.venta.items.map((i: any) => (
+                {(ticketData.venta?.items || []).map((i: any) => (
                   <div key={i.id} className="flex justify-between">
                     <span>{i.cantidad}x {i.nombreItem}</span>
                     <span className="font-bold">${Number(i.subtotal).toFixed(2)}</span>
@@ -738,16 +808,16 @@ export const PosView: React.FC<PosViewProps> = ({
               <div className="border-t border-dashed border-stone-300 my-1" />
               <div className="flex justify-between font-bold text-xs pt-0.5">
                 <span>TOTAL:</span>
-                <span>${Number(ticketData.venta.total).toFixed(2)} MXN</span>
+                <span>${Number(ticketData.venta?.total || lastSale.total).toFixed(2)} MXN</span>
               </div>
-              <div className="text-[9px] text-stone-500 mt-1">Método: {ticketData.venta.metodoPago}</div>
+              <div className="text-[9px] text-stone-500 mt-1">Método: {ticketData.venta?.metodoPago || lastSale.metodoPago}</div>
             </div>
 
             <div className="space-y-2">
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   type="button"
-                  onClick={() => window.open(`/api/ventas/${lastSale.id}/ticket-html?width=58mm&autoprint=true`, '_blank')}
+                  onClick={() => api.printTicketHtml(lastSale.id, '58mm')}
                   className="py-2 px-2 rounded-lg bg-white hover:bg-stone-100 text-stone-800 text-[11px] font-semibold border border-stone-200 transition flex items-center justify-center gap-1 shadow-xs"
                   title="Imprimir ticket para impresora térmica de 58mm"
                 >
@@ -757,7 +827,7 @@ export const PosView: React.FC<PosViewProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => window.open(`/api/ventas/${lastSale.id}/ticket-html?width=80mm&autoprint=true`, '_blank')}
+                  onClick={() => api.printTicketHtml(lastSale.id, '80mm')}
                   className="py-2 px-2 rounded-lg bg-white hover:bg-stone-100 text-stone-800 text-[11px] font-semibold border border-stone-200 transition flex items-center justify-center gap-1 shadow-xs"
                   title="Imprimir ticket para impresora térmica de 80mm"
                 >

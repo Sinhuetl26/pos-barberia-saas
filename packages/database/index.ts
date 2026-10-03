@@ -1,7 +1,11 @@
 import { PrismaClient } from '@prisma/client';
 import path from 'path';
 
-const defaultDbPath = path.resolve(__dirname, 'prisma', 'dev.db');
+const currentDir = typeof __dirname !== 'undefined'
+  ? __dirname
+  : path.resolve(process.cwd(), 'packages', 'database');
+
+const defaultDbPath = path.resolve(currentDir, 'prisma', 'dev.db');
 const rawUrl = process.env.DATABASE_URL;
 
 let finalDbUrl: string | undefined = undefined;

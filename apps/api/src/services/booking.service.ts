@@ -183,10 +183,10 @@ export function canCancelAppointment(
 }
 
 /**
- * Generates cryptographically secure short folio (RES-XXXXXX)
+ * Generates cryptographically secure high-entropy folio (RES-XXXXXXXXXXXXXXXX, 64-bit random)
  */
 export function generateBookingFolio(): string {
-  const hex = crypto.randomBytes(3).toString('hex').toUpperCase();
+  const hex = crypto.randomBytes(8).toString('hex').toUpperCase();
   return `RES-${hex}`;
 }
 

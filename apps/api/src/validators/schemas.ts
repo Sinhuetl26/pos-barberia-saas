@@ -44,7 +44,11 @@ export const createSaleSchema = z.object({
   clienteId: z.string().optional().nullable(),
   citaId: z.string().optional().nullable(),
   metodoPago: z.enum(['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'MIXTO']),
-  detallesPago: z.any().optional(),
+  detallesPago: z.any().optional().nullable(),
+  montoEfectivo: z.coerce.number().min(0).optional().nullable(),
+  montoTarjeta: z.coerce.number().min(0).optional().nullable(),
+  efectivoRecibido: z.coerce.number().min(0).optional().nullable(),
+  idempotencyKey: z.string().optional().nullable(),
   descuento: z.coerce.number().min(0).default(0),
   propina: z.coerce.number().min(0).default(0),
   items: z.array(
@@ -78,8 +82,8 @@ export const createProductSchema = z.object({
   sku: z.string().optional().nullable(),
   precioVenta: z.coerce.number().min(0, 'El precio no puede ser negativo'),
   costo: z.coerce.number().min(0).default(0),
-  stockActual: z.coerce.number().int().default(0),
-  stockMinimo: z.coerce.number().int().default(0)
+  stockActual: z.coerce.number().int().min(0, 'El stock inicial no puede ser negativo').default(0),
+  stockMinimo: z.coerce.number().int().min(0, 'El stock mínimo no puede ser negativo').default(0)
 });
 
 // Cash drawer open/close schemas

@@ -22,6 +22,14 @@ class ApiService {
     return this.token;
   }
 
+  getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {};
+    if (this.token) {
+      headers['authorization'] = `Bearer ${this.token}`;
+    }
+    return headers;
+  }
+
   setContext(tenantId: string, role: UserRole = 'DUENO', userId: string = '') {
     this.tenantId = tenantId;
     this.userRole = role;
@@ -459,8 +467,43 @@ class ApiService {
       body: JSON.stringify({ canal })
     });
   }
+  async downloadFile(endpoint: string, filename: string) {
+    const headers = this.getAuthHeaders();
+    const res = await fetch(`${API_BASE}${endpoint}`, { headers });
+    if (!res.ok) {
+      let errMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson.error) errMsg = errJson.error;
+      } catch (e) {}
+      throw new Error(errMsg);
+    }
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  }
+
+  async printTicketHtml(ventaId: string, width: string = '80mm') {
+    const headers = this.getAuthHeaders();
+    const res = await fetch(`${API_BASE}/ventas/${ventaId}/ticket-html?width=${width}&autoprint=true`, { headers });
+    if (!res.ok) throw new Error('Error al obtener el ticket térmico');
+    const html = await res.text();
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+    }
+  }
+
   exportarVentasCsv() {
-    return `${API_BASE}/reportes/exportar/ventas-csv`;
+    return this.downloadFile('/reportes/exportar/ventas-csv', 'ventas_systech.csv');
   }
 }
 

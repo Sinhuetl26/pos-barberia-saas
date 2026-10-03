@@ -24,6 +24,7 @@ import { reportesRouter } from './routes/reportes.routes';
 import { suscripcionRouter } from './routes/suscripcion.routes';
 import { sucursalesRouter } from './routes/sucursales.routes';
 import { clientesRouter } from './routes/clientes.routes';
+import { proveedoresRouter, ordenesCompraRouter } from './routes/proveedores.routes';
 import { CronService } from './services/cron.service';
 
 const app = express();
@@ -73,6 +74,8 @@ app.use('/api/reportes', reportesRouter);
 app.use('/api/suscripcion', suscripcionRouter);
 app.use('/api/sucursales', sucursalesRouter);
 app.use('/api/clientes', clientesRouter);
+app.use('/api/proveedores', proveedoresRouter);
+app.use('/api/ordenes-compra', ordenesCompraRouter);
 
 // Backwards compatibility mappings
 app.use('/api/onboarding', authRouter); // /api/onboarding/templates & /api/onboarding/setup

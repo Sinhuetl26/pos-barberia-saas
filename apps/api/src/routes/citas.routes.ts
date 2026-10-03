@@ -87,6 +87,19 @@ citasRouter.post('/', async (req: AuthenticatedRequest, res) => {
     const barbero = await prisma.barbero.findFirst({ where: { id: barberoId, sucursal: { tenantId } } });
     if (!barbero) return res.status(400).json({ code: 'BAD_REQUEST', error: 'Barbero no válido para su barbería' });
 
+    // P1.6 RBAC: If logged-in user is BARBERO, verify they only create appointments for themselves
+    if (req.ctx!.rol === 'BARBERO') {
+      const userBarbero = await prisma.barbero.findFirst({
+        where: {
+          sucursal: { tenantId },
+          email: req.ctx!.email
+        }
+      });
+      if (userBarbero && barberoId !== userBarbero.id) {
+        return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede agendar citas en su propia agenda' });
+      }
+    }
+
     let cliente = await prisma.clienteFinal.findFirst({
       where: { tenantId, telefono: clienteTelefono }
     });
@@ -156,9 +169,32 @@ citasRouter.put('/:id/status', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ code: 'NOT_FOUND', error: 'Cita no encontrada en su barbería' });
     }
 
-    // A3 FIX: Idempotency check - only increment if status actually changed
+    // P1.6 RBAC: If logged in as BARBERO, verify they only manage their own appointments
+    if (req.ctx!.rol === 'BARBERO') {
+      const userBarbero = await prisma.barbero.findFirst({
+        where: {
+          sucursal: { tenantId },
+          email: req.ctx!.email
+        }
+      });
+      if (userBarbero && existingCita.barberoId !== userBarbero.id) {
+        return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede gestionar sus propias citas' });
+      }
+    }
+
+    // P1.8 FIX: Validate state transition
+    if (existingCita.estado === 'CANCELADA' && estado === 'COMPLETADA') {
+      return res.status(400).json({ code: 'INVALID_TRANSITION', error: 'No se puede marcar como completada una cita previamente cancelada' });
+    }
+
+    // Check if the appointment has already been billed through POS
+    const existingVenta = await prisma.venta.findUnique({
+      where: { citaId: id }
+    });
+
+    // A3 & P1.8 FIX: Idempotency check - only increment visits if status changed to COMPLETADA and not already billed
     const shouldIncrementNoShow = estado === 'NO_SHOW' && existingCita.estado !== 'NO_SHOW' && Boolean(existingCita.clienteId);
-    const shouldIncrementVisits = estado === 'COMPLETADA' && existingCita.estado !== 'COMPLETADA' && Boolean(existingCita.clienteId);
+    const shouldIncrementVisits = estado === 'COMPLETADA' && existingCita.estado !== 'COMPLETADA' && Boolean(existingCita.clienteId) && !existingVenta;
 
     const [cita] = await prisma.$transaction([
       prisma.cita.update({

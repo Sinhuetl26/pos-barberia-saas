@@ -299,7 +299,7 @@ async function runTests() {
   );
 
   // 6.2 Reserva legítima en fecha futura (garantizada en día laboral)
-  const randomDays = 15 + Math.floor(Math.random() * 50);
+  const randomDays = 100 + Math.floor(Math.random() * 200);
   const futureDate = new Date(Date.now() + randomDays * 24 * 3600000);
   if (futureDate.getDay() === 0) {
     futureDate.setDate(futureDate.getDate() + 1); // No domingo

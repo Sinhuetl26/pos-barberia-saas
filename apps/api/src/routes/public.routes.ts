@@ -17,6 +17,28 @@ import {
 
 export const publicRouter = Router();
 
+// In-memory sliding rate limiter for public booking endpoints
+const publicRateLimits = new Map<string, { count: number; resetAt: number }>();
+function publicRateLimiter(limit: number = 60, windowMs: number = 60000) {
+  return (req: any, res: any, next: any) => {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const now = Date.now();
+    const entry = publicRateLimits.get(ip) || { count: 0, resetAt: now + windowMs };
+    if (now > entry.resetAt) {
+      entry.count = 0;
+      entry.resetAt = now + windowMs;
+    }
+    entry.count++;
+    publicRateLimits.set(ip, entry);
+    if (entry.count > limit) {
+      return res.status(429).json({ error: 'Demasiadas consultas públicas. Intente más tarde.' });
+    }
+    next();
+  };
+}
+
+publicRouter.use(publicRateLimiter(60, 60000));
+
 // Get public barber shop profile and branch data by slug or id
 publicRouter.get('/barberia/:slug', async (req, res) => {
   try {
@@ -445,9 +467,11 @@ publicRouter.post('/reservar', async (req, res) => {
 publicRouter.get('/cita/:codigo', async (req, res) => {
   try {
     const { codigo } = req.params;
+    const { slug } = req.query;
     const cita = await prisma.cita.findFirst({
       where: {
-        OR: [{ codigoReserva: codigo }, { tokenCancelacion: codigo }]
+        OR: [{ codigoReserva: codigo }, { tokenCancelacion: codigo }],
+        ...(slug ? { tenant: { OR: [{ slug: String(slug) }, { id: String(slug) }] } } : {})
       },
       include: {
         cliente: { select: { nombre: true } },
@@ -461,7 +485,8 @@ publicRouter.get('/cita/:codigo', async (req, res) => {
       return res.status(404).json({ error: 'No se encontró ninguna cita con ese código' });
     }
 
-    // C7 FIX: Never leak tokenCancelacion or private notes to public short-code query
+    // C7 & P1.10 FIX: Never leak tokenCancelacion, private notes or full PII to public query
+    const clienteName = cita.cliente?.nombre || 'Cliente';
     res.json({
       codigoReserva: cita.codigoReserva,
       fechaHora: cita.fechaHora,
@@ -470,7 +495,7 @@ publicRouter.get('/cita/:codigo', async (req, res) => {
       servicios: cita.serviciosJson ? JSON.parse(cita.serviciosJson) : [],
       precioEstimado: cita.precioEstimado,
       estado: cita.estado,
-      cliente: { nombre: cita.cliente?.nombre || 'Cliente' },
+      cliente: { nombre: clienteName },
       barbero: { nombre: cita.barbero?.nombre || 'Barbero' },
       sucursal: {
         nombre: cita.sucursal?.nombre,

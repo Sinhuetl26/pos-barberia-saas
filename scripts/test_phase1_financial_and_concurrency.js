@@ -6,15 +6,20 @@
 const API_BASE = 'http://localhost:3001/api';
 
 // Direct unit tests of pure business logic services
+const fs = require('fs');
+const path = require('path');
 let pricingService, cashService, bookingService;
 try {
   pricingService = require('../apps/api/dist/services/pricing.service');
   cashService = require('../apps/api/dist/services/cash.service');
   bookingService = require('../apps/api/dist/services/booking.service');
 } catch (e) {
-  pricingService = require('../apps/api/src/services/pricing.service');
-  cashService = require('../apps/api/src/services/cash.service');
-  bookingService = require('../apps/api/src/services/booking.service');
+  const { execSync } = require('child_process');
+  console.log('⚙️ Compilando apps/api para pruebas unitarias de TypeScript...');
+  execSync('npm run build:api', { cwd: path.join(__dirname, '..'), stdio: 'inherit' });
+  pricingService = require('../apps/api/dist/services/pricing.service');
+  cashService = require('../apps/api/dist/services/cash.service');
+  bookingService = require('../apps/api/dist/services/booking.service');
 }
 const { calculateSaleTotals } = pricingService;
 const { calculateCashShiftSummary } = cashService;
@@ -145,6 +150,19 @@ async function runPhase1Tests() {
   // Conteo real con faltante: 1,400 -> Faltante de $50
   const summaryShort = calculateCashShiftSummary(1000, mockVentas, 1400);
   assert(summaryShort.descuadre === -50 && summaryShort.descuadrado, 'Detección correcta de faltante en arqueo ciego (-$50)');
+
+  // 2.3 P0.5 FIX: Arqueo con movimientos de caja (Ingreso extra + Gasto menor + Retiro)
+  const mockMovimientos = [
+    { tipo: 'INGRESO', monto: 200, concepto: 'Fondo de cambio adicional' },
+    { tipo: 'GASTO_MENOR', monto: 50, concepto: 'Compra de garrafón de agua' },
+    { tipo: 'RETIRO', monto: 100, concepto: 'Retiro parcial a caja fuerte' }
+  ];
+  // 1,000 (fondo) + 450 (ventas) + 200 (ingreso) - 50 (gasto) - 100 (retiro) = 1,500
+  const summaryMovs = calculateCashShiftSummary(1000, mockVentas, 1500, mockMovimientos);
+  assert(summaryMovs.totalIngresos === 200, 'Ingresos de caja registrados ($200)', `Obtenido: ${summaryMovs.totalIngresos}`);
+  assert(summaryMovs.totalGastosMenores === 50, 'Gastos menores registrados ($50)', `Obtenido: ${summaryMovs.totalGastosMenores}`);
+  assert(summaryMovs.totalRetiros === 100, 'Retiros de caja registrados ($100)', `Obtenido: ${summaryMovs.totalRetiros}`);
+  assert(summaryMovs.efectivoEsperado === 1500, 'Efectivo esperado reconciliado con movimientos ($1,500)', `Obtenido: ${summaryMovs.efectivoEsperado}`);
 
   // ----------------------------------------------------
   // TEST SUITE 3: Validaciones de Esquema con Zod

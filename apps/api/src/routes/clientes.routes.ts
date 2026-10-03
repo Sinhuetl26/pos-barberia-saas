@@ -5,7 +5,7 @@
 
 import { Router, Response } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { WhatsAppService } from '../services/whatsapp.service';
 
 export const clientesRouter = Router();
@@ -148,8 +148,51 @@ clientesRouter.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
       }
     }
 
+    // Compute favorite service
+    const serviceCounts: Record<string, number> = {};
+    cliente.citas.forEach(c => {
+      const s = c.nombreServicio || 'Corte';
+      serviceCounts[s] = (serviceCounts[s] || 0) + 1;
+    });
+    let servicioFavorito = 'Corte';
+    let maxServCount = 0;
+    for (const [srv, count] of Object.entries(serviceCounts)) {
+      if (count > maxServCount) {
+        maxServCount = count;
+        servicioFavorito = srv;
+      }
+    }
+
+    const mappedMembresias = (cliente.membresias || []).map(m => ({
+      id: m.id,
+      nombrePlan: m.nombrePlan,
+      planNombre: m.nombrePlan,
+      cortesRestantes: m.cortesRestantes,
+      cortesIncluidos: m.cortesIncluidos,
+      precioMensual: Number(m.precioMensual),
+      fechaInicio: m.fechaInicio,
+      fechaFin: m.fechaFin,
+      fechaRenovacion: m.fechaFin,
+      activo: m.activo,
+      estado: m.activo ? 'ACTIVA' : 'VENCIDA'
+    }));
+
+    const metricas = {
+      gastoTotal: Number(cliente.gastoTotal),
+      totalCitas: cliente.citas.length || cliente.totalVisitas,
+      visitasTotales: cliente.totalVisitas,
+      barberoFavorito: barberoFavorito || 'Sin preferencia',
+      servicioFavorito: servicioFavorito,
+      noShows: cliente.noShows
+    };
+
     res.json({
-      cliente,
+      cliente: {
+        ...cliente,
+        membresias: mappedMembresias
+      },
+      metricas,
+      membresias: mappedMembresias,
       barberoFavorito: barberoFavorito || 'Sin preferencia',
       visitasTotales: cliente.totalVisitas,
       gastoTotal: Number(cliente.gastoTotal),
@@ -199,12 +242,19 @@ clientesRouter.post('/', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// 5. Update client
+// 5. Update client (P0.1 FIX: Enforce tenant isolation)
 clientesRouter.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
     const { nombre, telefono, email, notas, notasEstilo, fechaNacimiento } = req.body;
+
+    const existing = await prisma.clienteFinal.findFirst({
+      where: { id, tenantId, eliminadoEn: null }
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Cliente no encontrado en esta barbería' });
+    }
 
     const cliente = await prisma.clienteFinal.update({
       where: { id },
@@ -224,17 +274,20 @@ clientesRouter.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// 6. Assign Client Recurring Membership
+// 6. Assign Client Recurring Membership (P1.11 FIX: Support both API & UI key contracts)
 clientesRouter.post('/:id/membresia', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id: clienteId } = req.params;
-    const { nombrePlan = 'Club Elite 2 Cortes', cortes = 2, precio = 350, vigenciaDias = 30 } = req.body;
+    const nombrePlan = req.body.nombrePlan || req.body.planNombre || 'Club Elite 2 Cortes';
+    const cortes = Number(req.body.cortes ?? req.body.cortesRestantes ?? 2);
+    const precio = Number(req.body.precio ?? req.body.precioMensual ?? 350);
+    const vigenciaDias = Number(req.body.vigenciaDias ?? 30);
 
     const cliente = await prisma.clienteFinal.findFirst({
-      where: { id: clienteId, tenantId }
+      where: { id: clienteId, tenantId, eliminadoEn: null }
     });
-    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado' });
+    if (!cliente) return res.status(404).json({ error: 'Cliente no encontrado en esta barbería' });
 
     const fechaFin = new Date(Date.now() + vigenciaDias * 24 * 60 * 60 * 1000);
 
@@ -270,11 +323,18 @@ clientesRouter.post('/:id/membresia', async (req: AuthenticatedRequest, res: Res
   }
 });
 
-// 7. ARCO / LFPDPPP: Soft delete client data
-clientesRouter.delete('/:id', async (req: AuthenticatedRequest, res: Response) => {
+// 7. ARCO / LFPDPPP: Soft delete client data (P0.1 FIX: Enforce tenant isolation & RBAC)
+clientesRouter.delete('/:id', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
+
+    const existing = await prisma.clienteFinal.findFirst({
+      where: { id, tenantId, eliminadoEn: null }
+    });
+    if (!existing) {
+      return res.status(404).json({ error: 'Cliente no encontrado en esta barbería' });
+    }
 
     await prisma.clienteFinal.update({
       where: { id },

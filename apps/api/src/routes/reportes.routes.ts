@@ -30,13 +30,14 @@ reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
       startDate = new Date(now.getFullYear(), 0, 1);
     }
 
-    // A5 FIX: Filter out CANCELADA sales from financial metrics
+    // A5 & P1.12 FIX: Filter out CANCELADA sales and apply barberoId filter uniformly across all cards
     const ventas = await prisma.venta.findMany({
       where: {
         tenantId,
         fecha: { gte: startDate },
         estado: { not: 'CANCELADA' },
-        ...(sucursalId ? { sucursalId } : {})
+        ...(sucursalId ? { sucursalId } : {}),
+        ...(barberoId ? { barberoId } : {})
       },
       include: {
         items: true,
@@ -102,7 +103,10 @@ reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
     const noShowRate = totalCitas > 0 ? (noShows / totalCitas) * 100 : 0;
 
     const allComisiones = await prisma.comision.findMany({
-      where: { tenantId }
+      where: {
+        tenantId,
+        ...(barberoId ? { barberoId } : {})
+      }
     });
     const comisionesPagadas = allComisiones.filter(c => c.pagada).reduce((s, c) => s + Number(c.monto), 0);
     const comisionesPendientes = allComisiones.filter(c => !c.pagada).reduce((s, c) => s + Number(c.monto), 0);
