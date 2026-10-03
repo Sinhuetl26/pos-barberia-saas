@@ -23,7 +23,10 @@ RUN npm ci
 # Copy full source tree
 COPY . .
 
-# Generate Prisma Client
+# P1.1 FIX: Switch Prisma schema to PostgreSQL for Docker production container
+RUN node scripts/switch_db.js postgres
+
+# Generate Prisma Client for PostgreSQL
 RUN npm run db:generate
 
 # Compile API TypeScript to CommonJS (dist/)
@@ -55,6 +58,9 @@ COPY --from=builder /app/packages/database ./packages/database
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+
+RUN chmod +x ./scripts/docker-entrypoint.sh
 
 # Switch to unprivileged user
 USER systech
@@ -65,6 +71,8 @@ EXPOSE 3001
 # Health check to ensure service readiness
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:3001/api/health || exit 1
+
+ENTRYPOINT ["./scripts/docker-entrypoint.sh"]
 
 # Start server using dumb-init for proper PID 1 signal forwarding
 CMD ["dumb-init", "node", "apps/api/dist/index.js"]

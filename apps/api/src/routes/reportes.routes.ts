@@ -5,6 +5,7 @@
 import { Router } from 'express';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { sanitizeCsvCell } from '../utils/security';
 
 export const reportesRouter = Router();
 
@@ -243,17 +244,28 @@ reportesRouter.get('/exportar/ventas-csv', async (req: AuthenticatedRequest, res
     });
 
     const header = 'Folio,Fecha,Sucursal,Barbero,Cliente,Subtotal,Descuento,Propina,Total,MetodoPago,Estado\n';
+
     const rows = ventas.map(v => {
       const fecha = new Date(v.fecha).toISOString().split('T')[0];
-      const cliente = (v.cliente?.nombre || 'General').replace(/,/g, ' ');
-      const barbero = v.barbero.nombre.replace(/,/g, ' ');
-      const sucursal = v.sucursal.nombre.replace(/,/g, ' ');
-      return `${v.folio},${fecha},"${sucursal}","${barbero}","${cliente}",${v.subtotal},${v.descuento},${v.propina},${v.total},${v.metodoPago},${v.estado}`;
+      return [
+        sanitizeCsvCell(v.folio),
+        sanitizeCsvCell(fecha),
+        sanitizeCsvCell(v.sucursal?.nombre || 'Sucursal Principal'),
+        sanitizeCsvCell(v.barbero?.nombre || 'Barbero'),
+        sanitizeCsvCell(v.cliente?.nombre || 'General'),
+        Number(v.subtotal || 0).toFixed(2),
+        Number(v.descuento || 0).toFixed(2),
+        Number(v.propina || 0).toFixed(2),
+        Number(v.total || 0).toFixed(2),
+        sanitizeCsvCell(v.metodoPago),
+        sanitizeCsvCell(v.estado)
+      ].join(',');
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="ventas_systech.csv"');
-    res.send(header + rows);
+    // Prepend UTF-8 BOM (\uFEFF) so Excel respects accents and special characters without encoding corruption
+    res.send('\uFEFF' + header + rows);
   } catch (error) {
     res.status(500).send('Error al exportar ventas');
   }

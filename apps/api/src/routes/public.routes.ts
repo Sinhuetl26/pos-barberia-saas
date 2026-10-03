@@ -14,6 +14,7 @@ import {
   canCancelAppointment,
   hasTimeConflict
 } from '../services/booking.service';
+import { escapeHtml } from '../utils/security';
 
 export const publicRouter = Router();
 
@@ -797,16 +798,16 @@ publicRouter.get('/cita/:codigo/imprimir-carta', async (req, res) => {
   <div class="sheet">
     <div class="header">
       <div>
-        <h1 class="brand-title">${cita.tenant?.nombre || 'Barbería'}</h1>
-        <div class="brand-slogan">${(cita.tenant as any)?.slogan || 'El arte del corte clásico y diseño de vanguardia'}</div>
+        <h1 class="brand-title">${escapeHtml(cita.tenant?.nombre || 'Barbería')}</h1>
+        <div class="brand-slogan">${escapeHtml((cita.tenant as any)?.slogan || 'El arte del corte clásico y diseño de vanguardia')}</div>
         <div class="brand-contact">
-          📍 ${cita.sucursal?.nombre || 'Sucursal Principal'} — ${cita.sucursal?.direccion || 'Centro'}<br>
-          📞 Tel / WhatsApp: ${cita.sucursal?.telefono || cita.tenant?.telefono || 'Disponible en recepción'}
+          📍 ${escapeHtml(cita.sucursal?.nombre || 'Sucursal Principal')} — ${escapeHtml(cita.sucursal?.direccion || 'Centro')}<br>
+          📞 Tel / WhatsApp: ${escapeHtml(cita.sucursal?.telefono || cita.tenant?.telefono || 'Disponible en recepción')}
         </div>
       </div>
       <div class="folio-box">
         <div class="folio-label">Folio de Reserva</div>
-        <div class="folio-code">${cita.codigoReserva || 'RES-000000'}</div>
+        <div class="folio-code">${escapeHtml(cita.codigoReserva || 'RES-000000')}</div>
         <div style="font-size: 10px; color: #15803d; font-weight: 700; margin-top: 4px;">● CONFIRMADA</div>
       </div>
     </div>
@@ -818,26 +819,26 @@ publicRouter.get('/cita/:codigo/imprimir-carta', async (req, res) => {
     <div class="details-grid">
       <div class="info-card">
         <div class="info-title">📅 Fecha y Hora Programada</div>
-        <div class="info-value-big">${fechaFormateada}</div>
-        <div class="info-sub" style="font-size: 15px; font-weight: 700; color: #1c1917; margin-top: 4px;">⏰ ${horaFormateada} (${cita.duracionMinutos} minutos)</div>
+        <div class="info-value-big">${escapeHtml(fechaFormateada)}</div>
+        <div class="info-sub" style="font-size: 15px; font-weight: 700; color: #1c1917; margin-top: 4px;">⏰ ${escapeHtml(horaFormateada)} (${Number(cita.duracionMinutos)} minutos)</div>
       </div>
 
       <div class="info-card">
         <div class="info-title">👤 Cliente</div>
-        <div class="info-value-big">${cita.cliente?.nombre || 'Cliente'}</div>
-        <div class="info-sub">Tel: ${cita.cliente?.telefono ? '••• ••• ' + cita.cliente.telefono.slice(-4) : 'Registrado'}</div>
+        <div class="info-value-big">${escapeHtml(cita.cliente?.nombre || 'Cliente')}</div>
+        <div class="info-sub">Tel: ${cita.cliente?.telefono ? '••• ••• ' + escapeHtml(cita.cliente.telefono.slice(-4)) : 'Registrado'}</div>
       </div>
 
       <div class="info-card">
         <div class="info-title">✂️ Barbero Asignado</div>
-        <div class="info-value-big">${cita.barbero?.nombre || 'Barbero de Turno'}</div>
-        <div class="info-sub">${(cita.barbero as any)?.especialidad || 'Especialista en Estilo y Barbería'}</div>
+        <div class="info-value-big">${escapeHtml(cita.barbero?.nombre || 'Barbero de Turno')}</div>
+        <div class="info-sub">${escapeHtml((cita.barbero as any)?.especialidad || 'Especialista en Estilo y Barbería')}</div>
       </div>
 
       <div class="info-card">
         <div class="info-title">🏢 Ubicación y Sucursal</div>
-        <div class="info-value-big">${cita.sucursal?.nombre || 'Sucursal Principal'}</div>
-        <div class="info-sub">${cita.sucursal?.direccion || 'Consultar recepción'}</div>
+        <div class="info-value-big">${escapeHtml(cita.sucursal?.nombre || 'Sucursal Principal')}</div>
+        <div class="info-sub">${escapeHtml(cita.sucursal?.direccion || 'Consultar recepción')}</div>
       </div>
     </div>
 
@@ -852,8 +853,8 @@ publicRouter.get('/cita/:codigo/imprimir-carta', async (req, res) => {
       <tbody>
         ${servicios.map((s: any) => `
           <tr>
-            <td style="font-weight: 600;">${s.nombre || 'Servicio'}</td>
-            <td>${s.duracion || s.duracionMinutos || 30} min</td>
+            <td style="font-weight: 600;">${escapeHtml(s.nombre || 'Servicio')}</td>
+            <td>${Number(s.duracion || s.duracionMinutos || 30)} min</td>
             <td class="col-right font-mono" style="font-weight: 600;">$${Number(s.precio || s.precioVenta || 0).toFixed(2)} MXN</td>
           </tr>
         `).join('')}

@@ -82,33 +82,33 @@ export class StripeBillingService {
     const eventId = event.id;
     const eventType = event.type;
 
-    // 1. Idempotency Check: if event already processed, do not repeat side effects
-    const existing = await prisma.eventoPago.findUnique({
-      where: { eventId }
-    });
-
-    if (existing && existing.procesado) {
-      return {
-        received: true,
-        alreadyProcessed: true,
-        action: `SKIP_DUPLICATE_${eventType}`
-      };
-    }
-
-    // 2. Upsert initial pending record in EventoPago
-    await prisma.eventoPago.upsert({
-      where: { eventId },
-      create: {
-        eventId,
-        proveedor: 'STRIPE',
-        tipoEvento: eventType,
-        payload: JSON.stringify(event),
-        procesado: false
-      },
-      update: {
-        payload: JSON.stringify(event)
+    // P3.5 FIX: Atomic claim pattern for concurrent webhooks
+    // Attempt to claim the event record via unique constraint insertion.
+    // If it already exists, another thread/replica is processing it or has already processed it.
+    try {
+      await prisma.eventoPago.create({
+        data: {
+          eventId,
+          proveedor: 'STRIPE',
+          tipoEvento: eventType,
+          payload: JSON.stringify(event),
+          procesado: false
+        }
+      });
+    } catch (claimErr: any) {
+      // P2002: Unique constraint failed on eventId
+      if (claimErr.code === 'P2002' || claimErr.message?.includes('Unique constraint')) {
+        const existing = await prisma.eventoPago.findUnique({ where: { eventId } });
+        if (existing) {
+          return {
+            received: true,
+            alreadyProcessed: true,
+            action: `SKIP_CONCURRENT_DUPLICATE_${eventType}`
+          };
+        }
       }
-    });
+      throw claimErr;
+    }
 
     let actionTaken = 'NONE';
     let targetTenantId: string | undefined;
@@ -121,14 +121,20 @@ export class StripeBillingService {
           targetTenantId = (session.client_reference_id || session.metadata?.tenantId) as string;
           const customerId = session.customer as string;
           const subscriptionId = session.subscription as string;
+          const planComprado = (session.metadata?.plan as string) || 'PRO';
 
           if (targetTenantId) {
+            const limiteSucursales = planComprado === 'PRO' ? 999 : 1;
+            const limiteBarberos = planComprado === 'PRO' ? 999 : 3;
+            const montoMensual = planComprado === 'PRO' ? 999 : 499;
+
             await prisma.suscripcion.upsert({
               where: { tenantId: targetTenantId },
               update: {
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscriptionId,
                 estadoPago: 'active',
+                montoMensual,
                 fechaUltimoCobro: new Date(),
                 fechaProximoCobro: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
               },
@@ -137,15 +143,21 @@ export class StripeBillingService {
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscriptionId,
                 estadoPago: 'active',
-                montoMensual: 499,
+                montoMensual,
                 fechaUltimoCobro: new Date(),
                 fechaProximoCobro: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
               }
             });
 
+            // P1.4 FIX: Apply purchased plan and resource limits to tenant
             await prisma.tenant.update({
               where: { id: targetTenantId },
-              data: { estado: 'ACTIVO' }
+              data: {
+                estado: 'ACTIVO',
+                plan: planComprado,
+                limiteSucursales,
+                limiteBarberos
+              }
             });
 
             await prisma.auditoriaLog.create({
@@ -153,7 +165,7 @@ export class StripeBillingService {
                 tenantId: targetTenantId,
                 usuarioEmail: 'stripe@webhook.systech.mx',
                 accion: 'CHECKOUT_COMPLETADO',
-                detalles: `Suscripción activada con Stripe (Customer: ${customerId}, Sub: ${subscriptionId})`
+                detalles: `Suscripción activada con Stripe (Plan: ${planComprado}, Customer: ${customerId}, Sub: ${subscriptionId})`
               }
             });
             actionTaken = 'CHECKOUT_ACTIVATED';

@@ -87,15 +87,21 @@ citasRouter.post('/', async (req: AuthenticatedRequest, res) => {
     const barbero = await prisma.barbero.findFirst({ where: { id: barberoId, sucursal: { tenantId } } });
     if (!barbero) return res.status(400).json({ code: 'BAD_REQUEST', error: 'Barbero no válido para su barbería' });
 
-    // P1.6 RBAC: If logged-in user is BARBERO, verify they only create appointments for themselves
+    // P1.2 & P1.6 RBAC: If logged-in user is BARBERO, verify they only create appointments for themselves (fail closed)
     if (req.ctx!.rol === 'BARBERO') {
       const userBarbero = await prisma.barbero.findFirst({
         where: {
           sucursal: { tenantId },
-          email: req.ctx!.email
+          OR: [
+            { email: req.ctx!.email },
+            { id: (req.ctx as any)?.barberoId || undefined }
+          ]
         }
       });
-      if (userBarbero && barberoId !== userBarbero.id) {
+      if (!userBarbero) {
+        return res.status(403).json({ code: 'BARBER_PROFILE_NOT_LINKED', error: 'Cuenta de barbero no vinculada a un perfil de barbero activo.' });
+      }
+      if (barberoId !== userBarbero.id) {
         return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede agendar citas en su propia agenda' });
       }
     }
@@ -169,15 +175,21 @@ citasRouter.put('/:id/status', async (req: AuthenticatedRequest, res) => {
       return res.status(404).json({ code: 'NOT_FOUND', error: 'Cita no encontrada en su barbería' });
     }
 
-    // P1.6 RBAC: If logged in as BARBERO, verify they only manage their own appointments
+    // P1.2 & P1.6 RBAC: If logged in as BARBERO, verify they only manage their own appointments (fail closed)
     if (req.ctx!.rol === 'BARBERO') {
       const userBarbero = await prisma.barbero.findFirst({
         where: {
           sucursal: { tenantId },
-          email: req.ctx!.email
+          OR: [
+            { email: req.ctx!.email },
+            { id: (req.ctx as any)?.barberoId || undefined }
+          ]
         }
       });
-      if (userBarbero && existingCita.barberoId !== userBarbero.id) {
+      if (!userBarbero) {
+        return res.status(403).json({ code: 'BARBER_PROFILE_NOT_LINKED', error: 'Cuenta de barbero no vinculada a un perfil de barbero activo.' });
+      }
+      if (existingCita.barberoId !== userBarbero.id) {
         return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede gestionar sus propias citas' });
       }
     }

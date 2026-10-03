@@ -35,27 +35,33 @@ export interface AuthenticatedRequest extends Request {
  * Resolves user identity, tenantId, and role strictly from verified Bearer JWT.
  */
 export const requireAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  let token: string | undefined;
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7).trim();
-  } else if (typeof req.query.token === 'string' && req.query.token.trim()) {
-    token = req.query.token.trim();
-  }
+  // P2.2 FIX: Enforce Referrer-Policy to prevent leaking URLs
+  res.setHeader('Referrer-Policy', 'no-referrer');
 
-  if (!token) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ code: 'NO_AUTH', error: 'Se requiere token de autenticación Bearer' });
   }
+
+  const token = authHeader.substring(7).trim();
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: string; tid: string; rol: string; email: string };
 
-    // Check user active status in database (A14)
+    // Check user active status and live role/tenant in database (A14 & P3.3 FIX)
     const dbUser = await prisma.usuario.findUnique({
       where: { id: payload.sub },
-      select: { id: true, activo: true, rol: true, eliminadoEn: true }
+      select: { id: true, activo: true, rol: true, eliminadoEn: true, tenantId: true, barberoId: true }
     });
     if (!dbUser || !dbUser.activo || dbUser.eliminadoEn) {
       return res.status(401).json({ code: 'USUARIO_INACTIVO', error: 'Cuenta de usuario inactiva o deshabilitada' });
+    }
+
+    // P3.3 FIX: Verify token claims match live database identity
+    if (dbUser.rol !== payload.rol) {
+      return res.status(401).json({ code: 'TOKEN_ROLE_MISMATCH', error: 'El rol de usuario ha cambiado. Inicie sesión nuevamente.' });
+    }
+    if (dbUser.tenantId && payload.tid !== dbUser.tenantId) {
+      return res.status(401).json({ code: 'TOKEN_TENANT_MISMATCH', error: 'La asociación de barbería ha cambiado. Inicie sesión nuevamente.' });
     }
 
     let tenantId = payload.tid;

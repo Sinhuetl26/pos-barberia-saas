@@ -7,12 +7,13 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, JWT_SECRET, AuthenticatedRequest } from '../middleware/auth';
+import { loginRateLimiter, registerRateLimiter, onboardingRateLimiter } from '../middleware/rateLimit';
 import { loginSchema, registerSchema, validateBody } from '../validators/schemas';
 
 export const authRouter = Router();
 
-// Login endpoint
-authRouter.post('/login', validateBody(loginSchema), async (req, res) => {
+// Login endpoint (P1.6 FIX: Rate limited against brute-force)
+authRouter.post('/login', loginRateLimiter, validateBody(loginSchema), async (req, res) => {
   try {
     const { email, password } = req.body;
     const cleanEmail = email.trim().toLowerCase();
@@ -82,8 +83,8 @@ authRouter.post('/login', validateBody(loginSchema), async (req, res) => {
   }
 });
 
-// Self-service register endpoint
-authRouter.post('/register', validateBody(registerSchema), async (req, res) => {
+// Self-service register endpoint (P1.6 FIX: Rate limited against registration abuse)
+authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), async (req, res) => {
   try {
     const { nombreBarberia, nombreDueno, email, password, telefono, direccion, plan = 'PRO' } = req.body;
     const cleanEmail = email.trim().toLowerCase();
@@ -365,8 +366,8 @@ authRouter.get('/onboarding/templates', (req, res) => {
   res.json(templates);
 });
 
-// Setup Wizard endpoint (P0.2 FIX: Strict validation, strong password requirement, async bcrypt, and response sanitization)
-authRouter.post('/onboarding/setup', async (req, res) => {
+// Setup Wizard endpoint (P1.6 FIX: Rate limited against automated spam setups)
+authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => {
   try {
     const {
       nombreBarberia,

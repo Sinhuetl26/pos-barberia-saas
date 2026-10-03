@@ -31,6 +31,7 @@ async function request(endpoint, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'x-test-suite': 'true',
       ...(options.headers || {})
     }
   });
@@ -251,7 +252,7 @@ async function runPhase1Tests() {
 
   if (sucursal && barbero) {
     // Definir un horario futuro único garantizado que no sea domingo (día de descanso) ni ocupado
-    const randomDays = 30 + Math.floor(Math.random() * 60);
+    const randomDays = 400 + Math.floor(Math.random() * 300);
     const raceSlot = new Date(Date.now() + randomDays * 24 * 3600000);
     if (raceSlot.getDay() === 0) {
       raceSlot.setDate(raceSlot.getDate() + 1); // Si cae en domingo, mover al lunes

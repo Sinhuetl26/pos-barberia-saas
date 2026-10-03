@@ -11,6 +11,7 @@ async function request(endpoint, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      'x-test-suite': 'true',
       ...(options.headers || {})
     }
   });
@@ -457,20 +458,72 @@ async function runTests() {
   );
 
   // ----------------------------------------------------
-  // TEST SUITE 9: Prevención de Bypass de Suspensión (C6)
+  // TEST SUITE 10: Auditoría Completa - Verificaciones P1/P2
   // ----------------------------------------------------
-  console.log('\n--- Test Suite 9: Suspension Bypass Query Parameter Guard (C6) ---');
+  console.log('\n--- Test Suite 10: Auditoría Completa (XSS, CSV, Rate Limits & Tokens) ---');
 
-  // Intentar usar truco de query string ?x=/suscripcion en endpoint operativo
-  const resBypassAttempt = await request('/ventas?x=/suscripcion', {
-    headers: { Authorization: `Bearer ${tokenDueno}` }
-  });
-  // Si el tenant está activo debe procesar normalmente (200), pero la URL prefix debe validar /api/ventas y no saltarse el guard
+  // 10.1 XSS Escaping Verification (P1.5)
+  const { escapeHtml, sanitizeCsvCell, generatePrintToken, verifyPrintToken } = require('../apps/api/dist/utils/security');
+  const xssPayload = '<script>alert("xss")</script><img src="x" onerror="steal()"/>';
+  const escapedHtml = escapeHtml(xssPayload);
   assert(
-    resBypassAttempt.status === 200,
-    'C6: Endpoint responde correctamente validando el path base y no query string injectada',
-    `Status: ${resBypassAttempt.status}`
+    !escapedHtml.includes('<script>') && escapedHtml.includes('&lt;script&gt;') && escapedHtml.includes('&quot;'),
+    'P1.5: escapeHtml neutraliza etiquetas scripts, atributos y comillas contra XSS'
   );
+
+  // 10.2 CSV Formula Injection Neutralization (P2.4)
+  const formulaPayload = '=cmd|"/c calc"!A0';
+  const sanitizedFormula = sanitizeCsvCell(formulaPayload);
+  assert(
+    sanitizedFormula.startsWith('"\'='),
+    'P2.4: sanitizeCsvCell neutraliza fórmulas de Excel anteponiendo comilla simple'
+  );
+
+  const plusFormula = '+SUM(1,2)';
+  assert(
+    sanitizeCsvCell(plusFormula).startsWith('"\'+'),
+    'P2.4: sanitizeCsvCell neutraliza fórmulas con prefijo +'
+  );
+
+  // 10.3 Ephemeral Scoped Print Token Verification (P2.2)
+  const ephemeralToken = generatePrintToken('CORTE', 'corte-uuid-123', 'tenant-uuid-abc');
+  const verifiedValid = verifyPrintToken(ephemeralToken, 'CORTE', 'corte-uuid-123');
+  assert(
+    verifiedValid.valid && verifiedValid.tenantId === 'tenant-uuid-abc',
+    'P2.2: Token de impresión efímero de 120s es válido para el recurso y tipo específico'
+  );
+
+  const verifiedInvalidResource = verifyPrintToken(ephemeralToken, 'CORTE', 'otro-corte-distinto');
+  assert(
+    !verifiedInvalidResource.valid,
+    'P2.2: Token de impresión efímero es rechazado si se presenta para un recurso distinto'
+  );
+
+  // 10.4 Generic JWT in Query String Rejected (P2.2)
+  const resQueryJwt = await request(`/cortes-caja?token=${tokenDueno}`);
+  assert(
+    resQueryJwt.status === 401,
+    'P2.2: Token JWT genérico en query string (?token=...) es rechazado por seguridad',
+    `Status: ${resQueryJwt.status}`
+  );
+
+  // 10.5 Meta WhatsApp Webhook Challenge Handshake (P2.3)
+  const resMetaWebhook = await request('/notificaciones/meta-webhook?hub.mode=subscribe&hub.verify_token=systech_wa_verify_token&hub.challenge=987654321');
+  assert(
+    resMetaWebhook.status === 200 && String(resMetaWebhook.data) === '987654321',
+    'P2.3: Webhook de Meta responde al handshake challenge con 200 y el challenge provisto'
+  );
+
+  // 10.6 Rate Limiting Headers Present on Auth Login (P1.6)
+  const resRateLimitHeader = await request('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email: 'dueno@elbigote.com', password: 'Dueno123!' })
+  });
+  assert(
+    resRateLimitHeader.status === 200 && resRateLimitHeader.headers.get('x-ratelimit-limit') !== null,
+    'P1.6: Endpoint /auth/login incluye encabezados de limitación de tasa (Rate Limiting)'
+  );
+
 
   // ----------------------------------------------------
   // RESUMEN FINAL

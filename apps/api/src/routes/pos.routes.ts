@@ -8,6 +8,7 @@ import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { createSaleSchema, validateBody } from '../validators/schemas';
 import { calculateSaleTotals } from '../services/pricing.service';
+import { escapeHtml } from '../utils/security';
 
 export const posRouter = Router();
 
@@ -72,15 +73,24 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       return res.status(404).json({ code: 'BARBER_NOT_FOUND', error: 'Barbero no encontrado o no pertenece a esta barbería' });
     }
 
-    // P1.6 RBAC: If logged-in user is BARBERO, verify they only attribute sales to themselves
+    // P1.2 & P1.6 RBAC: If logged-in user is BARBERO, verify they only attribute sales to themselves (fail closed)
     if (req.ctx!.rol === 'BARBERO') {
       const userBarbero = await prisma.barbero.findFirst({
         where: {
           sucursal: { tenantId },
-          email: req.ctx!.email
+          OR: [
+            { email: req.ctx!.email },
+            { id: (req.ctx as any)?.barberoId || undefined }
+          ]
         }
       });
-      if (userBarbero && barberoId !== userBarbero.id) {
+      if (!userBarbero) {
+        return res.status(403).json({
+          code: 'BARBER_PROFILE_NOT_LINKED',
+          error: 'Su cuenta con rol de Barbero no está vinculada a un perfil de barbero activo en esta barbería.'
+        });
+      }
+      if (barberoId !== userBarbero.id) {
         return res.status(403).json({
           code: 'FORBIDDEN',
           error: 'Un barbero solo puede registrar ventas asignadas a sí mismo'
@@ -142,6 +152,16 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
       comisionServPct,
       comisionProdPct
     );
+    // P1.3 FIX: Enforce discount authority - Barbers cannot exceed 20% discount without Manager/Owner
+    if (req.ctx!.rol === 'BARBERO' && calculation.subtotal > 0) {
+      const discountPct = (calculation.descuento / calculation.subtotal) * 100;
+      if (discountPct > 20.01) {
+        return res.status(403).json({
+          code: 'DISCOUNT_LIMIT_EXCEEDED',
+          error: `Un barbero solo puede aplicar hasta 20% de descuento autónomo (${discountPct.toFixed(1)}% solicitado). Descuentos mayores requieren autorización de un Dueño o Gerente.`
+        });
+      }
+    }
 
     // P0.3: Authoritative payment validation on server
     const total = calculation.total;
@@ -306,8 +326,20 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
             throw err;
           }
 
-          if (liveProd.stockActual < item.cantidad) {
-            const err: any = new Error(`Stock insuficiente para "${liveProd.nombre}". Existencias actuales: ${liveProd.stockActual}, Solicitadas: ${item.cantidad}`);
+          // P2.1 FIX: Atomic conditional stock decrement (prevents race conditions and negative inventory)
+          const updateResult = await tx.producto.updateMany({
+            where: {
+              id: item.productoId,
+              tenantId,
+              stockActual: { gte: item.cantidad }
+            },
+            data: {
+              stockActual: { decrement: item.cantidad }
+            }
+          });
+
+          if (updateResult.count === 0) {
+            const err: any = new Error(`Stock insuficiente para "${liveProd.nombre}". Existencias actuales insuficientes para completar la venta en concurrencia.`);
             err.statusCode = 400;
             err.code = 'INSUFFICIENT_STOCK';
             throw err;
@@ -315,11 +347,6 @@ posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedReq
 
           const stockAnterior = liveProd.stockActual;
           const stockNuevo = stockAnterior - item.cantidad;
-
-          await tx.producto.update({
-            where: { id: liveProd.id },
-            data: { stockActual: { decrement: item.cantidad } }
-          });
 
           await tx.kardexMovimiento.create({
             data: {
@@ -657,7 +684,7 @@ posRouter.get('/:id/ticket-html', async (req: AuthenticatedRequest, res) => {
     const is58mm = widthParam === '58mm';
     const itemsHtml = venta.items.map(item => `
       <tr>
-        <td style="text-align: left; padding: 2px 0;">${item.cantidad}x ${item.nombreItem}</td>
+        <td style="text-align: left; padding: 2px 0;">${item.cantidad}x ${escapeHtml(item.nombreItem)}</td>
         <td style="text-align: right; padding: 2px 0; white-space: nowrap;">$${Number(item.subtotal).toFixed(2)}</td>
       </tr>
     `).join('');
@@ -666,7 +693,7 @@ posRouter.get('/:id/ticket-html', async (req: AuthenticatedRequest, res) => {
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Ticket ${venta.folio}</title>
+  <title>Ticket ${escapeHtml(venta.folio)}</title>
   <style>
     @page {
       margin: 0;
@@ -745,19 +772,19 @@ posRouter.get('/:id/ticket-html', async (req: AuthenticatedRequest, res) => {
   </div>
 
   <div class="text-center">
-    <div class="header-title">${venta.tenant.nombre.toUpperCase()}</div>
-    <div>${venta.sucursal.nombre}</div>
-    ${venta.sucursal.direccion ? `<div>${venta.sucursal.direccion}</div>` : ''}
-    ${venta.sucursal.telefono ? `<div>Tel: ${venta.sucursal.telefono}</div>` : ''}
+    <div class="header-title">${escapeHtml(venta.tenant.nombre.toUpperCase())}</div>
+    <div>${escapeHtml(venta.sucursal.nombre)}</div>
+    ${venta.sucursal.direccion ? `<div>${escapeHtml(venta.sucursal.direccion)}</div>` : ''}
+    ${venta.sucursal.telefono ? `<div>Tel: ${escapeHtml(venta.sucursal.telefono)}</div>` : ''}
   </div>
 
   <div class="divider"></div>
 
   <div>
-    <div><strong>Folio:</strong> ${venta.folio}</div>
+    <div><strong>Folio:</strong> ${escapeHtml(venta.folio)}</div>
     <div><strong>Fecha:</strong> ${new Date(venta.fecha).toLocaleString('es-MX')}</div>
-    <div><strong>Atendido por:</strong> ${venta.barbero.nombre}</div>
-    ${venta.cliente ? `<div><strong>Cliente:</strong> ${venta.cliente.nombre}</div>` : ''}
+    <div><strong>Atendido por:</strong> ${escapeHtml(venta.barbero.nombre)}</div>
+    ${venta.cliente ? `<div><strong>Cliente:</strong> ${escapeHtml(venta.cliente.nombre)}</div>` : ''}
   </div>
 
   <div class="divider"></div>
@@ -799,7 +826,7 @@ posRouter.get('/:id/ticket-html', async (req: AuthenticatedRequest, res) => {
 
   <div class="divider"></div>
 
-  <div><strong>Método de Pago:</strong> ${venta.metodoPago}</div>
+  <div><strong>Método de Pago:</strong> ${escapeHtml(venta.metodoPago)}</div>
 
   <div class="divider"></div>
 

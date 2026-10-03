@@ -37,6 +37,13 @@ model Tenant {
   emailContacto     String?
   direccion         String?
   logoUrl           String?
+  slogan            String?
+  descripcion       String?
+  portadaUrl        String?
+  instagram         String?
+  facebook          String?
+  tiktok            String?
+  whatsappPublico   String?
   limiteSucursales  Int          @default(1) // 1 for BASICO, 999 for PRO
   limiteBarberos    Int          @default(3) // 3 for BASICO, 999 for PRO
   fechaCreacion     DateTime     @default(now())
@@ -114,6 +121,7 @@ model Usuario {
   nombre       String
   telefono     String?
   sucursalId   String?
+  barberoId    String?
   activo       Boolean     @default(true)
   fechaAlta    DateTime    @default(now())
   eliminadoEn  DateTime?
@@ -129,6 +137,9 @@ model Barbero {
   telefono             String?
   email                String?
   avatarUrl            String?
+  especialidad         String?
+  descripcion          String?
+  visibleEnWeb         Boolean          @default(true)
   comisionServiciosPct Decimal          @default(50.0) // 50% por defecto
   comisionProductosPct Decimal          @default(10.0) // 10% por defecto
   diasDescanso         String           @default("Domingo")

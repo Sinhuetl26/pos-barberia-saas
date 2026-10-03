@@ -4,6 +4,7 @@
 // ======================================================================
 
 import { PrismaClient } from '@prisma/client';
+import { prisma } from '@systech/database';
 
 export interface EnviarMensajeOptions {
   tenantId: string;
@@ -18,7 +19,7 @@ export interface EnviarMensajeOptions {
 export interface EnviarMensajeResultado {
   success: boolean;
   notificacionId?: string;
-  estado: 'ENVIADO' | 'PENDIENTE' | 'LINK_GENERADO' | 'BLOQUEADO_HORARIO' | 'BLOQUEADO_OPTOUT' | 'FALLIDO';
+  estado: 'ACEPTADO' | 'ENVIADO' | 'ENTREGADO' | 'LEIDO' | 'PENDIENTE' | 'LINK_GENERADO' | 'BLOQUEADO_HORARIO' | 'BLOQUEADO_OPTOUT' | 'FALLIDO';
   whatsappLink?: string;
   proveedor: 'META_CLOUD_API' | 'MANUAL_LINK';
   mensajeError?: string;
@@ -257,21 +258,23 @@ export class WhatsAppService {
 
         if (response.ok && data.messages?.[0]?.id) {
           const metaMessageId = data.messages[0].id;
+          // P2.3 FIX: Honest status - Meta has accepted the message into its dispatch queue
+          // Final delivery (ENTREGADO) and read (LEIDO) states will arrive via webhook
           const log = await prisma.notificacionLog.create({
             data: {
               tenantId,
               tipo,
               canal: 'WHATSAPP',
               destinatario: telNormalizado,
-              mensaje,
-              estado: 'ENVIADO'
+              mensaje: `[meta_id:${metaMessageId}] ${mensaje}`,
+              estado: 'ACEPTADO'
             }
           });
 
           return {
             success: true,
             notificacionId: log.id,
-            estado: 'ENVIADO',
+            estado: 'ACEPTADO',
             proveedor: 'META_CLOUD_API',
             metaMessageId,
             whatsappLink
@@ -533,5 +536,53 @@ export class WhatsAppService {
     }
 
     return resultados;
+  }
+
+  /**
+   * P2.3 FIX: Processes Meta WhatsApp status webhooks (sent, delivered, read, failed)
+   * Updates NotificacionLog to ENTREGADO, LEIDO, ENVIADO, or FALLIDO
+   */
+  static async actualizarEstadoWebhook(
+    metaMessageId: string,
+    metaStatus: string,
+    recipientId?: string,
+    prismaClient?: any
+  ): Promise<boolean> {
+    const client = prismaClient || prisma;
+    const estadoMap: Record<string, string> = {
+      sent: 'ENVIADO',
+      delivered: 'ENTREGADO',
+      read: 'LEIDO',
+      failed: 'FALLIDO'
+    };
+    const nuevoEstado = estadoMap[metaStatus.toLowerCase()] || metaStatus.toUpperCase();
+
+    try {
+      // 1. Search by message containing [meta_id:<id>]
+      let log = await client.notificacionLog.findFirst({
+        where: { mensaje: { contains: metaMessageId } },
+        orderBy: { fecha: 'desc' }
+      });
+
+      // 2. Fallback to recipient if applicable
+      if (!log && recipientId) {
+        const tel = this.normalizarTelefono(recipientId);
+        log = await client.notificacionLog.findFirst({
+          where: { destinatario: tel, canal: 'WHATSAPP' },
+          orderBy: { fecha: 'desc' }
+        });
+      }
+
+      if (log) {
+        await client.notificacionLog.update({
+          where: { id: log.id },
+          data: { estado: nuevoEstado }
+        });
+        return true;
+      }
+    } catch (e) {
+      console.error('Error al actualizar estado de WhatsApp desde webhook:', e);
+    }
+    return false;
   }
 }

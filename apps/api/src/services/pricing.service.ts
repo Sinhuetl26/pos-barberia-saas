@@ -70,11 +70,6 @@ export function calculateSaleTotals(
     const lineTotal = Math.round(price * qty * 100) / 100;
     subtotal = Math.round((subtotal + lineTotal) * 100) / 100;
 
-    // Calculate line commission
-    const pct = prod.tipo === 'SERVICIO' ? barberComisionServPct : barberComisionProdPct;
-    const itemComision = Math.round(lineTotal * (pct / 100) * 100) / 100;
-    totalComision = Math.round((totalComision + itemComision) * 100) / 100;
-
     preparedItems.push({
       productoId: prod.id,
       nombreItem: prod.nombre,
@@ -82,13 +77,24 @@ export function calculateSaleTotals(
       cantidad: qty,
       precioUnitario: price,
       subtotal: lineTotal,
-      comision: itemComision
+      comision: 0 // assigned below based on net billed amount
     });
   }
 
-  // Bounded discount: cannot be negative, cannot exceed subtotal
+  // Bounded discount: cannot be negative, cannot exceed subtotal (P1.3 FIX)
   const cleanDiscount = Math.min(Math.max(Number(rawDiscount) || 0, 0), subtotal);
   const roundedDiscount = Math.round(cleanDiscount * 100) / 100;
+
+  // P1.3 FIX: Distribute discount proportionally across lines so commission is computed on NET revenue
+  for (const item of preparedItems) {
+    const prod = productMap.get(item.productoId)!;
+    const pct = prod.tipo === 'SERVICIO' ? barberComisionServPct : barberComisionProdPct;
+    const lineDiscount = subtotal > 0 ? (item.subtotal / subtotal) * roundedDiscount : 0;
+    const lineNet = Math.max(0, item.subtotal - lineDiscount);
+    const itemComision = Math.round(lineNet * (pct / 100) * 100) / 100;
+    item.comision = itemComision;
+    totalComision = Math.round((totalComision + itemComision) * 100) / 100;
+  }
 
   // Tip: cannot be negative
   const cleanTip = Math.max(Number(rawTip) || 0, 0);

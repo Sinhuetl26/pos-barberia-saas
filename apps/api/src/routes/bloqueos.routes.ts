@@ -49,6 +49,25 @@ bloqueosRouter.post('/', async (req: AuthenticatedRequest, res) => {
       }
     }
 
+    // P1.2 RBAC: If BARBERO, verify they only block their own schedule and cannot create branch-wide blocks
+    if (req.ctx!.rol === 'BARBERO') {
+      const userBarbero = await prisma.barbero.findFirst({
+        where: {
+          sucursal: { tenantId },
+          OR: [
+            { email: req.ctx!.email },
+            { id: (req.ctx as any)?.barberoId || undefined }
+          ]
+        }
+      });
+      if (!userBarbero) {
+        return res.status(403).json({ code: 'BARBER_PROFILE_NOT_LINKED', error: 'Cuenta de barbero no vinculada a un perfil activo.' });
+      }
+      if (!barberoId || barberoId !== userBarbero.id) {
+        return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede crear bloqueos para su propio horario personal.' });
+      }
+    }
+
     const bloqueo = await prisma.bloqueoHorario.create({
       data: {
         tenantId,
@@ -76,6 +95,22 @@ bloqueosRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
     });
     if (!existing) {
       return res.status(404).json({ code: 'NOT_FOUND', error: 'Bloqueo no encontrado' });
+    }
+
+    // P1.2 RBAC: If BARBERO, can only delete their own personal blocks
+    if (req.ctx!.rol === 'BARBERO') {
+      const userBarbero = await prisma.barbero.findFirst({
+        where: {
+          sucursal: { tenantId },
+          OR: [
+            { email: req.ctx!.email },
+            { id: (req.ctx as any)?.barberoId || undefined }
+          ]
+        }
+      });
+      if (!userBarbero || existing.barberoId !== userBarbero.id) {
+        return res.status(403).json({ code: 'FORBIDDEN', error: 'No tiene permisos para eliminar bloqueos de la sucursal u otros barberos.' });
+      }
     }
 
     await prisma.bloqueoHorario.delete({ where: { id } });

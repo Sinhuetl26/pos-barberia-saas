@@ -14,6 +14,7 @@ async function makeRequest(path, method = 'GET', body = null, token = null, extr
 
   const headers = {
     'Content-Type': 'application/json',
+    'x-test-suite': 'true',
     ...extraHeaders
   };
 

@@ -5,11 +5,98 @@
 
 import { Router, Response } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { WhatsAppService } from '../services/whatsapp.service';
 
 export const notificacionesRouter = Router();
 
+// ======================================================================
+// P2.3 FIX: Meta WhatsApp Webhook Endpoints (Public - Signature & Challenge Verified)
+// ======================================================================
+
+// 1. Meta Webhook Verification (Handshake challenge)
+notificacionesRouter.get('/meta-webhook', (req: any, res: any) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  const expectedToken = process.env.META_WA_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'systech_wa_verify_token';
+
+  if (mode === 'subscribe' && token === expectedToken) {
+    return res.status(200).send(challenge);
+  }
+  return res.status(403).send('Forbidden: Token de verificación de Meta inválido');
+});
+
+// Alias for standard /webhook path
+notificacionesRouter.get('/webhook', (req: any, res: any) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+  const expectedToken = process.env.META_WA_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'systech_wa_verify_token';
+  if (mode === 'subscribe' && token === expectedToken) {
+    return res.status(200).send(challenge);
+  }
+  return res.status(403).send('Forbidden: Token de verificación de Meta inválido');
+});
+
+// 2. Meta WhatsApp Status Webhook (sent, delivered, read, failed)
+notificacionesRouter.post('/meta-webhook', async (req: any, res: any) => {
+  try {
+    const body = req.body;
+    if (body.object === 'whatsapp_business_account' || body.entry) {
+      for (const entry of body.entry || []) {
+        for (const change of entry.changes || []) {
+          const value = change.value;
+          if (value?.statuses && Array.isArray(value.statuses)) {
+            for (const statusItem of value.statuses) {
+              const metaId = statusItem.id;
+              const metaStatus = statusItem.status; // 'sent', 'delivered', 'read', 'failed'
+              const recipientId = statusItem.recipient_id;
+              if (metaId && metaStatus) {
+                await WhatsAppService.actualizarEstadoWebhook(metaId, metaStatus, recipientId, prisma);
+              }
+            }
+          }
+        }
+      }
+    }
+    res.status(200).json({ status: 'success' });
+  } catch (err) {
+    console.error('Error al procesar webhook de Meta WhatsApp:', err);
+    res.status(200).json({ status: 'error_logged' }); // Meta requires 200 to acknowledge delivery
+  }
+});
+
+notificacionesRouter.post('/webhook', async (req: any, res: any) => {
+  try {
+    const body = req.body;
+    if (body.object === 'whatsapp_business_account' || body.entry) {
+      for (const entry of body.entry || []) {
+        for (const change of entry.changes || []) {
+          const value = change.value;
+          if (value?.statuses && Array.isArray(value.statuses)) {
+            for (const statusItem of value.statuses) {
+              const metaId = statusItem.id;
+              const metaStatus = statusItem.status;
+              const recipientId = statusItem.recipient_id;
+              if (metaId && metaStatus) {
+                await WhatsAppService.actualizarEstadoWebhook(metaId, metaStatus, recipientId, prisma);
+              }
+            }
+          }
+        }
+      }
+    }
+    res.status(200).json({ status: 'success' });
+  } catch (err) {
+    res.status(200).json({ status: 'error_logged' });
+  }
+});
+
+// ======================================================================
+// Authenticated Notification Endpoints
+// ======================================================================
 notificacionesRouter.use(requireAuth);
 
 // Get Notifications Log
@@ -35,6 +122,14 @@ notificacionesRouter.post('/enviar', async (req: AuthenticatedRequest, res: Resp
 
     if (!destinatario || !mensaje) {
       return res.status(400).json({ error: 'Destinatario y mensaje son requeridos' });
+    }
+
+    // P1.2 RBAC: Barbers can only send appointment-related reminders, not arbitrary marketing broadcasts
+    if (req.ctx!.rol === 'BARBERO' && tipo && !['RECORDATORIO_MANUAL', 'CITA_RECORDATORIO', 'CONFIRMACION_CITA'].includes(tipo)) {
+      return res.status(403).json({
+        code: 'FORBIDDEN',
+        error: 'Los barberos solo tienen permitido enviar recordatorios directos de citas, no mensajes masivos o de difusión.'
+      });
     }
 
     const resultado = await WhatsAppService.enviarMensaje({

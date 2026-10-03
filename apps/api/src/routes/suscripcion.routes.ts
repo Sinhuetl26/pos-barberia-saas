@@ -108,8 +108,17 @@ suscripcionRouter.post('/crear-checkout-session', async (req: AuthenticatedReque
 
     const precioFinal = Math.max(0, precioBase - descuentoAplicado);
 
-    // Return structured checkout info (invokes Stripe SDK if key is configured, with safe fallback)
-    let checkoutUrl = `https://checkout.stripe.com/c/pay/cs_test_${tenantId}_${Date.now()}`;
+    const isProd = process.env.NODE_ENV === 'production';
+
+    // In production, reject if Stripe SDK is not configured
+    if (isProd && !stripe) {
+      return res.status(503).json({
+        code: 'PAYMENT_GATEWAY_NOT_CONFIGURED',
+        error: 'La integración de Stripe no está configurada en el servidor de producción. Configure STRIPE_SECRET_KEY.'
+      });
+    }
+
+    let checkoutUrl: string | null = null;
     if (stripe) {
       try {
         const session = await stripe.checkout.sessions.create({
@@ -143,7 +152,24 @@ suscripcionRouter.post('/crear-checkout-session', async (req: AuthenticatedReque
         }
       } catch (stripeErr: any) {
         console.warn('Error al invocar Stripe Checkout SDK:', stripeErr.message);
+        if (isProd) {
+          return res.status(502).json({
+            code: 'STRIPE_GATEWAY_ERROR',
+            error: `Error al comunicarse con la pasarela de pagos de Stripe: ${stripeErr.message}`
+          });
+        }
       }
+    }
+
+    // Only allow simulation fallback in test or local development environments
+    if (!checkoutUrl) {
+      if (isProd) {
+        return res.status(502).json({
+          code: 'STRIPE_SESSION_FAILED',
+          error: 'No fue posible generar una sesión de pago válida con Stripe.'
+        });
+      }
+      checkoutUrl = `https://checkout.stripe.com/c/pay/cs_test_${tenantId}_${Date.now()}`;
     }
 
     res.json({
@@ -164,9 +190,17 @@ suscripcionRouter.post('/crear-checkout-session', async (req: AuthenticatedReque
 suscripcionRouter.post('/portal-cliente', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
+    const isProd = process.env.NODE_ENV === 'production';
     const sub = await prisma.suscripcion.findUnique({ where: { tenantId } });
 
-    let portalUrl = `https://billing.stripe.com/p/session/test_${sub?.stripeCustomerId || tenantId}`;
+    if (isProd && (!stripe || !sub?.stripeCustomerId)) {
+      return res.status(400).json({
+        code: 'NO_STRIPE_CUSTOMER',
+        error: 'No se encontró un identificador de cliente en Stripe para esta cuenta. Para gestionar tarjetas, complete un cobro inicial.'
+      });
+    }
+
+    let portalUrl: string | null = null;
     if (stripe && sub?.stripeCustomerId) {
       try {
         const portalSession = await stripe.billingPortal.sessions.create({
@@ -178,7 +212,23 @@ suscripcionRouter.post('/portal-cliente', async (req: AuthenticatedRequest, res:
         }
       } catch (portalErr: any) {
         console.warn('Error al invocar Stripe Billing Portal SDK:', portalErr.message);
+        if (isProd) {
+          return res.status(502).json({
+            code: 'STRIPE_PORTAL_ERROR',
+            error: `Error al abrir portal de facturación en Stripe: ${portalErr.message}`
+          });
+        }
       }
+    }
+
+    if (!portalUrl) {
+      if (isProd) {
+        return res.status(502).json({
+          code: 'STRIPE_PORTAL_FAILED',
+          error: 'No fue posible abrir el portal de cliente de Stripe.'
+        });
+      }
+      portalUrl = `https://billing.stripe.com/p/session/test_${sub?.stripeCustomerId || tenantId}`;
     }
 
     res.json({
@@ -191,24 +241,65 @@ suscripcionRouter.post('/portal-cliente', async (req: AuthenticatedRequest, res:
 });
 
 // Upgrade / Downgrade Plan
-// C3 FIX: Requires DUENO role. In production, requires checkout/portal; directly modifying plan only in test/dev
+// C3 FIX: Requires DUENO role. In production, requires real Stripe checkout; directly modifying plan only in test/dev
 suscripcionRouter.post('/cambiar-plan', requireRole('DUENO'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { nuevoPlan } = req.body;
+    const isProd = process.env.NODE_ENV === 'production';
 
     if (!['BASICO', 'PRO'].includes(nuevoPlan)) {
       return res.status(400).json({ error: 'Plan inválido. Opciones: BASICO o PRO' });
     }
 
-    // In production, initiate Checkout or Customer Portal rather than direct granting
-    if (process.env.NODE_ENV === 'production') {
-      const checkoutUrl = `https://checkout.stripe.com/c/pay/cs_${tenantId}_${nuevoPlan}_${Date.now()}`;
-      return res.json({
-        requiresPayment: true,
-        message: 'Para cambiar de plan en producción, complete el proceso de pago.',
-        checkoutUrl
-      });
+    // In production, initiate real Stripe Checkout session
+    if (isProd) {
+      if (!stripe) {
+        return res.status(503).json({
+          code: 'STRIPE_NOT_CONFIGURED',
+          error: 'La pasarela de Stripe no está configurada para procesar pagos de cambio de plan.'
+        });
+      }
+
+      try {
+        const priceAmount = nuevoPlan === 'PRO' ? 99900 : 49900;
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          mode: 'subscription',
+          line_items: [
+            {
+              price_data: {
+                currency: 'mxn',
+                product_data: {
+                  name: `Plan ${nuevoPlan} - SYSTECH Studio`,
+                  description: `Actualización de plan recurrente (${nuevoPlan})`
+                },
+                unit_amount: priceAmount,
+                recurring: { interval: 'month' }
+              },
+              quantity: 1
+            }
+          ],
+          client_reference_id: tenantId,
+          metadata: {
+            tenantId,
+            plan: nuevoPlan
+          },
+          success_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?plan=${nuevoPlan}&status=success`,
+          cancel_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?status=cancel`
+        });
+
+        return res.json({
+          requiresPayment: true,
+          message: 'Para cambiar de plan en producción, complete el proceso de pago seguro en Stripe.',
+          checkoutUrl: session.url
+        });
+      } catch (stripeErr: any) {
+        return res.status(502).json({
+          code: 'STRIPE_CHECKOUT_FAILED',
+          error: `Error al iniciar pasarela de Stripe: ${stripeErr.message}`
+        });
+      }
     }
 
     const limiteSucursales = nuevoPlan === 'PRO' ? 999 : 1;

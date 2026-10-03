@@ -274,8 +274,8 @@ clientesRouter.put('/:id', async (req: AuthenticatedRequest, res: Response) => {
   }
 });
 
-// 6. Assign Client Recurring Membership (P1.11 FIX: Support both API & UI key contracts)
-clientesRouter.post('/:id/membresia', async (req: AuthenticatedRequest, res: Response) => {
+// 6. Assign Client Recurring Membership (P1.2 & P1.11 FIX: Role restricted to DUENO/GERENTE)
+clientesRouter.post('/:id/membresia', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id: clienteId } = req.params;
