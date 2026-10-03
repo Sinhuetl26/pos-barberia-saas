@@ -1,0 +1,529 @@
+// Prisma schema for SYSTECH Barber SaaS Platform
+// Multi-tenant Barber Management System - Production Ready Architecture
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Plan {
+  id                String    @id @default(uuid())
+  codigo            String    @unique // BASICO, PRO, ENTERPRISE
+  nombre            String
+  precioMensual     Decimal
+  limiteSucursales  Int       @default(1)
+  limiteBarberos    Int       @default(3)
+  whatsappPro       Boolean   @default(false)
+  analiticaAvanzada Boolean   @default(false)
+  activo            Boolean   @default(true)
+  fechaCreacion     DateTime  @default(now())
+
+  tenants           Tenant[]
+}
+
+model Tenant {
+  id                String       @id @default(uuid())
+  nombre            String
+  slug              String?      @unique
+  plan              String       @default("BASICO") // BASICO, PRO
+  planId            String?
+  planRel           Plan?        @relation(fields: [planId], references: [id])
+  estado            String       @default("ACTIVO") // ACTIVO, EN_RIESGO, SUSPENDIDO, CANCELADO
+  telefono          String?
+  emailContacto     String?
+  direccion         String?
+  logoUrl           String?
+  limiteSucursales  Int          @default(1) // 1 for BASICO, 999 for PRO
+  limiteBarberos    Int          @default(3) // 3 for BASICO, 999 for PRO
+  fechaCreacion     DateTime     @default(now())
+  
+  sucursales        Sucursal[]
+  usuarios          Usuario[]
+  clientes          ClienteFinal[]
+  suscripcion       Suscripcion?
+  productos         Producto[]
+  citas             Cita[]
+  ventas            Venta[]
+  comisiones        Comision[]
+  cortesCaja        CorteCaja[]
+  kardexMovimientos KardexMovimiento[]
+  notificaciones    NotificacionLog[]
+  auditorias        AuditoriaLog[]
+  bloqueos          BloqueoHorario[]
+  proveedores       Proveedor[]
+  ordenesCompra     OrdenCompra[]
+  resenas           Resena[]
+  consentimientos   ConsentimientoCliente[]
+  listasEspera      ListaEspera[]
+  movimientosCaja   MovimientoCaja[]
+  membresias        ClienteMembresia[]
+}
+
+model Suscripcion {
+  id                   String    @id @default(uuid())
+  tenantId             String    @unique
+  tenant               Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  montoMensual         Decimal   @default(499)
+  estadoPago           String    @default("active") // active, past_due, suspended, canceled
+  diasGracia           Int       @default(3)
+  fechaProximoCobro    DateTime?
+  fechaUltimoCobro     DateTime?
+  fechaSuspension      DateTime?
+}
+
+model Sucursal {
+  id              String       @id @default(uuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre          String
+  direccion       String?
+  telefono        String?
+  zonaHoraria     String       @default("America/Mexico_City")
+  horarioApertura String       @default("09:00")
+  horarioCierre   String       @default("20:00")
+  diasLaborales   String       @default("Lunes a Sábado")
+  eliminadoEn     DateTime?
+  
+  barberos        Barbero[]
+  citas           Cita[]
+  ventas          Venta[]
+  productos       Producto[]
+  cortesCaja      CorteCaja[]
+  bloqueos        BloqueoHorario[]
+  listasEspera    ListaEspera[]
+  movimientosCaja MovimientoCaja[]
+
+  @@index([tenantId])
+}
+
+model Usuario {
+  id           String      @id @default(uuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email        String      @unique
+  passwordHash String
+  rol          String      // SUPER_ADMIN, DUENO, GERENTE, BARBERO
+  nombre       String
+  telefono     String?
+  sucursalId   String?
+  activo       Boolean     @default(true)
+  fechaAlta    DateTime    @default(now())
+  eliminadoEn  DateTime?
+
+  @@index([tenantId])
+}
+
+model Barbero {
+  id                   String           @id @default(uuid())
+  sucursalId           String
+  sucursal             Sucursal         @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  nombre               String
+  telefono             String?
+  email                String?
+  avatarUrl            String?
+  comisionServiciosPct Decimal          @default(50.0) // 50% por defecto
+  comisionProductosPct Decimal          @default(10.0) // 10% por defecto
+  diasDescanso         String           @default("Domingo")
+  horarioInicio        String           @default("09:00")
+  horarioFin           String           @default("20:00")
+  activo               Boolean          @default(true)
+  eliminadoEn          DateTime?
+  
+  citas                Cita[]
+  ventas               Venta[]
+  comisiones           Comision[]
+  bloqueos             BloqueoHorario[]
+  resenas              Resena[]
+  listasEspera         ListaEspera[]
+
+  @@index([sucursalId, activo])
+}
+
+model ClienteFinal {
+  id                String       @id @default(uuid())
+  tenantId          String
+  tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre            String
+  telefono          String?
+  email             String?
+  notas             String?
+  totalVisitas      Int          @default(0)
+  fechaUltimaVisita DateTime?
+  gastoTotal        Decimal      @default(0)
+  noShows           Int          @default(0)
+  fechaNacimiento   DateTime?
+  notasEstilo       String?
+  eliminadoEn       DateTime?
+  
+  citas             Cita[]
+  ventas            Venta[]
+  consentimientos   ConsentimientoCliente[]
+  membresias        ClienteMembresia[]
+
+  @@unique([tenantId, telefono])
+  @@index([tenantId, telefono])
+}
+
+model Producto {
+  id              String              @id @default(uuid())
+  tenantId        String
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId      String?
+  sucursal        Sucursal?           @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  nombre          String
+  tipo            String              @default("PRODUCTO") // PRODUCTO, SERVICIO
+  categoria       String              @default("General")
+  duracionMinutos Int                 @default(30) // Para servicios
+  sku             String?
+  precioVenta     Decimal
+  costo           Decimal?            @default(0)
+  stockActual     Int                 @default(0)
+  stockMinimo     Int                 @default(0)
+  activo          Boolean             @default(true)
+  eliminadoEn     DateTime?
+  
+  kardex          KardexMovimiento[]
+  ventaItems      VentaItem[]
+
+  @@index([tenantId, sucursalId])
+  @@index([tenantId, tipo])
+}
+
+model Cita {
+  id              String       @id @default(uuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId      String
+  sucursal        Sucursal     @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  barberoId       String
+  barbero         Barbero      @relation(fields: [barberoId], references: [id])
+  clienteId       String
+  cliente         ClienteFinal @relation(fields: [clienteId], references: [id])
+  servicioId      String?
+  nombreServicio  String?
+  fechaHora       DateTime
+  duracionMinutos Int          @default(30)
+  estado          String       @default("PENDIENTE") // PENDIENTE, CONFIRMADA, COMPLETADA, CANCELADA, NO_SHOW
+  notas           String?
+  precioEstimado  Decimal?
+  codigoReserva    String?
+  tokenCancelacion String?      @unique
+  serviciosJson    String?
+  bufferMinutos    Int          @default(10)
+  
+  venta           Venta?
+  resena          Resena?
+
+  @@unique([tenantId, codigoReserva])
+  @@index([tenantId, fechaHora])
+  @@index([sucursalId, barberoId, fechaHora])
+}
+
+model BloqueoHorario {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId  String
+  sucursal    Sucursal  @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  barberoId   String?
+  barbero     Barbero?  @relation(fields: [barberoId], references: [id])
+  fechaInicio DateTime
+  fechaFin    DateTime
+  motivo      String    // Almuerzo, Mantenimiento, Descanso, Especial
+
+  @@index([tenantId, sucursalId, fechaInicio, fechaFin])
+}
+
+model Venta {
+  id            String        @id @default(uuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId    String
+  sucursal      Sucursal      @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  barberoId     String
+  barbero       Barbero       @relation(fields: [barberoId], references: [id])
+  clienteId     String?
+  cliente       ClienteFinal? @relation(fields: [clienteId], references: [id])
+  citaId        String?       @unique
+  cita          Cita?         @relation(fields: [citaId], references: [id])
+  folio             String?
+  serie             String        @default("A")
+  folioConsecutivo  Int           @default(1)
+  estado            String        @default("COMPLETADA") // COMPLETADA, CANCELADA
+  motivoCancelacion String?
+  canceladoPor      String?
+  subtotal          Decimal       @default(0)
+  descuento     Decimal       @default(0)
+  propina       Decimal       @default(0)
+  total         Decimal
+  metodoPago    String        // EFECTIVO, TARJETA, TRANSFERENCIA, MIXTO
+  detallesPago  String?       // JSON string for split payments
+  fecha         DateTime      @default(now())
+  
+  items         VentaItem[]
+  comisiones    Comision[]
+
+  @@unique([tenantId, sucursalId, folio])
+  @@index([tenantId, fecha])
+  @@index([sucursalId, fecha])
+}
+
+model VentaItem {
+  id             String    @id @default(uuid())
+  ventaId        String
+  venta          Venta     @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  productoId     String
+  producto       Producto  @relation(fields: [productoId], references: [id])
+  nombreItem     String
+  tipoItem       String    @default("PRODUCTO") // PRODUCTO, SERVICIO
+  cantidad       Int       @default(1)
+  precioUnitario Decimal
+  subtotal       Decimal
+
+  @@index([ventaId])
+}
+
+model Comision {
+  id                 String     @id @default(uuid())
+  tenantId           String
+  tenant             Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ventaId            String
+  venta              Venta      @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  barberoId          String
+  barbero            Barbero    @relation(fields: [barberoId], references: [id])
+  monto              Decimal
+  porcentaje         Decimal    @default(0)
+  pagada             Boolean    @default(false)
+  fechaPago          DateTime?
+  metodoPagoComision String?
+  corteCajaId        String?
+  corteCaja          CorteCaja? @relation(fields: [corteCajaId], references: [id])
+
+  @@index([tenantId, barberoId, pagada])
+}
+
+model CorteCaja {
+  id                 String     @id @default(uuid())
+  tenantId           String
+  tenant             Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId         String
+  sucursal           Sucursal   @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  usuarioId          String?
+  fechaApertura      DateTime   @default(now())
+  fechaCierre        DateTime?
+  fondoInicial       Decimal    @default(0)
+  totalEfectivo      Decimal    @default(0)
+  totalTarjeta       Decimal    @default(0)
+  totalTransferencia Decimal    @default(0)
+  totalPropinas      Decimal    @default(0)
+  totalVentas        Decimal    @default(0)
+  conteoEfectivoReal Decimal?
+  descuadre          Decimal?
+  notas              String?
+  estado             String     @default("ABIERTO") // ABIERTO, CERRADO
+  
+  comisiones         Comision[]
+  movimientos        MovimientoCaja[]
+
+  @@index([tenantId, sucursalId, estado])
+}
+
+model KardexMovimiento {
+  id             String    @id @default(uuid())
+  tenantId       String
+  tenant         Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId     String
+  productoId     String
+  producto       Producto  @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  tipoMovimiento String    // VENTA_POS, ENTRADA_COMPRA, AJUSTE_INVENTARIO, MERMA_DEVOLUCION
+  cantidad       Int
+  stockAnterior  Int
+  stockNuevo     Int
+  motivo         String?
+  fecha          DateTime  @default(now())
+  usuarioId      String?
+
+  @@index([tenantId, productoId, fecha])
+}
+
+model NotificacionLog {
+  id           String    @id @default(uuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tipo         String    // CONFIRMACION_CITA, RECORDATORIO_24H, RECORDATORIO_2H, STOCK_MINIMO, SUSCRIPCION_RIESGO
+  canal        String    // WHATSAPP, SMS, EMAIL
+  destinatario String
+  mensaje      String
+  estado       String    @default("ENVIADO") // ENVIADO, PENDIENTE, FALLIDO
+  fecha        DateTime  @default(now())
+
+  @@index([tenantId, fecha])
+}
+
+model AuditoriaLog {
+  id           String    @id @default(uuid())
+  tenantId     String?
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  usuarioEmail String
+  accion       String    // SUSPENDER_CUENTA, REACTIVAR_CUENTA, UPGRADE_PLAN, DOWNGRADE_PLAN, CANCELAR_CUENTA, CORTE_CAJA
+  detalles     String
+  fecha        DateTime  @default(now())
+
+  @@index([tenantId, fecha])
+}
+
+// ----------------------------------------------------------------------
+// NUEVOS MODELOS PARA EL ROADMAP DE PRODUCCIÓN (FASE 1)
+// ----------------------------------------------------------------------
+
+model Cupon {
+  id            String    @id @default(uuid())
+  tenantId      String?   // null si es cupón global del SaaS, o por tenant para sus clientes
+  codigo        String    @unique
+  descuentoPct  Decimal?
+  descuentoFijo Decimal?
+  fechaInicio   DateTime  @default(now())
+  fechaFin      DateTime?
+  usosMaximos   Int?
+  usosActuales  Int       @default(0)
+  activo        Boolean   @default(true)
+
+  @@index([tenantId, activo])
+}
+
+model Proveedor {
+  id            String        @id @default(uuid())
+  tenantId      String
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  nombre        String
+  contacto      String?
+  telefono      String?
+  email         String?
+  direccion     String?
+  rfc           String?
+  activo        Boolean       @default(true)
+  eliminadoEn   DateTime?
+
+  ordenesCompra OrdenCompra[]
+
+  @@index([tenantId])
+}
+
+model OrdenCompra {
+  id           String      @id @default(uuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId   String
+  proveedorId  String
+  proveedor    Proveedor   @relation(fields: [proveedorId], references: [id])
+  folio        String
+  total        Decimal
+  estado       String      @default("PENDIENTE") // PENDIENTE, RECIBIDA, CANCELADA
+  fecha        DateTime    @default(now())
+  fechaEntrega DateTime?
+  notas        String?
+
+  @@index([tenantId, proveedorId])
+}
+
+model Resena {
+  id            String       @id @default(uuid())
+  tenantId      String
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  citaId        String?      @unique
+  cita          Cita?        @relation(fields: [citaId], references: [id])
+  barberoId     String
+  barbero       Barbero      @relation(fields: [barberoId], references: [id])
+  calificacion  Int          // 1 a 5 estrellas
+  comentario    String?
+  clienteNombre String?
+  fecha         DateTime     @default(now())
+
+  @@index([tenantId, barberoId])
+}
+
+model ConsentimientoCliente {
+  id            String       @id @default(uuid())
+  tenantId      String
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clienteId     String
+  cliente       ClienteFinal @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  canal         String       // WHATSAPP, SMS, MARKETING
+  otorgado      Boolean      @default(true)
+  fechaRegistro DateTime     @default(now())
+  ipRegistro    String?
+
+  @@index([tenantId, clienteId])
+}
+
+model EventoPago {
+  id            String    @id @default(uuid())
+  tenantId      String?
+  proveedor     String    // STRIPE, MERCADOPAGO, CONEKTA
+  eventId       String    @unique
+  tipoEvento    String
+  payload       String    // JSON
+  procesado     Boolean   @default(false)
+  fechaCreacion DateTime  @default(now())
+
+  @@index([tenantId, proveedor])
+}
+
+model ClienteMembresia {
+  id              String       @id @default(uuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  clienteId       String
+  cliente         ClienteFinal @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  nombrePlan      String       // Ej. "Club Elite 2 Cortes"
+  cortesIncluidos Int          @default(2)
+  cortesRestantes Int          @default(2)
+  precioMensual   Decimal      @default(350)
+  fechaInicio     DateTime     @default(now())
+  fechaFin        DateTime
+  activo          Boolean      @default(true)
+
+  @@index([tenantId, clienteId, activo])
+}
+
+model ListaEspera {
+  id              String       @id @default(uuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId      String
+  sucursal        Sucursal     @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  clienteNombre   String
+  clienteTelefono String
+  servicioId      String?
+  barberoId       String?
+  barbero         Barbero?     @relation(fields: [barberoId], references: [id])
+  fechaDeseada    DateTime
+  estado          String       @default("ACTIVO") // ACTIVO, NOTIFICADO, ATENDIDO, CANCELADO
+  fechaRegistro   DateTime     @default(now())
+
+  @@index([tenantId, sucursalId, estado])
+}
+
+model MovimientoCaja {
+  id           String     @id @default(uuid())
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sucursalId   String
+  sucursal     Sucursal   @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
+  corteCajaId  String?
+  corteCaja    CorteCaja? @relation(fields: [corteCajaId], references: [id])
+  tipo         String     // INGRESO, RETIRO, GASTO_MENOR
+  monto        Decimal
+  concepto     String
+  usuarioEmail String
+  fecha        DateTime   @default(now())
+
+  @@index([tenantId, sucursalId, fecha])
+}
+

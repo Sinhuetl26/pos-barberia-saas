@@ -1,0 +1,27 @@
+{
+  "name": "systech-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@systech/api",
+    "dev:web": "npm run dev --workspace=@systech/web",
+    "dev": "start npm run dev:api & start npm run dev:web",
+    "build": "npm run db:generate && npm run build:api && npm run build:web",
+    "build:api": "npm run build --workspace=@systech/api",
+    "build:web": "npm run build --workspace=@systech/web",
+    "db:generate": "npm run prisma:generate --workspace=@systech/database",
+    "db:migrate": "npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma",
+    "test:phase0": "node scripts/test_phase0_security.js",
+    "test:phase1": "node scripts/test_phase1_financial_and_concurrency.js",
+    "test:phase2": "node scripts/test_phase2_integrations.js",
+    "test:phase3": "node scripts/test_phase3_product_suite.js",
+    "test": "node scripts/run_all_tests.js",
+    "docker:build": "docker build -t systech-api:latest .",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  }
+}

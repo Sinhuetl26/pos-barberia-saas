@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /b/
+Allow: /privacidad
+Allow: /terminos
+Disallow: /app/
+Disallow: /admin
+Disallow: /cita/token/
+
+Sitemap: https://systech.mx/sitemap.xml
