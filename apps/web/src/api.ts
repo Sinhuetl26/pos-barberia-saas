@@ -137,7 +137,7 @@ class ApiService {
   }
 
   printCorteHtml(corteId: string) {
-    const url = `${API_BASE}/cortes-caja/${corteId}/comprobante-html`;
+    const url = `${API_BASE}/cortes-caja/${corteId}/comprobante-html?token=${encodeURIComponent(this.token)}`;
     const win = window.open(url, '_blank');
     if (!win) window.location.href = url;
   }

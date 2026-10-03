@@ -35,12 +35,17 @@ export interface AuthenticatedRequest extends Request {
  * Resolves user identity, tenantId, and role strictly from verified Bearer JWT.
  */
 export const requireAuth = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  let token: string | undefined;
   const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ code: 'NO_AUTH', error: 'Se requiere token de autenticación Bearer' });
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7).trim();
+  } else if (typeof req.query.token === 'string' && req.query.token.trim()) {
+    token = req.query.token.trim();
   }
 
-  const token = authHeader.substring(7).trim();
+  if (!token) {
+    return res.status(401).json({ code: 'NO_AUTH', error: 'Se requiere token de autenticación Bearer' });
+  }
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: string; tid: string; rol: string; email: string };
 
