@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Receipt,
   Download,
-  ShieldCheck,
   Check,
   Calendar,
   X
@@ -92,27 +91,17 @@ export const SuscripcionView: React.FC<SuscripcionViewProps> = ({ onPlanChanged 
     }
   };
 
-  const handleSimular = async (accion: 'PAGO_EXITOSO' | 'PAGO_FALLIDO' | 'SUSPENDER') => {
-    try {
-      await api.simularPago(accion);
-      loadSub();
-      if (onPlanChanged) onPlanChanged();
-    } catch (e: any) {
-      alert(e.message);
-    }
-  };
-
   const handleProcessCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setProcessing(true);
 
     try {
-      // If plan is changed, apply it
-      if (checkoutPlan !== data.tenant.plan) {
-        await api.cambiarPlan(checkoutPlan);
+      // Inicia sesión en pasarela segura Stripe Checkout
+      const res = await api.crearCheckoutSession(checkoutPlan, codigoCupon || undefined);
+      if (res?.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+        return;
       }
-      // Process successful payment simulation
-      await api.simularPago('PAGO_EXITOSO');
 
       setProcessing(false);
       setCheckoutSuccess(true);
@@ -125,7 +114,7 @@ export const SuscripcionView: React.FC<SuscripcionViewProps> = ({ onPlanChanged 
       }, 1500);
     } catch (err: any) {
       setProcessing(false);
-      alert(err.message || 'Error al procesar el pago');
+      alert(err.message || 'Error al iniciar sesión en pasarela de pago');
     }
   };
 
@@ -216,33 +205,6 @@ export const SuscripcionView: React.FC<SuscripcionViewProps> = ({ onPlanChanged 
             </div>
           </div>
         )}
-
-        {/* Developer Sandbox Controls */}
-        <div className="mt-5 pt-4 border-t border-stone-100 flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="text-stone-500 flex items-center gap-1.5 text-[11px] font-medium">
-            <ShieldCheck className="w-3.5 h-3.5 text-stone-600" /> Pruebas de Pasarela (Simulación de Webhook):
-          </span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleSimular('PAGO_EXITOSO')}
-              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-semibold border border-emerald-200 transition"
-            >
-              Simular Cobro Exitoso
-            </button>
-            <button
-              onClick={() => handleSimular('PAGO_FALLIDO')}
-              className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 text-[11px] font-semibold border border-amber-200 transition"
-            >
-              Simular Fallo (Gracia 3 días)
-            </button>
-            <button
-              onClick={() => handleSimular('SUSPENDER')}
-              className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-800 text-[11px] font-semibold border border-rose-200 transition"
-            >
-              Simular Suspensión
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Plan Cards */}
