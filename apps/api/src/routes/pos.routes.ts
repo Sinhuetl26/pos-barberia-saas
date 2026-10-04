@@ -5,14 +5,21 @@
 
 import { Router } from 'express';
 import { prisma } from '@systech/database';
-import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import jwt from 'jsonwebtoken';
+import { requireAuth, requireRole, AuthenticatedRequest, JWT_SECRET } from '../middleware/auth';
 import { createSaleSchema, validateBody } from '../validators/schemas';
 import { calculateSaleTotals } from '../services/pricing.service';
-import { escapeHtml } from '../utils/security';
+import { escapeHtml, generatePrintToken, verifyPrintToken } from '../utils/security';
 
 export const posRouter = Router();
 
-posRouter.use(requireAuth);
+// Require Auth for operational POS routes, allowing ticket-html to authenticate with either Bearer or ephemeral printToken
+posRouter.use((req, res, next) => {
+  if (req.path.endsWith('/ticket-html')) {
+    return next();
+  }
+  return requireAuth(req as any, res, next);
+});
 
 // Process Fast Sale (< 30 seconds)
 posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedRequest, res) => {
@@ -658,11 +665,50 @@ posRouter.get('/:id/ticket', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// Standalone Printable Thermal Receipt (HTML formatted for 58mm and 80mm ESC/POS roll printers)
-posRouter.get('/:id/ticket-html', async (req: AuthenticatedRequest, res) => {
+// P2.2: Generates a scoped ephemeral print token for ticket printing (120s TTL)
+posRouter.post('/:id/print-token', async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
+    const venta = await prisma.venta.findFirst({ where: { id, tenantId } });
+    if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
+
+    const printToken = generatePrintToken('VENTA', id, tenantId);
+    res.json({ success: true, printToken });
+  } catch (error) {
+    res.status(500).json({ error: 'Error al generar token de impresión' });
+  }
+});
+
+// Standalone Printable Thermal Receipt (HTML formatted for 58mm and 80mm ESC/POS roll printers)
+// P2.2: Accepts either Bearer authorization or scoped ephemeral printToken (120s TTL)
+posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
+  try {
+    const { id } = req.params;
+    let tenantId = req.ctx?.tenantId || null;
+
+    if (!tenantId) {
+      const authHeader = req.headers['authorization'];
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        try {
+          const payload = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET) as any;
+          tenantId = payload.tid;
+        } catch (e) {}
+      }
+    }
+
+    const printToken = req.query.printToken as string | undefined;
+    if (!tenantId && printToken) {
+      const verified = verifyPrintToken(printToken, 'VENTA', id);
+      if (verified.valid) {
+        tenantId = verified.tenantId!;
+      }
+    }
+
+    if (!tenantId) {
+      return res.status(401).send('<h1>No autorizado: Se requiere token de impresión temporal o sesión activa.</h1>');
+    }
+
     const widthParam = (req.query.width as string) === '80mm' ? '80mm' : '58mm';
     const autoprint = req.query.autoprint === 'true';
 
