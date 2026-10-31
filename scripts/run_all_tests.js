@@ -1,136 +1,55 @@
-// ======================================================================
-// SYSTECH STUDIO - UNIFIED SELF-CONTAINED TEST RUNNER (ALL PHASES 0 TO 3)
-// Executes: Security, Concurrency/Finances, Integrations, and Product Suite
-// Auto-builds and auto-starts local API test server if not already running
-// ======================================================================
-
-const { execSync, spawn } = require('child_process');
+const { execFileSync, fork } = require('child_process');
 const path = require('path');
-const fs = require('fs');
+const { createTestFixture, seedTestFixture, cleanTestFixture } = require('./test_fixture');
 
 const suites = [
-  { name: 'Fase 0: Seguridad, Criptografía & Multitenant', script: 'test_phase0_security.js' },
-  { name: 'Fase 1: Finanzas, Validaciones Zod & Concurrencia', script: 'test_phase1_financial_and_concurrency.js' },
-  { name: 'Fase 2: Stripe Billing, WhatsApp Cloud & Tickets Térmicos', script: 'test_phase2_integrations.js' },
-  { name: 'Fase 3: Multi-Servicio, Cancelación Criptográfica & CRM', script: 'test_phase3_product_suite.js' }
+  {id:'counter-tickets',name:'ST-09: tickets de mostrador',script:'test_counter_tickets.js'},
+  {id:'mail-onboarding',name:'ST-08: alta y correo transaccional',script:'test_mail_onboarding.js'},
+  { id: 'booking-integrity', name: 'ST-07: agenda y reservas concurrentes', script: 'test_booking_integrity.js' },
+  { id: 'cash-integrity', name: 'ST-06: caja, custodia y devoluciones concurrentes', script: 'test_cash_integrity.js' },
+  { id: 'pos-integrity', name: 'ST-05: ventas, inventario y reintentos concurrentes', script: 'test_pos_integrity.js' },
+  { id: 'account-security', name: 'Recuperación, invitaciones y revocación de sesiones', script: 'test_account_security.js' },
+  { id: 'phase0', name: 'Seguridad y aislamiento', script: 'test_phase0_security.js' },
+  { id: 'phase1', name: 'Finanzas y concurrencia', script: 'test_phase1_financial_and_concurrency.js' },
+  { id: 'phase2', name: 'Integraciones y tickets', script: 'test_phase2_integrations.js' },
+  { id: 'phase3', name: 'Agenda, clientes y comisiones', script: 'test_phase3_product_suite.js' },
+  { id: 'commercial', name: 'Base comercial y licencias', script: 'test_commercial_foundation.js' },
+  { id: 'authorization', name: 'Roles, sucursales y capacidades públicas', script: 'test_authorization.js' },
+  { id: 'licenses', name: 'Catálogo y capacidad por sucursal', script: 'test_license_catalog.js' },
 ];
-
-async function isServerRunning() {
-  try {
-    const res = await fetch('http://localhost:3001/api/health', { signal: AbortSignal.timeout(1500) });
-    return res.ok;
-  } catch (e) {
-    return false;
-  }
-}
-
-async function waitForServer(maxAttempts = 30, delayMs = 500) {
-  for (let i = 0; i < maxAttempts; i++) {
-    if (await isServerRunning()) return true;
-    await new Promise(r => setTimeout(r, delayMs));
-  }
-  return false;
-}
-
 async function main() {
-  console.log('======================================================================');
-  console.log('🚀 SYSTECH STUDIO - EJECUCIÓN DE BATERÍA COMPLETA DE PRUEBAS AUTOMATIZADAS');
-  console.log('======================================================================\n');
-
-  const rootDir = path.join(__dirname, '..');
-  const distIndex = path.join(rootDir, 'apps', 'api', 'dist', 'index.js');
-
-  // Step 1: Ensure API is built
-  if (!fs.existsSync(distIndex)) {
-    console.log('⚙️ Compilando API para ejecución de pruebas...');
-    execSync('npm run build:api', { cwd: rootDir, stdio: 'inherit' });
-  }
-
-  // Step 2: Check or start API server
-  let serverProcess = null;
-  const running = await isServerRunning();
-  if (running) {
-    console.log('✅ Servidor API detectado activo en http://localhost:3001');
-  } else {
-    serverProcess = spawn(process.execPath, [distIndex], {
-      cwd: rootDir,
-      env: {
-        ...process.env,
-        PATH: 'C:\\Program Files\\nodejs;' + (process.env.PATH || ''),
-        PORT: '3001',
-        NODE_ENV: 'test',
-        DATABASE_URL: process.env.DATABASE_URL || 'file:./packages/database/prisma/dev.db'
-      },
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
-
-    serverProcess.stdout.on('data', (d) => {
-      // console.log(`[API] ${d}`);
-    });
-    serverProcess.stderr.on('data', (d) => {
-      console.error(`[API STDERR] ${d}`);
-    });
-
-    serverProcess.on('error', (err) => {
-      console.error('❌ Error al iniciar servidor API:', err.message);
-    });
-
-    const ready = await waitForServer();
-    if (!ready) {
-      console.error('❌ No se pudo conectar al servidor API en http://localhost:3001 tras varios intentos.');
-      if (serverProcess) serverProcess.kill();
-      process.exit(1);
-    }
-    console.log('✅ Servidor API iniciado y listo en http://localhost:3001\n');
-  }
-
-  let passedCount = 0;
-  let failedCount = 0;
-  let totalIndividualTestsPassed = 0;
-
+  const selection = process.argv[2];
+  const selected = selection ? suites.filter(s => s.id === selection) : suites;
+  if (!selected.length) throw new Error('Suite desconocida');
+  const root = path.resolve(__dirname, '..');
+  console.log('Compilando la API actual para pruebas en una base desechable…');
+  execFileSync(process.execPath, [require.resolve('typescript/bin/tsc'), '-p', 'apps/api/tsconfig.json'], { cwd: root, stdio: 'inherit' });
+  let fixture;
+  let server;
+  let failures = 0;
   try {
-    for (const suite of suites) {
-      console.log(`\n▶ Ejecutando: ${suite.name}...`);
-      const scriptPath = path.join(__dirname, suite.script);
+    fixture = createTestFixture();
+    seedTestFixture(fixture.env);
+    server = fork(path.join(__dirname, 'test_server.js'), [], { cwd: root, env: fixture.env, execArgv: process.env.SYSTECH_TEST_PRISMA_CLIENT ? ['--require', path.join(__dirname, 'test_prisma_client.js')] : [], stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
+    server.stderr.on('data', data => process.stderr.write(data));
+    const base = await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('La API de pruebas no inició.')), 15000);
+      server.once('message', message => { clearTimeout(timeout); resolve(message.base); });
+      server.once('exit', () => { clearTimeout(timeout); reject(new Error('La API de pruebas terminó antes de iniciar.')); });
+    });
+    for (const suite of selected) {
+      console.log(`\n▶ ${suite.name}`);
       try {
-        const output = execSync(`node "${scriptPath}"`, { encoding: 'utf8', cwd: __dirname });
-        process.stdout.write(output);
-
-        // Extract real test counts from suite output
-        const match = output.match(/(\d+)\s+(?:de\s+\d+\s+pruebas pasadas|PASSED)/i);
-        if (match) {
-          totalIndividualTestsPassed += parseInt(match[1], 10);
-        }
-
-        passedCount++;
-      } catch (err) {
-        if (err.stdout) process.stdout.write(err.stdout);
-        if (err.stderr) process.stderr.write(err.stderr);
-        console.error(`❌ ERROR en suite: ${suite.name}`);
-        failedCount++;
-      }
+        execFileSync(process.execPath, [...(process.env.SYSTECH_TEST_PRISMA_CLIENT ? ['--require', path.join(__dirname, 'test_prisma_client.js')] : []), path.join(__dirname, suite.script)], {
+          cwd: root, env: { ...fixture.env, TEST_API_BASE: base, SYSTECH_ISOLATED_TESTS: 'true' }, stdio: 'inherit', timeout: 120000,
+        });
+      } catch { failures++; }
     }
   } finally {
-    if (serverProcess) {
-      console.log('\n🛑 Deteniendo servidor API temporal de pruebas...');
-      serverProcess.kill();
-    }
+    if (server && server.exitCode === null) await new Promise(resolve => { server.once('exit', resolve); server.kill(); });
+    if (fixture) cleanTestFixture(fixture.directory);
   }
-
-  console.log('\n======================================================================');
-  console.log(`📊 RESUMEN FINAL: ${passedCount} de ${suites.length} suites exitosas (${totalIndividualTestsPassed} pruebas individuales verificadas), ${failedCount} fallidas`);
-  if (failedCount === 0) {
-    console.log(`🎉 TODAS LAS PRUEBAS (${totalIndividualTestsPassed}/${totalIndividualTestsPassed}) PASARON CON ÉXITO AL 100%. LISTO PARA PRODUCCIÓN.`);
-    console.log('======================================================================\n');
-    process.exit(0);
-  } else {
-    console.error('❌ SE ENCONTRARON FALLOS EN LAS PRUEBAS.');
-    console.log('======================================================================\n');
-    process.exit(1);
-  }
+  console.log(`\n${selected.length - failures}/${selected.length} suites aprobadas. Las pruebas no certifican preparación para producción.`);
+  process.exitCode = failures ? 1 : 0;
 }
-
-main().catch(err => {
-  console.error('Error fatal al ejecutar pruebas:', err);
-  process.exit(1);
-});
+main().catch(err => { console.error(err.message); process.exitCode = 1; });

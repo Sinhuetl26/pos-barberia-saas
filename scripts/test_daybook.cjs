@@ -1,0 +1,8 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
+const m={exports:{}};new Function('exports',ts.transpileModule(fs.readFileSync('apps/web/src/utils/daybook.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText)(m.exports);
+const barbers=[{id:'a',nombre:'Alex',activo:true},{id:'b',nombre:'Alex',activo:true},{id:'c',nombre:'Sin citas',activo:true},{id:'d',nombre:'Inactivo',activo:false}];
+const visit=(id,barberoId,estado,fechaHora)=>({id,barberoId,estado,fechaHora,barbero:{nombre:'Retirado'}});
+const appointments=[visit('late','a','CONFIRMADA','2026-10-27T18:00:00Z'),visit('old','a','PENDIENTE','2026-10-27T10:00:00Z'),visit('done','b','COMPLETADA','2026-10-27T09:00:00Z'),visit('cancel','b','CANCELADA','2026-10-27T08:00:00Z'),visit('absent','b','NO_SHOW','2026-10-27T07:00:00Z'),visit('current','d','EN_CURSO','2026-10-27T17:00:00Z')];
+const before=JSON.stringify({barbers,appointments});const columns=m.exports.daybookColumns(barbers,appointments);
+assert.deepEqual(columns.map(c=>c.id),['a','b','c','d']);assert.deepEqual(columns[0].appointments.map(a=>a.id),['old','late']);assert.equal(columns[0].todayCount,2);assert.equal(columns[1].todayCount,1);assert.equal(columns[1].appointments.length,0);assert.equal(columns[2].todayCount,0);assert.equal(columns[3].appointments[0].estado,'EN_CURSO');assert.equal(JSON.stringify({barbers,appointments}),before);assert.deepEqual(m.exports.daybookColumns([],[]),[]);
+console.log('PASS identidades distintas con mismo nombre, orden, pendientes vencidas, en atención, completadas, canceladas, ausencias, equipo inactivo con cita y sin mutación.');

@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
+const file=fs.readFileSync('apps/web/src/views/NotificacionesView.tsx','utf8');
+const source=file.slice(file.indexOf('export function messageStatusGroup'),file.indexOf('export const NotificacionesView'));
+const compiled={exports:{}};new Function('exports','module',ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS}}).outputText)(compiled.exports,compiled);
+const {messageStatusGroup,messageStatusLabel}=compiled.exports;
+assert.deepEqual(['PENDIENTE','LINK_GENERADO','ENVIADO','ENTREGADO','LEIDO','FALLIDO','ERROR','BLOQUEADO_HORARIO','BLOQUEADO_OPTOUT','REGISTRADO'].map(messageStatusGroup),['LISTO','LISTO','ENVIADO','ENVIADO','ENVIADO','ATENCION','ATENCION','ATENCION','ATENCION','REGISTRADO']);
+assert.equal(messageStatusLabel('ENVIADO'),'Aceptado por el proveedor');
+assert.equal(messageStatusLabel('ENTREGADO'),'Entregado');
+assert.notEqual(messageStatusLabel('ENVIADO'),messageStatusLabel('ENTREGADO'));
+assert.equal(messageStatusLabel('LINK_GENERADO'),'Listo para abrir');
+console.log('Message status UI: 10 states grouped and provider acceptance is not presented as delivery; no external messages sent.');

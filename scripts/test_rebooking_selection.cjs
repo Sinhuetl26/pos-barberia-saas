@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
+const moduleResult={exports:{}};
+const source=ts.transpileModule(fs.readFileSync('apps/web/src/types/rebooking.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+new Function('exports','module',source)(moduleResult.exports,moduleResult);
+const choose=moduleResult.exports.availableRebookingSelection,draft={barberoId:'historic-barber',servicioId:'historic-service'};
+const barbers=[{id:'historic-barber',activo:true},{id:'other-barber',activo:true}],services=[{id:'historic-service',activo:true},{id:'other-service',activo:true}];
+assert.deepEqual(choose(draft,barbers,services),draft);
+assert.deepEqual(choose(draft,[barbers[1]],services),{barberoId:'',servicioId:'historic-service'});
+assert.deepEqual(choose(draft,barbers,[services[1]]),{barberoId:'historic-barber',servicioId:''});
+assert.deepEqual(choose(draft,[{...barbers[0],activo:false}],[{...services[0],activo:false}]),{barberoId:'',servicioId:''});
+assert.deepEqual(choose(draft,[],[]),{barberoId:'',servicioId:''});
+console.log('PASS 5 rebooking selections: preserve available history; never silently replace missing/inactive professionals or services');

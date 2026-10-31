@@ -1,0 +1,16 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const read = path => fs.readFileSync(path, 'utf8');
+const api = read('apps/web/src/api.ts');
+const access = read('apps/web/src/views/AccesosView.tsx');
+const onboarding = read('apps/web/src/views/OnboardingModal.tsx');
+const styles = read('apps/web/src/styles/secondary-workspaces.css');
+assert.match(api, /NETWORK_UNAVAILABLE/);
+assert.match(api, /Revisa que la demo esté encendida/);
+assert.match(access, /¿Guardar este acceso\?/);
+assert.match(access, /setConfirmChange\(true\)/);
+assert.match(onboarding, /Prepara tu barbería/);
+assert.doesNotMatch(onboarding, /Crear y Lanzar Barbería/);
+assert.match(styles, /secondary-workspace/);
+assert.match(styles, /focus-visible/);
+console.log('Secondary workspace UI: 8/8 contracts passed');

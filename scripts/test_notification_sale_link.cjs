@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const source = fs.readFileSync('apps/web/src/views/NotificacionesView.tsx', 'utf8');
+const app = fs.readFileSync('apps/web/src/App.tsx', 'utf8');
+const pos = fs.readFileSync('apps/web/src/views/PosView.tsx', 'utf8');
+const history = fs.readFileSync('apps/web/src/components/SalesHistory.tsx', 'utf8');
+assert.match(source, /ventaId.*\/app\/pos\?ventaId=/s);
+assert.match(source, /message-history-action/);
+assert.match(app, /<NotificacionesView onNavigate=/);
+assert.match(pos, /searchParams\.get\('ventaId'\)/);
+assert.match(history, /is-target/);
+console.log('Notification sale link: 5/5 contracts passed');

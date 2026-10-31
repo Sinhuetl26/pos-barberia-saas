@@ -1,0 +1,27 @@
+const fs=require('fs'),path=require('path'),crypto=require('crypto'),assert=require('node:assert/strict');
+const {createTestFixture,cleanTestFixture}=require('./test_fixture');
+const {createTestEvidence}=require('./test_evidence');
+async function main(){
+ const evidence=createTestEvidence();
+ const work=path.resolve(__dirname,'../packages/database/prisma/dev.db'),hash=()=>crypto.createHash('sha256').update(fs.readFileSync(work)).digest('hex'),before=hash();
+ const fixture=createTestFixture();Object.assign(process.env,fixture.env);
+ const {prisma}=require('@systech/database'),jwt=require('jsonwebtoken'),{default:app}=require('../apps/api/dist/index');
+ const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port+'/api',checks=[];
+ const check=async(name,fn)=>{await fn();checks.push(name);console.log('PASS '+name);};
+ const call=async(endpoint,token,data)=>fetch(base+endpoint,{method:data?'POST':'GET',headers:{'content-type':'application/json',...(token?{authorization:'Bearer '+token}:{})},...(data?{body:JSON.stringify(data)}:{})});
+ try{
+ const tenant=await prisma.tenant.create({data:{nombre:'Taller de prueba <sin ejecutar>',slug:'counter-proof'}}),branch=await prisma.sucursal.create({data:{tenantId:tenant.id,nombre:'Sucursal de prueba',zonaHoraria:'America/Tijuana'}}),barber=await prisma.barbero.create({data:{sucursalId:branch.id,nombre:'Profesional de prueba con nombre extenso '.repeat(3)}}),owner=await prisma.usuario.create({data:{tenantId:tenant.id,nombre:'Dueña de prueba',email:'counter@example.invalid',passwordHash:'disabled-fixture',rol:'DUENO'}});
+ await prisma.corteCaja.create({data:{tenantId:tenant.id,sucursalId:branch.id,usuarioId:owner.id,fondoInicial:0}});
+ const product=await prisma.producto.create({data:{tenantId:tenant.id,sucursalId:branch.id,nombre:'Servicio largo <script>alert(1)</script> '.repeat(3),tipo:'SERVICIO',precioVenta:280}}),token=jwt.sign({sub:owner.id,tid:tenant.id,rol:owner.rol,sv:owner.sessionVersion},fixture.env.JWT_SECRET);
+ const response=await call('/ventas',token,{sucursalId:branch.id,barberoId:barber.id,items:[{productoId:product.id,cantidad:1}],metodoPago:'EFECTIVO',efectivoRecibido:500,idempotencyKey:crypto.randomUUID()});assert.equal(response.status,200);const sale=(await response.json()).venta;
+ await check('Both receipt widths keep long descriptions bounded and expose print action without broken width navigation',async()=>{for(const width of ['58mm','80mm']){const r=await call('/ventas/'+sale.id+'/ticket-html?width='+width,token),html=await r.text();assert.equal(r.status,200);assert(html.includes('width: '+width));assert(html.includes('table-layout: fixed'));assert(html.includes('overflow-wrap: anywhere'));assert(html.includes('window.print()'));assert(!html.includes('href="?width='));}});
+ await check('Receipt escapes stored text and distinguishes service professional from collector',async()=>{const r=await call('/ventas/'+sale.id+'/ticket-html',token),html=await r.text();assert(!html.includes('<script>alert(1)</script>'));assert(html.includes('&lt;script&gt;'));assert(html.includes('Atendido por:'));assert(html.includes('Cobrado por:'));assert(html.includes(owner.email));});
+ await check('Stored received cash and change are printed without claiming a CFDI or a scannable fake barcode',async()=>{const html=await(await call('/ventas/'+sale.id+'/ticket-html',token)).text();assert(html.includes('Recibido:'));assert(html.includes('$500.00'));assert(html.includes('Cambio:'));assert(html.includes('$220.00'));assert(html.includes('No es CFDI'));assert(!html.includes('||| | ||||'));});
+ await check('Receipt route uses private non-cached policy and permits its own inline print action',async()=>{const r=await call('/ventas/'+sale.id+'/ticket-html',token);assert.equal(r.headers.get('cache-control'),'no-store');assert.equal(r.headers.get('referrer-policy'),'no-referrer');assert(r.headers.get('content-security-policy').includes("script-src 'unsafe-inline'"));assert(r.headers.get('content-security-policy').includes("default-src 'none'"));});
+ await check('Anonymous and foreign business cannot read the thermal receipt',async()=>{assert.equal((await call('/ventas/'+sale.id+'/ticket-html')).status,401);const other=await prisma.tenant.create({data:{nombre:'Otro negocio',slug:'other-counter'}}),user=await prisma.usuario.create({data:{tenantId:other.id,nombre:'Otra dueña',email:'other-counter@example.invalid',passwordHash:'disabled',rol:'DUENO'}}),t=jwt.sign({sub:user.id,tid:user.tenantId,rol:user.rol,sv:user.sessionVersion},fixture.env.JWT_SECRET);assert.equal((await call('/ventas/'+sale.id+'/ticket-html',t)).status,404);});
+ await check('Ticket time is expressed in the branch time zone',async()=>{const html=await(await call('/ventas/'+sale.id+'/ticket-html',token)).text();assert(html.includes(new Date(sale.fecha).toLocaleString('es-MX',{timeZone:'America/Tijuana'})));});
+ await check('Working database is unchanged',async()=>assert.equal(hash(),before));
+ const motor=process.env.SYSTECH_TEST_PG_URL?'POSTGRES':'SQLITE';fs.writeFileSync(path.resolve(__dirname,'../docs/ST09_RESULTADOS_'+motor+'.json'),JSON.stringify({...evidence,finishedAt:new Date().toISOString(),motor,count:checks.length,checks,pass:true,hardwareFisico:false,baseOperativaIntacta:true},null,2)+'\n');
+ }finally{await new Promise(r=>server.close(r));await prisma.$disconnect();cleanTestFixture(fixture.directory);}
+}
+main().catch(e=>{console.error(e);process.exitCode=1;});

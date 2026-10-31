@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'), esbuild=require('esbuild');
+const output=esbuild.buildSync({entryPoints:['apps/web/src/utils/appointmentNavigation.ts'],bundle:true,platform:'node',format:'cjs',write:false}).outputFiles[0].text;
+const mod={exports:{}};new Function('module','exports',output)(mod,mod.exports);
+const {appointmentAgendaPath}=mod.exports;
+const branch={id:'local-a',zonaHoraria:'America/Mexico_City'};
+const appointment={id:'cita con espacios/?',sucursalId:'local-a',fechaHora:'2026-10-21T03:30:00Z'};
+assert.equal(appointmentAgendaPath(appointment,branch),'/app/agenda?fecha=2026-10-20&citaId=cita%20con%20espacios%2F%3F');
+assert.equal(appointmentAgendaPath(appointment,{...branch,zonaHoraria:'Asia/Tokyo'}),'/app/agenda?fecha=2026-10-21&citaId=cita%20con%20espacios%2F%3F');
+for(const wrong of [null,{...branch,id:'local-b'}])assert.equal(appointmentAgendaPath(appointment,wrong),null);
+assert.equal(appointmentAgendaPath({...appointment,fechaHora:'invalid'},branch),null);
+assert.equal(appointmentAgendaPath({...appointment,id:''},branch),null);
+assert.equal(appointmentAgendaPath(appointment,{...branch,zonaHoraria:'invalid'}),null);
+console.log('PASS 7 appointment return checks: branch-local date, encoded ID, foreign branch, missing branch/date/ID and invalid zone');

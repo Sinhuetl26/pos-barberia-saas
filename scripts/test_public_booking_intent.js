@@ -1,0 +1,23 @@
+'use strict';
+const fs = require('node:fs'), assert = require('node:assert/strict'), ts = require('typescript'), Module = require('node:module'), path = require('node:path');
+const filename = path.resolve('apps/web/src/utils/publicBookingIntent.ts');
+const loaded = new Module(filename); loaded.filename = filename; loaded.paths = Module._nodeModulePaths(path.dirname(filename));
+loaded._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText, filename);
+const { savePublicBookingIntent: save, readPublicBookingIntent: read, clearPublicBookingIntent: clear } = loaded.exports;
+const store = () => { const map = new Map(); return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, value), removeItem: key => map.delete(key) }; };
+const payload = { tenantId: 'tenant-test', idempotencyKey: 'test-uuid-preserved', clienteNombre: 'Cliente QA', clienteTelefono: '5510101010', tipoCorte: 'Fade', fotoReferencia: 'data:image/jpeg;base64,private-fixture' };
+const key = 'systech:public-booking:tenant-test', durable = store(), session = store(), now = 1000;
+let passed = 0;
+function test(name, run) { run(); passed++; console.log('PASS ' + name); }
+test('exact payload can be retried in its original session', () => { save(durable, session, payload, now); assert.deepEqual(read(durable, session, payload.tenantId, now + 1), payload); });
+test('durable storage excludes photo and customer data', () => { const raw = durable.getItem(key); assert(!raw.includes('fotoReferencia')); assert(!raw.includes('Cliente QA')); assert(!raw.includes('5510101010')); assert(!raw.includes('Fade')); });
+test('another tenant cannot retrieve the pending payload', () => assert.equal(read(durable, session, 'other-tenant', now), null));
+test('expiry removes session media but preserves the recovery key', () => { const expired = read(durable, session, payload.tenantId, now + 24 * 3600 * 1000); assert.deepEqual(expired, { tenantId: payload.tenantId, idempotencyKey: payload.idempotencyKey, __requiresRecovery: true }); assert.equal(session.getItem(key), null); assert(durable.getItem(key)); });
+test('closing the photo session keeps a recovery marker', () => { save(durable, session, payload, now); session.removeItem(key); assert.equal(read(durable, session, payload.tenantId, now).__requiresRecovery, true); });
+test('old pending payload migrates without replacing its original key', () => { durable.setItem(key, JSON.stringify(payload)); assert.deepEqual(read(durable, session, payload.tenantId, now), payload); assert(!durable.getItem(key).includes('private-fixture')); });
+test('a mismatched session cannot reuse another intent photo', () => { session.setItem(key, JSON.stringify({ createdAt: now, payload: { ...payload, idempotencyKey: 'another-key' } })); assert.equal(read(durable, session, payload.tenantId, now).__requiresRecovery, true); });
+test('future timestamps fail closed without exposing the payload', () => { save(durable, session, payload, now + 100); assert.equal(read(durable, session, payload.tenantId, now).__requiresRecovery, true); });
+test('malformed durable markers cannot silently start a new intent', () => { durable.setItem(key, '{bad'); assert.throws(() => read(durable, session, payload.tenantId, now)); });
+test('failed durable save rolls back session media', () => { assert.throws(() => save({ setItem() { throw new Error('quota'); } }, session, payload, now)); assert.equal(session.getItem(key), null); });
+test('confirmed completion removes both marker and media', () => { save(durable, session, payload, now); clear(durable, session, payload.tenantId); assert.equal(read(durable, session, payload.tenantId, now), null); assert.equal(session.getItem(key), null); });
+console.log(`${passed}/${passed} public booking retention checks passed`);

@@ -1,3 +1,4 @@
+if (process.env.SYSTECH_ISOLATED_TESTS !== 'true') throw new Error('Utiliza npm test o npm run test:phaseN para ejecutar en una base aislada.');
 // ======================================================================
 // SYSTECH STUDIO - FASE 3 AUTOMATED TEST SUITE (PRODUCT SUITE)
 // Multi-service booking, Buffer times, Token cancellation, Waitlist,
@@ -6,7 +7,7 @@
 
 const http = require('http');
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.TEST_API_BASE || 'http://localhost:3001';
 
 async function makeRequest(path, method = 'GET', body = null, token = null, extraHeaders = {}) {
   const url = new URL(path, API_BASE);
@@ -95,7 +96,7 @@ async function runTests() {
     sucursalId,
     barberoId,
     servicioIds: serviceIds.length > 0 ? serviceIds : undefined,
-    fechaHora: futureDate.toISOString(),
+    fechaHora: futureDate.toISOString().slice(0,10)+'T11:00:00',
     clienteNombre: 'Alejandro Sanz',
     clienteTelefono: '5577665544',
     clienteEmail: 'alejandro@crmtest.com'
@@ -122,7 +123,7 @@ async function runTests() {
   // Cancel appointment via secure token
   const cancelRes = await makeRequest(`/api/public/cita/token/${cancelToken}/cancelar`, 'POST');
   assert(cancelRes.status === 200 && cancelRes.body.estado === 'CANCELADA', 'Appointment cancelled via secure token adhering to policy');
-  assert(cancelRes.body.waitlistNotified === true, 'Waitlist automatically notified of freed appointment slot');
+  assert(cancelRes.body.waitlistNotified === false, 'No external waitlist delivery is claimed without a connected provider');
 
   // 4. No-Show Tracking on Appointments
   console.log('\n--- 4. No-Show Tracking ---');
@@ -131,11 +132,15 @@ async function runTests() {
     barberoId,
     clienteNombre: 'Roberto NoShow',
     clienteTelefono: '5533221100',
-    fechaHora: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+    fechaHora: futureDate.toISOString().slice(0,10)+'T15:00:00'
   }, duenoToken);
   assert(newCitaRes.status === 200, 'Internal appointment created');
   const testCitaId = newCitaRes.body.id;
 
+  assert((await makeRequest(`/api/citas/${testCitaId}/status`, 'PUT', { estado: 'NO_SHOW' }, duenoToken)).status === 400, 'Future appointment cannot be marked absent');
+  const { prisma } = require('@systech/database');
+  await prisma.cita.update({where:{id:testCitaId},data:{fechaHora:new Date(Date.now()-3600000)}});
+  await prisma.$disconnect();
   // Mark as NO_SHOW
   const noShowRes = await makeRequest(`/api/citas/${testCitaId}/status`, 'PUT', { estado: 'NO_SHOW' }, duenoToken);
   assert(noShowRes.status === 200 && noShowRes.body.estado === 'NO_SHOW', 'Appointment marked as NO_SHOW in agenda');
@@ -163,17 +168,24 @@ async function runTests() {
 
   // Cancel the sale
   const cancelSaleRes = await makeRequest(`/api/ventas/${createdSaleId}/cancelar`, 'POST', {
+    idempotencyKey: 'phase3-return-' + createdSaleId,
     motivo: 'Cliente solicitó reembolso por error de cargo'
   }, duenoToken);
   assert(cancelSaleRes.status === 200 && cancelSaleRes.body.success, 'Sale cancelled and refunded with audit trail');
 
   // 6. CRM & Inactivity Reactivation
   console.log('\n--- 6. CRM & Reactivation Campaigns ---');
+  const { prisma: reactivationPrisma } = require('@systech/database');
+  await reactivationPrisma.clienteFinal.update({ where: { id: clienteId }, data: { totalVisitas: 1, fechaUltimaVisita: new Date(Date.now() - 45 * 86400000) } });
+  await reactivationPrisma.$disconnect();
   const reactivacionRes = await makeRequest('/api/clientes/reactivacion?diasInactividad=0', 'GET', null, duenoToken);
   assert(reactivacionRes.status === 200 && Array.isArray(reactivacionRes.body.clientes), 'Reactivation campaign endpoint identifies inactive clients');
   if (reactivacionRes.body.clientes.length > 0) {
     assert(reactivacionRes.body.clientes[0].mensajeReactivacion, 'Reactivation campaign prepares 1-click WhatsApp message');
   }
+  const invitation = reactivacionRes.body.clientes.find(client => client.id === clienteId);
+  assert(invitation && !/descuento|regalamos|\d+%/i.test(invitation.mensajeReactivacion), 'Inactive client invitation does not promise an unconfigured discount');
+  assert(invitation?.whatsappUrl && decodeURIComponent(new URL(invitation.whatsappUrl).searchParams.get('text') || '') === invitation.mensajeReactivacion, 'WhatsApp link contains the exact reviewable invitation without sending it');
 
   // Assign client membership
   const membresiaRes = await makeRequest(`/api/clientes/${clienteId}/membresia`, 'POST', {
@@ -194,6 +206,7 @@ async function runTests() {
   }, duenoToken);
 
   const nominaRes = await makeRequest('/api/comisiones/liquidar-nomina', 'POST', {
+    idempotencyKey: 'phase3-payroll-' + createdSaleId,
     barberoId,
     adelantos: 50,
     deducciones: 0,
@@ -204,6 +217,7 @@ async function runTests() {
   // 8. Cash Drawer Movements
   console.log('\n--- 8. Cash Drawer Movements ---');
   const movCajaRes = await makeRequest('/api/cortes-caja/movimiento', 'POST', {
+    idempotencyKey: 'phase3-cash-' + createdSaleId,
     sucursalId,
     tipo: 'GASTO_MENOR',
     monto: 75.50,
@@ -215,6 +229,11 @@ async function runTests() {
   console.log('\n--- 9. Weekly BI Summary & CSV Export ---');
   const resumenRes = await makeRequest('/api/reportes/resumen-semanal', 'POST', {}, duenoToken);
   assert(resumenRes.status === 200 && resumenRes.body.textoResumen.includes('RESUMEN SEMANAL'), 'Automated weekly BI summary prepared for owner');
+  const summaryLogs = await makeRequest('/api/notificaciones', 'GET', null, duenoToken);
+  const preparedSummary = Array.isArray(summaryLogs.body) && summaryLogs.body.find(log => log.id === resumenRes.body.notificacionId);
+  assert(summaryLogs.status === 200 && preparedSummary && preparedSummary.tipo === 'RESUMEN_SEMANAL'
+    && preparedSummary.estado === 'PREPARADO' && preparedSummary.mensaje === resumenRes.body.textoResumen,
+    'Weekly summary persists as prepared, never sent merely by generating its text');
 
   const csvRes = await makeRequest('/api/reportes/exportar/ventas-csv', 'GET', null, duenoToken);
   assert(csvRes.status === 200 && typeof csvRes.body === 'string' && csvRes.body.includes('Folio,Fecha'), 'Sales exported in valid accounting CSV format');

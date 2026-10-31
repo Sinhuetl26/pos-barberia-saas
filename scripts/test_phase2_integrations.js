@@ -1,3 +1,4 @@
+if (process.env.SYSTECH_ISOLATED_TESTS !== 'true') throw new Error('Utiliza npm test o npm run test:phaseN para ejecutar en una base aislada.');
 // ======================================================================
 // SYSTECH STUDIO - FASE 2 AUTOMATED TEST SUITE
 // Tests Stripe Webhooks, Idempotency, Dunning, Gated Simulators,
@@ -6,7 +7,7 @@
 
 const http = require('http');
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = process.env.TEST_API_BASE || 'http://localhost:3001';
 
 async function makeRequest(path, method = 'GET', body = null, token = null, extraHeaders = {}) {
   const url = new URL(path, API_BASE);
@@ -58,7 +59,7 @@ function assert(condition, message) {
 
 async function runTests() {
   console.log('\n======================================================');
-  console.log('🚀 RUNNING FASE 2: REAL INTEGRATIONS TEST SUITE');
+  console.log('🚀 RUNNING FASE 2: CONTROLLED INTEGRATIONS TEST SUITE');
   console.log('======================================================\n');
 
   // 1. Authenticate as Dueno (El Bigote)
@@ -69,7 +70,12 @@ async function runTests() {
   });
   assert(loginRes.status === 200 && loginRes.body.token, 'Dueno login successful');
   const duenoToken = loginRes.body.token;
+  const platformLogin = await makeRequest('/api/auth/login', 'POST', { email: 'admin@systech.com', password: 'Admin@Systech2026!' });
+  assert(platformLogin.status === 200 && platformLogin.body.token, 'Platform account authenticates for global jobs');
+  const superAdminToken = platformLogin.body.token;
   const tenantId = loginRes.body.user.tenantId;
+  const plan = require('../packages/licensing/catalog.json').plans.find(p => p.code === loginRes.body.tenant.plan);
+  if (!plan) throw new Error('La cuenta de prueba debe tener un plan válido del catálogo.');
 
   // 2. Stripe SaaS Webhooks & Idempotency
   console.log('\n--- 2. Stripe SaaS Webhooks & Idempotency ---');
@@ -84,7 +90,7 @@ async function runTests() {
         id: `in_test_${Date.now()}`,
         customer: 'cus_elbigote_test',
         subscription: 'sub_elbigote_test',
-        amount_due: 99900
+        amount_due: plan.monthlyBaseMxn * 100
       }
     }
   };
@@ -97,7 +103,8 @@ async function runTests() {
       object: {
         client_reference_id: tenantId,
         customer: 'cus_elbigote_test',
-        subscription: 'sub_elbigote_test'
+        subscription: 'sub_elbigote_test',
+        metadata: { plan: plan.code }
       }
     }
   });
@@ -127,7 +134,7 @@ async function runTests() {
         id: `in_recover_${Date.now()}`,
         customer: 'cus_elbigote_test',
         subscription: 'sub_elbigote_test',
-        amount_paid: 99900
+        amount_paid: plan.monthlyBaseMxn * 100
       }
     }
   };
@@ -140,7 +147,7 @@ async function runTests() {
 
   // 3. Dunning Execution Job
   console.log('\n--- 3. Dunning Verification Job ---');
-  const dunningRes = await makeRequest('/api/suscripcion/ejecutar-dunning', 'POST', {}, duenoToken);
+  const dunningRes = await makeRequest('/api/suscripcion/ejecutar-dunning', 'POST', {}, superAdminToken);
   assert(dunningRes.status === 200 && dunningRes.body.success, 'Dunning execution endpoint responds 200 OK with summary');
 
   // 4. Coupon Validation (FUNDADOR)
@@ -174,7 +181,7 @@ async function runTests() {
   assert(optOutRes.status === 200, 'Opt-out endpoint accepts telephone');
 
   // 5.3 Automated Reminders Scan
-  const procRecordatorios = await makeRequest('/api/notificaciones/procesar-recordatorios', 'POST', {}, duenoToken);
+  const procRecordatorios = await makeRequest('/api/notificaciones/procesar-recordatorios', 'POST', {}, superAdminToken);
   assert(procRecordatorios.status === 200 && procRecordatorios.body.success, 'Automated reminder scanner executed smoothly');
 
   // 5.4 Test Gated simular-pago

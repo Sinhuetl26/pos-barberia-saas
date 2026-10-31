@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),ts=require('typescript');
+const scope={exports:{}};
+new Function('exports','module','require',ts.transpileModule(fs.readFileSync('apps/web/src/views/DataImportView.tsx','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2020,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText)(scope.exports,scope,()=>({}));
+const {importFailureIsDefinitive}=scope.exports;
+for(const status of [0,408,429,500,502,503])assert.equal(importFailureIsDefinitive({status}),false,'uncertain/network outcome must preserve the intent');
+for(const status of [400,403,404])assert.equal(importFailureIsDefinitive({status}),true,'definitive rejection allows reviewing the file');
+assert.equal(importFailureIsDefinitive({status:409,code:'IMPORT_PREVIEW_CHANGED'}),true);
+for(const status of [400,403,404,409,500])assert.equal(importFailureIsDefinitive({status,code:'IDEMPOTENCY_CONFLICT'}),false,'never discard a conflicting intent');
+assert.equal(importFailureIsDefinitive({status:409,code:'UNKNOWN'}),false);
+console.log('PASS 16 recovery assertions: uncertain/conflict intents retained, stale previews reviewed');

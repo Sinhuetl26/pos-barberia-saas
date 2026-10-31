@@ -1,9 +1,10 @@
+if (process.env.SYSTECH_ISOLATED_TESTS !== 'true') throw new Error('Utiliza npm test o npm run test:phaseN para ejecutar en una base aislada.');
 // ======================================================================
 // SYSTECH STUDIO - PHASE 1 TEST SUITE
 // Unit tests for financial calculations, Zod validations, and concurrency
 // ======================================================================
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = (process.env.TEST_API_BASE || 'http://localhost:3001') + '/api';
 
 // Direct unit tests of pure business logic services
 const fs = require('fs');
@@ -205,12 +206,14 @@ async function runPhase1Tests() {
   });
   const token = resLogin.data?.token;
 
+  const validationBranches = await request('/sucursales', { headers: { Authorization: `Bearer ${token}` } });
+  const validationBarbers = await request('/barberos', { headers: { Authorization: `Bearer ${token}` } });
   const resEmptySale = await request('/ventas', {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({
-      sucursalId: 'fake-id',
-      barberoId: 'fake-id',
+      sucursalId: validationBranches.data[0].id,
+      barberoId: validationBarbers.data.find(b => b.sucursalId === validationBranches.data[0].id).id,
       metodoPago: 'EFECTIVO',
       items: [] // Items vacío
     })
@@ -252,7 +255,7 @@ async function runPhase1Tests() {
 
   if (sucursal && barbero) {
     // Definir un horario futuro único garantizado que no sea domingo (día de descanso) ni ocupado
-    const randomDays = 400 + Math.floor(Math.random() * 300);
+    const randomDays = 40;
     const raceSlot = new Date(Date.now() + randomDays * 24 * 3600000);
     if (raceSlot.getDay() === 0) {
       raceSlot.setDate(raceSlot.getDate() + 1); // Si cae en domingo, mover al lunes
@@ -275,7 +278,7 @@ async function runPhase1Tests() {
             barberoId: barbero.id,
             clienteNombre: `Cliente Concurrente ${i}`,
             clienteTelefono: `551100220${i}`,
-            fechaHora: raceSlot.toISOString(),
+            fechaHora: raceSlot.toISOString().slice(0,10)+'T11:00:00',
             duracionMinutos: 30
           })
         })
@@ -306,7 +309,7 @@ async function runPhase1Tests() {
   console.log('\n======================================================================');
   console.log(`📊 RESULTADO FASE 1: ${passed} de ${total} pruebas pasadas (${Math.round((passed / total) * 100)}%)`);
   if (passed === total) {
-    console.log('🎉 FASE 1 VERIFICADA CON ÉXITO: Finanzas, arquitectura y concurrencia operando al 100%.');
+    console.log(`🎉 FASE 1 VERIFICADA CON ÉXITO: Las verificaciones de esta suite aprobaron en ${process.env.SYSTECH_TEST_PG_URL ? 'PostgreSQL' : 'SQLite'}.`);
   } else {
     console.error('⚠️ ALERTA: Algunas pruebas de la Fase 1 fallaron.');
     process.exit(1);

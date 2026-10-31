@@ -1,0 +1,11 @@
+const assert = require('node:assert/strict'), fs = require('node:fs'), ts = require('typescript');
+const moduleScope = { exports: {} };
+new Function('exports', 'module', 'require', ts.transpileModule(fs.readFileSync('apps/web/src/components/CommercialControls.tsx', 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText)(moduleScope.exports, moduleScope, () => ({}));
+const { commercialPercentValid, tariffVersion, canDecideDiscount } = moduleScope.exports;
+let count = 0; const check = (name, fn) => { fn(); count++; console.log(`PASS ${name}`); };
+check('Policy requires explicit percentage rather than treating blank as zero', () => { for (const value of ['', ' ', 'false', 'Infinity', '-1', '100.01', '0.001']) assert.equal(commercialPercentValid(value), false); for (const value of ['0', '0.01', '20', '100.00']) assert.equal(commercialPercentValid(value), true); });
+check('Tariff publication version belongs to exact barber and service', () => assert.equal(tariffVersion([{ barberoId: 'a', servicioId: 'cut', version: 2 }, { barberoId: 'b', servicioId: 'cut', version: 20 }, { barberoId: 'a', servicioId: 'beard', version: 30 }], 'a', 'cut'), 2));
+check('New tariff pair starts at version zero and retains latest annulled version', () => { assert.equal(tariffVersion([], 'a', 'cut'), 0); assert.equal(tariffVersion([{ barberoId: 'a', servicioId: 'cut', version: 4, anulada: true }], 'a', 'cut'), 4); });
+check('Own account cannot approve its own discount request', () => assert.equal(canDecideDiscount({ estado: 'PENDIENTE', solicitadoPorId: 'owner' }, 'owner'), false));
+check('Used, approved and rejected requests cannot be decided again', () => { for (const estado of ['USADA', 'APROBADA', 'RECHAZADA']) assert.equal(canDecideDiscount({ estado, solicitadoPorId: 'barber' }, 'owner'), false); assert.equal(canDecideDiscount({ estado: 'PENDIENTE', solicitadoPorId: 'barber' }, 'owner'), true); });
+console.log(`Commercial UI helpers: ${count}/${count} passed`);

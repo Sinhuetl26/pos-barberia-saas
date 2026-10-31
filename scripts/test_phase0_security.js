@@ -1,9 +1,10 @@
+if (process.env.SYSTECH_ISOLATED_TESTS !== 'true') throw new Error('Utiliza npm test o npm run test:phaseN para ejecutar en una base aislada.');
 // ==========================================
 // SYSTECH STUDIO - PHASE 0 SECURITY TEST SUITE
 // Automated verification of P0 security & multi-tenant isolation
 // ==========================================
 
-const API_BASE = 'http://localhost:3001/api';
+const API_BASE = (process.env.TEST_API_BASE || 'http://localhost:3001') + '/api';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
@@ -294,13 +295,13 @@ async function runTests() {
     })
   });
   assert(
-    resPastBooking.status === 400 && resPastBooking.data?.code === 'PAST_DATE',
+    resPastBooking.status === 400 && resPastBooking.data?.code === 'BOOKING_DATE_RANGE',
     'Rechazo de reserva pública con fecha en el pasado (400)',
     `Status: ${resPastBooking.status}`
   );
 
   // 6.2 Reserva legítima en fecha futura (garantizada en día laboral)
-  const randomDays = 100 + Math.floor(Math.random() * 200);
+  const randomDays = 30;
   const futureDate = new Date(Date.now() + randomDays * 24 * 3600000);
   if (futureDate.getDay() === 0) {
     futureDate.setDate(futureDate.getDate() + 1); // No domingo
@@ -317,7 +318,7 @@ async function runTests() {
       clienteNombre: 'Juan Perez',
       clienteTelefono: '5598765432',
       clienteEmail: 'juan@testseguridad.com',
-      fechaHora: futureDate.toISOString()
+      fechaHora: futureDate.toISOString().slice(0,10)+'T11:00:00'
     })
   });
 
@@ -334,7 +335,7 @@ async function runTests() {
     const resPublicLookup = await request(`/public/cita/${bookingCode}`);
     assert(
       resPublicLookup.status === 200 &&
-      resPublicLookup.data?.cliente?.nombre === 'Juan Perez' &&
+      resPublicLookup.data?.cliente?.nombre === 'Cliente' &&
       resPublicLookup.data?.cliente?.telefono === undefined &&
       resPublicLookup.data?.cliente?.email === undefined,
       'Consulta pública no filtra teléfono ni email del cliente (Cumplimiento LFPDPPP)',
@@ -531,7 +532,7 @@ async function runTests() {
   console.log('\n========================================================');
   console.log(`📊 RESULTADO FASE 0: ${passedTests} de ${totalTests} pruebas pasadas (${Math.round((passedTests / totalTests) * 100)}%)`);
   if (passedTests === totalTests) {
-    console.log('🎉 FASE 0 COMPLETADA CON ÉXITO: Todos los bloqueantes P0 están cerrados.');
+    console.log('🎉 FASE 0 COMPLETADA CON ÉXITO: Las verificaciones de esta suite aprobaron; otros requisitos de producción siguen pendientes.');
   } else {
     console.error('⚠️ ALERTA: Algunas pruebas de seguridad fallaron.');
     process.exit(1);

@@ -1,0 +1,13 @@
+'use strict';
+// Keep the currently loaded demo client and the default SDK untouched.
+const fs = require('node:fs'), path = require('node:path'), { execFileSync } = require('node:child_process');
+if (process.env.NODE_ENV !== 'test' || process.env.SYSTECH_ISOLATED_TESTS !== 'true') throw new Error('Isolated test mode required');
+const root = path.resolve(__dirname, '..'), postgres = process.argv.includes('--postgres');
+const directory = path.join(root, '.tools', postgres ? 'prisma-uiux-postgres' : 'prisma-uiux');
+fs.mkdirSync(directory, { recursive: true });
+const source = fs.readFileSync(path.join(root, 'packages/database/prisma', postgres ? 'schema.postgres.prisma' : 'schema.prisma'), 'utf8');
+const schema = source.replace(/generator client \{[\s\S]*?\}/, 'generator client {\n  provider = "prisma-client-js"\n  output = "./client"\n}');
+if (schema === source) throw new Error('Generator not found');
+const file = path.join(directory, 'schema.prisma'); fs.writeFileSync(file, schema);
+execFileSync(process.execPath, [require.resolve('prisma/build/index.js'), 'generate', '--schema=' + file], { cwd: root, env: { ...process.env, DATABASE_URL: postgres ? 'postgresql://unused:unused@localhost:55404/systech_test_unused' : 'file:./unused.db' }, stdio: 'inherit', windowsHide: true });
+console.log('Isolated UI/UX client ready');

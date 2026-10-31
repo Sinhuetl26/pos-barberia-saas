@@ -1,0 +1,13 @@
+'use strict';
+const assert = require('node:assert/strict'), fs = require('node:fs'), ts = require('typescript');
+const mod = { exports: {} };
+new Function('exports', 'module', 'require', ts.transpileModule(fs.readFileSync('apps/web/src/views/OperationAuditView.tsx', 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText)(mod.exports, mod, () => ({}));
+const display = (label, value) => mod.exports.displayAuditValue({ label, value }, 'America/Mexico_City');
+for (const label of ['Importe anterior', 'Importe actual', 'Importe neto', 'Efectivo esperado', 'Conteo real', 'Diferencia', 'Ventas totales', 'Ventas en efectivo', 'Ventas con tarjeta', 'Ventas por transferencia', 'Fondo inicial']) assert.equal(display(label, 12), '$12.00', label);
+assert.equal(display('Diferencia', -5), '-$5.00');
+assert.equal(display('Existencia anterior', 12), 12);
+assert.equal(display('Estado anterior', 'EN_CURSO'), 'En atención');
+assert.equal(display('Estado nuevo', 'COMPLETADA'), 'Completada');
+assert.equal(display('Estado nuevo', 'UNKNOWN'), 'UNKNOWN');
+assert.equal(display('Horario anterior', '2026-10-14T15:00:00Z'), new Date('2026-10-14T15:00:00Z').toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }));
+console.log('PASS audit display: money, negative difference, quantities, readable states and branch dates');
