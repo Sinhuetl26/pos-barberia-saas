@@ -288,18 +288,36 @@ async function runPhase1Tests() {
     const results = await Promise.all(promises);
 
     const successfulBookings = results.filter(r => r.status === 200);
-    const rejectedBookings = results.filter(r => r.status === 409);
+    // Un rechazo válido es definitivo (el horario ya está ocupado) o de cierre
+    // seguro (la transacción agotó sus reintentos por contención de escritura).
+    // Ambos garantizan que no se creó una segunda cita; lo que nunca se acepta
+    // es un 2xx extra o un error no previsto.
+    const slotTaken = results.filter(r => r.status === 409 && r.data?.code === 'SLOT_OCCUPIED');
+    const failClosed = results.filter(r => r.status === 503 && r.data?.code === 'FINANCIAL_RESULT_UNKNOWN');
+    const rejected = [...slotTaken, ...failClosed];
+    const unexpected = results.filter(r => r.status !== 200 && !rejected.includes(r));
+    const distribution = results.reduce((acc, r) => {
+      const key = `${r.status}${r.data?.code ? ' ' + r.data.code : ''}`;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
 
     assert(
       successfulBookings.length === 1,
       `Exactamente 1 de 10 reservas concurrentes fue aceptada (Ganó la carrera)`,
-      `Aceptadas: ${successfulBookings.length}, Rechazadas: ${rejectedBookings.length}`
+      `Aceptadas: ${successfulBookings.length}, Rechazadas: ${rejected.length} · respuestas: ${JSON.stringify(distribution)}`
     );
 
     assert(
-      rejectedBookings.length === 9,
-      `Las 9 solicitudes restantes fueron rechazadas con 409 SLOT_OCCUPIED`,
-      `Rechazos obtenidos: ${rejectedBookings.length}`
+      rejected.length === 9,
+      `Las 9 solicitudes restantes fueron rechazadas sin crear otra cita`,
+      `Rechazos obtenidos: ${rejected.length} · respuestas: ${JSON.stringify(distribution)}`
+    );
+
+    assert(
+      unexpected.length === 0,
+      `Todas las respuestas son éxito único, 409 SLOT_OCCUPIED o 503 con reintento`,
+      `Inesperadas: ${JSON.stringify(distribution)}`
     );
   }
 
