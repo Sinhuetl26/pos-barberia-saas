@@ -1,0 +1,126 @@
+/* Silla: the focused counter uses the existing checkout and permission flows. */
+.studio-counter-mode {background:#faf9f6;color:#121416}
+.studio-counter-mode .studio-workspace {padding-left:0}
+.silla-topbar {position:sticky;top:0;z-index:40;background:#faf9f6;border-bottom:1px solid #dfdfdc;color:#121416}
+.silla-topbar-row {display:flex;align-items:center;justify-content:space-between;gap:20px;height:80px;padding:0 36px}
+.silla-brand {display:flex;align-items:center;gap:10px;min-height:44px}
+.silla-brand span {font:600 27px OperationDisplay,sans-serif;letter-spacing:-.03em}
+.silla-main-nav {display:flex;align-items:center;gap:38px;height:100%}
+.silla-main-nav>button,.silla-main-nav>details>summary {font-size:17px;font-weight:600;min-height:44px;display:flex;align-items:center;cursor:pointer}
+.silla-main-nav>button[aria-current] {color:#064ff4;border-bottom:3px solid #064ff4}
+.silla-more,.silla-account,.silla-counter-actions,.silla-search {position:relative}
+.silla-more>summary,.silla-account>summary,.silla-counter-actions>summary,.silla-search>summary {list-style:none}
+.silla-topbar summary::-webkit-details-marker,.pos-silla summary::-webkit-details-marker {display:none}
+.silla-more-menu,.silla-account-menu,.silla-counter-actions-menu,.silla-search-panel {position:absolute;z-index:45;background:#fff;border:1px solid #dededb;box-shadow:0 12px 32px #17171914;border-radius:10px;padding:12px;min-width:250px;max-height:70dvh;overflow:auto}
+.silla-more-menu {top:55px;left:-90px;width:330px}
+.silla-more-menu>button,.silla-account-menu>button,.silla-counter-actions-menu>button {display:flex;align-items:center;gap:10px;min-height:44px;width:100%;padding:10px;text-align:left;border-radius:6px;font-size:14px;background:transparent;color:#25262a;border:0;box-shadow:none}
+.silla-more-menu>button:hover,.silla-account-menu>button:hover,.silla-counter-actions-menu>button:hover {background:#f1f4fc}
+.silla-branch-label {display:grid;gap:6px;font-size:12px;padding:8px 10px 12px;color:#5c626b}
+.silla-branch-label select {width:100%;padding:9px;border:1px solid #ddd;border-radius:6px;font-size:14px;color:#16191d;min-height:44px;background:#fff}
+.silla-account>summary {display:flex;align-items:center;gap:9px;cursor:pointer;min-height:44px}
+.silla-account>summary>span,.silla-barber-initial {display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;flex-shrink:0;border-radius:50%;background:#ebedf0;color:#363a43;font-weight:600;font-size:17px}
+.silla-account strong {font-size:14px;font-weight:500;max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.silla-account-menu {right:0;top:52px;min-width:200px}
+.silla-account-menu p {padding:8px 10px;font-size:12px;color:#65686e}
+.silla-license-alert {padding:10px 36px;background:#fff1d8;display:flex;gap:16px;flex-wrap:wrap;color:#6c471b;font-size:14px}
+.silla-license-alert button {text-decoration:underline;min-height:44px}
+.pos-silla.counter-studio {--counter-forest:#141619;--counter-ink:#141619;--counter-muted:#60656c;--counter-line:#dfdfdc;--counter-linen:#f5f5f3;max-width:1700px;padding:0 36px 36px;color:#141619}
+.pos-silla.counter-studio .counter-workbench {grid-template-columns:minmax(0,1.7fr) minmax(350px,1fr);gap:36px}
+.pos-silla .counter-catalog {padding-top:26px}
+.pos-silla .counter-masthead {display:flex;align-items:center;flex-wrap:wrap;border:0;margin:0 0 22px;padding:0;gap:8px}
+.pos-silla .counter-masthead h1 {font:600 clamp(48px,5.7vw,84px)/1.02 OperationDisplay,sans-serif;letter-spacing:-.035em;text-transform:uppercase;color:#111315}
+.pos-silla .silla-counter-actions {margin-left:auto;padding-top:0!important}
+.silla-counter-actions>summary {cursor:pointer;font-size:12px;color:#62666e;min-height:44px;display:flex;align-items:center}
+.silla-counter-actions-menu {right:0;top:44px;min-width:240px}
+.silla-catalog-tools {display:flex;align-items:center;gap:14px;margin:0 0 24px}
+.silla-search>summary {cursor:pointer;width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid #dfdfdc;border-radius:10px;background:#f1f0ed;position:relative}
+.silla-search-mark {position:absolute;top:7px;right:7px;width:7px;height:7px;background:#064ff4;border-radius:50%}
+.silla-search-panel {left:0;top:56px;min-width:280px;max-width:calc(100vw - 32px)}
+.silla-search-panel label {display:block;font-size:13px;color:#515963;margin:6px 0}
+.silla-search-panel input,.silla-search-panel select {width:100%;min-height:44px;padding:10px;font-size:15px;border:1px solid #d4d5d8;border-radius:6px;background:#fff}
+.silla-search-panel>button {min-height:44px;font-size:14px;color:#064ff4;margin-top:8px}
+.silla-kind {display:flex;background:#ededea;border:1px solid #e2e2df;border-radius:30px;padding:3px;gap:4px}
+.silla-kind button {min-height:44px;padding:10px 30px;border-radius:26px;font-size:15px;font-weight:600;color:#555b64}
+.silla-kind button[aria-pressed=true] {background:#064ff4;color:#fff}
+.pos-silla .counter-shelf {padding:0}
+.pos-silla .counter-shelf-grid {gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.pos-silla.counter-studio .counter-product {display:flex;flex-direction:column;align-items:stretch;gap:0;padding:0;border:1px solid #d9d9d5;border-radius:9px;background:transparent;min-height:150px;text-align:left;overflow:hidden;color:#121416}
+.pos-silla.counter-studio .counter-product.is-service {border-left:1px solid #d9d9d5}
+.pos-silla.counter-studio .counter-product:hover {background:#f3f5fb;border-color:#064ff4;box-shadow:none}
+.pos-silla.counter-studio .counter-product.is-selected {border-color:#064ff4;outline:2px solid #064ff4;outline-offset:-2px;background:#f8faff}
+.silla-service-photo {width:100%;height:auto;aspect-ratio:1.8;object-fit:cover;display:block;filter:grayscale(1)}
+.pos-silla .counter-product .silla-product-name {padding:13px 18px 0;display:flex;flex-direction:column-reverse;gap:4px}
+.pos-silla.counter-studio .counter-product h4 {font:600 clamp(21px,2vw,29px)/1.1 OperationDisplay,sans-serif;color:#111315;overflow-wrap:anywhere}
+.pos-silla .counter-product-meta {font-size:12px;color:#626971;margin:0}
+.pos-silla.counter-studio .counter-product>div:last-child {padding:5px 18px 14px;margin:0;border:0;align-items:center}
+.pos-silla.counter-studio .counter-product>div:last-child>span:first-child {font:600 30px/1.1 OperationDisplay,sans-serif;color:#111315;letter-spacing:-.02em}
+.pos-silla .counter-add {height:32px;width:32px;background:transparent;color:#064ff4}
+.pos-silla .counter-product:hover .counter-add {background:#064ff4;color:#fff}
+.silla-selected-count {position:absolute;top:12px;right:12px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#064ff4;color:#fff;font-size:17px;font-weight:600}
+.pos-silla .counter-stock-warning {position:absolute;top:8px;left:8px;font-size:12px;max-width:calc(100% - 60px)}
+.pos-silla.counter-studio .counter-ticket {position:sticky;top:80px;height:calc(100dvh - 80px);max-height:none;border:0;border-left:1px solid #dfdfdc;border-radius:0;padding:30px 0 22px 32px;background:transparent;overflow:visible}
+.pos-silla.counter-studio .pos-cart-body {padding:0;flex:1;min-height:160px;overflow:auto}
+.pos-silla.counter-studio .pos-cart-context {border:0;padding:0;margin:0 0 22px;display:block}
+.pos-silla .pos-cart-context>div:first-child {align-items:center}
+.pos-silla.counter-studio .pos-cart-context h2 {font:600 clamp(48px,5.7vw,84px)/1.02 OperationDisplay,sans-serif;color:#111315;letter-spacing:-.035em}
+.pos-silla .pos-cart-context h2 svg {display:none}
+.pos-silla .pos-cart-context button {min-height:44px;min-width:44px;font-size:12px}
+.pos-silla.counter-studio .pos-visit-context summary {display:flex;align-items:center;gap:10px;padding:12px 16px;border:1px solid #d9d9d5;border-radius:9px;margin-top:20px;min-height:60px;cursor:pointer;line-height:1.4}
+.pos-silla .pos-visit-context summary::after {content:'⌄';margin-left:auto;font-size:20px;color:#555b64}
+.pos-silla .silla-context-client {font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px}
+.pos-silla .pos-visit-fields {display:grid;grid-template-columns:1fr;gap:12px;padding:14px 0}
+.pos-silla .pos-visit-fields select,.pos-silla .pos-visit-fields input {font-size:14px;min-height:44px}
+.pos-silla .operation-cart-items {max-height:none;padding:0;overflow:visible}
+.pos-silla .operation-cart-items>div:not(.operation-cart-empty) {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:18px 0;background:transparent;border:0;border-bottom:1px solid #dfdfdc;border-radius:0}
+.pos-silla .operation-cart-items>div:not(.operation-cart-empty)>div:first-child {grid-column:1/-1}
+.pos-silla .operation-cart-items h5 {font-size:15px;line-height:1.4;white-space:normal}
+.pos-silla .operation-cart-items .operation-quantity {width:44px;height:44px;border-radius:7px}
+.pos-silla .operation-cart-items .operation-quantity svg {width:16px;height:16px}
+.pos-silla .operation-cart-items>div>span:last-child {font-size:15px;width:auto}
+.pos-silla .operation-cart-items>div>div>span {font-size:13px}
+.pos-silla .operation-cart-empty {display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center;padding:40px 12px;color:#666c73;font-size:14px}
+.pos-silla .operation-cart-empty svg {width:26px;height:26px}
+.pos-silla.counter-studio .pos-cart-checkout {border:0;padding-top:24px;background:#faf9f6;max-height:60dvh;overflow:auto}
+.pos-silla.counter-studio .pos-cart-totals {border:0;border-top:1px solid #dfdfdc;background:transparent;border-radius:0;padding:20px 0}
+.pos-silla .pos-cart-totals>div {font-size:14px;line-height:1.8}
+.pos-silla .pos-cart-totals .silla-unadjusted {display:none}
+.pos-silla .pos-cart-totals>div:last-child {border:0;padding:0;align-items:center;font-size:23px;font-weight:600;color:#111315}
+.pos-silla .pos-cart-totals>div:last-child>span:last-child {font:600 44px/1.2 OperationDisplay,sans-serif;letter-spacing:-.02em}
+.pos-silla .pos-cart-checkout>.studio-button {min-height:64px;padding:14px;background:#064ff4;border:1px solid #064ff4;border-radius:9px;color:#fff;font-size:18px;font-weight:600;box-shadow:none}
+.pos-silla .pos-cart-checkout>.studio-button:hover {background:#0041cc}
+.pos-silla .pos-cart-checkout>.studio-button:disabled {background:#d9e2f7;border-color:#d9e2f7;color:#606e8a;opacity:1;cursor:not-allowed}
+.pos-silla .pos-price-options {margin-top:10px}
+.pos-silla .pos-price-options>summary {display:flex;align-items:center;justify-content:center;min-height:44px;cursor:pointer;font-size:14px;color:#064ff4;list-style:none}
+.pos-silla .pos-price-options input,.pos-silla .pos-price-options button {min-height:44px;font-size:14px}
+.pos-silla .pos-price-options>div {grid-template-columns:1fr;gap:14px;padding:12px 0}
+.studio-counter-mode :focus-visible {outline:3px solid #064ff4;outline-offset:3px}
+.pos-silla .pos-mobile-checkout {display:none}
+@media(min-width:1600px){.pos-silla.counter-studio .counter-ticket {padding-right:18px}.silla-service-photo {aspect-ratio:1.9}}
+@media(max-width:1100px){.silla-topbar-row {padding:0 24px}.pos-silla.counter-studio {padding:0 24px 24px}.pos-silla.counter-studio .counter-workbench {grid-template-columns:minmax(0,1.3fr) minmax(320px,1fr);gap:24px}.pos-silla.counter-studio .counter-ticket {padding-left:24px}.pos-silla .counter-masthead h1,.pos-silla.counter-studio .pos-cart-context h2 {font-size:58px}.silla-service-photo {aspect-ratio:1.5}}
+@media(max-width:760px){.silla-topbar-row {height:68px;padding:0 16px;gap:12px}.silla-brand span {font-size:22px}.silla-brand svg {width:22px}.silla-main-nav {gap:18px}.silla-main-nav>button,.silla-main-nav>details>summary {font-size:14px}.silla-account strong {display:none}.silla-account>summary>span {width:32px;height:32px}.silla-more-menu {left:auto;right:-48px;max-width:calc(100vw - 32px);width:310px}.pos-silla.counter-studio {padding:0 16px 100px}.pos-silla.counter-studio .counter-workbench {display:flex;flex-direction:column;gap:28px}.pos-silla .counter-catalog {padding-top:24px}.pos-silla .counter-masthead h1 {font-size:50px}.pos-silla .counter-masthead {gap:0;display:block;margin-bottom:12px}.pos-silla .silla-counter-actions {margin:0;position:absolute;right:16px;top:146px}.silla-counter-actions>summary {font-size:11px}.silla-catalog-tools {gap:10px;margin-bottom:20px}.silla-kind button {padding:10px 21px}.pos-silla .counter-shelf-grid {gap:12px}.pos-silla.counter-studio .counter-product h4 {font-size:23px}.pos-silla .counter-product .silla-product-name {padding:12px 12px 0}.pos-silla.counter-studio .counter-product>div:last-child {padding:6px 12px 12px}.pos-silla.counter-studio .counter-product>div:last-child>span:first-child {font-size:28px}.silla-service-photo {aspect-ratio:1.25}.pos-silla .counter-product-meta {font-size:12px}.pos-silla.counter-studio .counter-ticket {position:static;height:auto;max-height:none;border-left:0;border-top:1px solid #dfdfdc;padding:28px 0 0;scroll-margin-top:80px}.pos-silla.counter-studio .pos-cart-context h2 {font-size:46px}.pos-silla.counter-studio .pos-cart-body {overflow:visible;min-height:180px}.pos-silla.counter-studio .pos-cart-checkout {max-height:none;overflow:visible}.pos-silla .pos-mobile-checkout {display:flex;align-items:center;position:fixed;bottom:0;left:0;right:0;z-index:35;gap:16px;background:#faf9f6;border-top:1px solid #dfdfdc;padding:12px 16px max(12px,env(safe-area-inset-bottom));color:#111315}.pos-silla .pos-mobile-checkout a {flex:1;font-size:12px;line-height:1.5}.pos-silla .pos-mobile-checkout a strong {display:block;font-size:19px}.pos-silla .pos-mobile-checkout button {min-height:48px;padding:12px 30px;background:#064ff4;color:#fff;border-radius:8px}.pos-silla .pos-mobile-checkout button:disabled {background:#d9e2f7;color:#606e8a;opacity:1}.silla-license-alert {padding:10px 16px}}
+@media(prefers-reduced-motion:reduce){.pos-silla * {scroll-behavior:auto;transition:none}}
+
+.operation-payment-silla .operation-payment-method[aria-pressed=true],.operation-payment-silla .studio-button {background:#064ff4;border-color:#064ff4;color:#fff}
+.operation-payment-silla button,.operation-payment-silla input,.operation-payment-silla select {min-height:44px}
+.operation-payment-silla :focus-visible {outline:3px solid #064ff4;outline-offset:3px}
+
+.studio-counter-mode .studio-workspace {background:#faf9f6}
+.pos-silla .pos-visit-context summary::after {content:none}
+.pos-silla .pos-visit-context summary span::before {content:none}
+.pos-silla .silla-payment-method {width:100%;min-height:52px;padding:12px 16px;margin-bottom:8px;border:1px solid #d9d9d5;border-radius:9px;background:#faf9f6;color:#151619;font-size:15px;font-weight:600}
+@media(min-width:1200px){.pos-silla .operation-cart-items>div:not(.operation-cart-empty) {grid-template-columns:minmax(0,1fr) auto auto;align-items:center}.pos-silla .operation-cart-items>div:not(.operation-cart-empty)>div:first-child {grid-column:auto}}
+
+.pos-silla.counter-studio .counter-ticket {top:128px;height:calc(100dvh - 144px)}
+@media(max-width:760px){.pos-silla.counter-studio .counter-ticket {position:static;height:auto}}
+@media(max-width:760px){.pos-silla .counter-masthead {display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:8px}.pos-silla .counter-masthead h1 {font-size:44px}.pos-silla .silla-counter-actions {position:relative;right:auto;top:auto;margin:0}.silla-counter-actions>summary {font-size:12px}}
+
+@font-face{font-family:SillaDisplay;src:url('/pos-studio/anton-regular.ttf') format('truetype');font-style:normal;font-weight:400;font-display:swap}
+.silla-brand span {font-family:SillaDisplay,sans-serif;font-size:23px;font-weight:400}
+.pos-silla .counter-masthead h1,.pos-silla.counter-studio .pos-cart-context h2 {font-family:SillaDisplay,sans-serif;font-weight:400;font-size:clamp(60px,6.5vw,104px);line-height:1.1}
+.pos-silla.counter-studio .counter-product h4 {font-family:SillaDisplay,sans-serif;font-size:25px;font-weight:400;line-height:1.25}
+.pos-silla.counter-studio .counter-product>div:last-child>span:first-child {font-family:SillaDisplay,sans-serif;font-size:29px;font-weight:400}
+.pos-silla .pos-cart-totals>div:last-child>span:last-child {font-family:SillaDisplay,sans-serif;font-weight:400;font-size:44px}
+@media(max-width:1100px){.pos-silla .counter-masthead h1,.pos-silla.counter-studio .pos-cart-context h2 {font-size:60px}}
+@media(max-width:760px){.pos-silla .counter-masthead h1 {font-size:36px}.pos-silla.counter-studio .pos-cart-context h2 {font-size:44px}.pos-silla.counter-studio .counter-product h4 {font-size:21px}.silla-brand span {font-size:19px}}
+@media(min-width:1101px){.pos-silla .counter-catalog {padding-top:20px}.pos-silla .counter-masthead {margin-bottom:16px}.silla-catalog-tools {margin-bottom:20px}.silla-service-photo {aspect-ratio:1.9}}
+@media(max-width:760px){.pos-silla.counter-studio .counter-ticket {scroll-margin-top:128px}}

@@ -1,0 +1,13 @@
+{
+  "sales": 3,
+  "refunds": 1,
+  "refundedFolio": "A-000003",
+  "refundAmount": 350,
+  "barberCustody": 550,
+  "cuts": 1,
+  "cutId": "ef1bd752-a211-485c-8bfa-bb614cda57b2",
+  "cutState": "CERRADO",
+  "counted": 150,
+  "difference": 0,
+  "receiptHttp": 200
+}

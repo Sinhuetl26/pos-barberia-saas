@@ -1,0 +1,15 @@
+{
+  "environment": "UI07 aislado, sin proveedores",
+  "sales": 2,
+  "operations": 2,
+  "folios": [
+    "A-000001",
+    "A-000002"
+  ],
+  "total": 700,
+  "recoveryReads": 3,
+  "recoveredFolio": "A-000002",
+  "foreignBarberDenied": 404,
+  "selfApprovalDenied": 403,
+  "noAdditionalSales": true
+}

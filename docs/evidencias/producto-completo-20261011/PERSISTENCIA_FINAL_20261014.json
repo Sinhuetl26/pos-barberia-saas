@@ -1,0 +1,30 @@
+{
+  "sale": {
+    "id": "2a05ce37-1795-4921-a12e-334eafcad403",
+    "folio": "A-000003",
+    "total": 600
+  },
+  "stocks": [
+    {
+      "sku": "DEMO-GEL-ML",
+      "stockActual": 490
+    },
+    {
+      "sku": "QA-IMPORT-20261014",
+      "stockActual": 1
+    }
+  ],
+  "commissions": [
+    {
+      "monto": 195,
+      "pagada": 0
+    }
+  ],
+  "cut": {
+    "estado": "CERRADO",
+    "fondoInicial": 100,
+    "conteoEfectivoReal": 675,
+    "descuadre": 0
+  },
+  "result": "PASS read-only after final restart; no repeat sale or close"
+}

@@ -1,0 +1,14 @@
+{
+  "salesPreserved": 2,
+  "handoffs": [
+    100,
+    50
+  ],
+  "financialOperations": 2,
+  "ledgerHandoffRows": 4,
+  "handoffNet": 0,
+  "drawerReceived": 150,
+  "barberCustody": 550,
+  "barberReadOnly": true,
+  "barberHandoffDenied": 403
+}

@@ -1,0 +1,11 @@
+{
+  "sales": 3,
+  "recoveredNewFolio": "A-000003",
+  "posOperations": 3,
+  "previousHandoffs": 2,
+  "secondBranchSales": 0,
+  "appointmentState": "EN_CURSO",
+  "appointmentHasSale": false,
+  "temporarySettingsNotSaved": true,
+  "barberCustody": 900
+}

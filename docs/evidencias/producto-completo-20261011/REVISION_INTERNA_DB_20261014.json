@@ -1,0 +1,57 @@
+{
+  "presentation": {
+    "saleA3": 600,
+    "gel": 490,
+    "tariffs": 0,
+    "discountPolicies": 0,
+    "closedCash": {
+      "estado": "CERRADO",
+      "conteoEfectivoReal": 675,
+      "descuadre": 0
+    }
+  },
+  "isolatedReview": {
+    "sale": {
+      "id": "5a0df259-d8cd-40b7-81b9-e6efcef599ed",
+      "folio": "A-000004",
+      "total": 170,
+      "descuento": 30,
+      "metodoPago": "TRANSFERENCIA"
+    },
+    "approval": {
+      "estado": "USADA",
+      "solicitadoPorId": "c48efb32-67f8-45ae-ae41-3343899d866e",
+      "aprobadoPorId": "9f0a6d52-4d03-4ece-8e8f-a9717cf39038"
+    },
+    "commission": 68,
+    "originalExpense": {
+      "id": "a5c580c2-0f8a-4500-ad06-e3ac4fa4710f",
+      "importe": 12,
+      "version": 2
+    },
+    "correction": {
+      "anteriorJson": {
+        "concepto": "QA aislada 14oct: gasto bancario ficticio",
+        "categoria": "OTROS",
+        "fecha": "2026-10-14T17:00:00.000Z",
+        "importe": 12,
+        "metodoPago": "TARJETA",
+        "comprobanteReferencia": "QA-REVISION-14OCT"
+      },
+      "actualJson": {
+        "concepto": "QA aislada 14oct: gasto bancario ficticio",
+        "categoria": "OTROS",
+        "fecha": "2026-10-14T17:00:00.000Z",
+        "importe": 14,
+        "metodoPago": "TARJETA",
+        "comprobanteReferencia": "QA-REVISION-14OCT"
+      }
+    },
+    "queue": {
+      "estado": "ASIGNADO",
+      "citaId": "ed813748-cf3b-469e-954e-0a91e5c7668e"
+    },
+    "queuePrice": 280,
+    "equivalentCustomerCount": 1
+  }
+}

@@ -1,0 +1,29 @@
+.cash-custody .operation-section-heading h2,.cash-history h3{font-size:22px;line-height:1.2;letter-spacing:-.02em;color:#17191c}
+.cash-custody .operation-section-heading p,.cash-history .operation-section-heading p{max-width:65ch;line-height:1.6}
+.cash-custody .operation-custody-row{display:flex;align-items:center;justify-content:space-between;gap:28px;padding:22px 0;border-top:1px solid #dfe3e9}
+.cash-custody .cash-holder-name{font-size:18px;font-weight:600;overflow-wrap:anywhere}
+.cash-custody .operation-custody-action{display:flex;align-items:end;gap:12px}
+.cash-custody .operation-custody-action input{width:150px;font-variant-numeric:tabular-nums}
+.cash-custody .studio-button,.cash-receipt-review .studio-button{background:#064ff4;color:#fff;min-height:44px}
+.cash-custody summary{min-height:44px;display:list-item;align-content:center}
+.cash-receipt-review{padding:24px;border-radius:14px;background:#fff;color:#17191c}
+.cash-receipt-review h2{font-size:24px;font-weight:600;line-height:1.2}
+.cash-receipt-review p{margin:14px 0;line-height:1.6;color:#5a606a}
+.cash-receipt-review dl{margin:22px 0;border-block:1px solid #dfe3e9}
+.cash-receipt-review dl>div{display:flex;justify-content:space-between;gap:20px;padding:16px 0}
+.cash-receipt-review dt{color:#5a606a;font-size:14px}.cash-receipt-review dd{font-weight:600;text-align:right;overflow-wrap:anywhere}
+.cash-review-actions{display:flex;justify-content:flex-end;gap:12px}.cash-review-actions button{min-height:44px}
+.cash-history .operation-table button{min-height:44px}
+@media(max-width:640px){
+ .cash-custody .operation-custody-row{align-items:stretch;flex-direction:column;gap:16px}
+ .cash-custody .operation-custody-action{align-items:stretch;flex-direction:column;gap:12px}
+ .cash-custody .operation-custody-action input{width:100%}
+ .cash-history{padding:18px}.cash-history .operation-table,.cash-history tbody{display:block;min-width:0;width:100%}
+ .cash-history thead{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ .cash-history tbody tr{display:block;padding:16px 0;border-top:1px solid #dfe3e9}
+ .cash-history .operation-table td{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:8px 0;text-align:right;min-width:0;white-space:normal}
+ .cash-history td[data-label]::before{content:attr(data-label);font-family:inherit;font-weight:400;font-size:13px;color:#5a606a;text-align:left}
+ .cash-history td[data-label="Apertura"]{flex-wrap:wrap;justify-content:flex-start}.cash-history td[data-label="Apertura"]::before{margin-right:auto}
+ .cash-history td[colspan]{display:block;text-align:left}
+ .cash-review-actions{flex-direction:column-reverse}.cash-review-actions button{width:100%}
+}

@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-30T15:21:33.208Z",
+  "engine": "sqlite",
+  "checks": [
+    "Owner prepares exact-cost stock, two versioned recipes and one cash shift through the API",
+    "Customer reserves combined services once; public replay preserves quote, duration and customer",
+    "Assigned barber advances own visit, completes once and consumes each recipe exactly once",
+    "Barber collects combined visit plus retail; replay cannot duplicate sale, stock, recipe, commission or visit",
+    "Cash remains in barber custody until owner receives it once, separate from sale and commission",
+    "A classified cash expense removes 25 exactly once and does not create another purchase or sale",
+    "Declared drawer 315 previews without closing, then closes and recovers the same cut",
+    "Owner intelligence reconciles original line revenue, tip, commission, retail/supply costs and expense",
+    "Financial journey stays restricted to assigned managers and owners; no foreign business records leak",
+    "All final ledger balances and the untouched working database are independently confirmed",
+    "Process restart preserves the closed cut, custody, reports and exact recoverable sale"
+  ],
+  "passed": 11,
+  "browser": false,
+  "external_providers_contacted": false,
+  "working_database_unchanged": true,
+  "fixture_time_note": "Public booking is tomorrow; status progression is accelerated through supported APIs without changing server time.",
+  "balances": {
+    "drawer": 315,
+    "supply": 493,
+    "retail": 9,
+    "revenue": 230,
+    "tips": 10,
+    "commission": 83,
+    "retailCost": 20,
+    "supplyCost": 1.4,
+    "expenses": 25,
+    "estimatedOperationalProfit": 100.6
+  }
+}

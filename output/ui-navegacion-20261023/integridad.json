@@ -1,0 +1,9 @@
+{
+  "appointmentState": "EN_CURSO",
+  "reservedPrice": 350,
+  "appointmentHasSale": false,
+  "expiredApprovalDenied": 409,
+  "expiredApprovalCode": "DISCOUNT_APPROVAL_INVALID",
+  "previousSalesPreserved": 2,
+  "previousHandoffsPreserved": 2
+}

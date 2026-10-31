@@ -1,0 +1,11 @@
+{
+  "date": "2026-10-27",
+  "status": "waiting_for_visual_selection",
+  "orderRule": "Order actually displayed in the chat, not submission order",
+  "options": [
+    {"displayedOption": 1, "image": "propuesta-1.png", "direction": "Siguiente cliente", "source": "exec-a2d2fd1b-dee3-482f-b8ef-af0056558d6b.png"},
+    {"displayedOption": 2, "image": "propuesta-2.png", "direction": "Agenda al frente", "source": "exec-36cac3d2-6133-4dff-abb0-8560e7f69819.png"},
+    {"displayedOption": 3, "image": "propuesta-3.png", "direction": "Jornada de un vistazo", "source": "exec-f3d6d5f8-98fb-4af1-9ac2-5d06fe0930fc.png"}
+  ],
+  "implementation": "No application source or served build changed during ideation"
+}

@@ -1,0 +1,83 @@
+{
+  "contrast": [
+    {
+      "name": "Texto",
+      "foreground": "#171b1d",
+      "background": "#fafaf7",
+      "ratio": 16.58
+    },
+    {
+      "name": "Auxiliar",
+      "foreground": "#646b68",
+      "background": "#fafaf7",
+      "ratio": 5.22
+    },
+    {
+      "name": "Acción primaria",
+      "foreground": "#ffffff",
+      "background": "#ad4e24",
+      "ratio": 5.4
+    },
+    {
+      "name": "Enlace",
+      "foreground": "#9c421b",
+      "background": "#fafaf7",
+      "ratio": 6.26
+    },
+    {
+      "name": "Confirmada",
+      "foreground": "#35613f",
+      "background": "#ffffff",
+      "ratio": 7.16
+    },
+    {
+      "name": "Pendiente",
+      "foreground": "#a74619",
+      "background": "#ffffff",
+      "ratio": 5.94
+    }
+  ],
+  "bundles": [
+    {
+      "file": ".tools\\hoy-daybook-final-20261027\\assets\\index-CYDVhNT9.js",
+      "bytes": 931056
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-4AkQ8M6D.js",
+      "bytes": 929970
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-B5aN4k11.js",
+      "bytes": 930236
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-BdaudGEU.js",
+      "bytes": 930231
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-BEoNvhs7.js",
+      "bytes": 930118
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-BIYUWJA1.js",
+      "bytes": 930215
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-BJm3WerY.js",
+      "bytes": 929839
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-Boit0gr6.js",
+      "bytes": 930309
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-CnUf389f.js",
+      "bytes": 928895
+    },
+    {
+      "file": ".tools\\day-workspace-qa-20261027\\assets\\index-DhPFXUvg.js",
+      "bytes": 930361
+    }
+  ],
+  "note": "Contraste de pares usados; no acredita WCAG de toda la aplicación. Bundle sin nueva dependencia; separación de rutas pendiente."
+}

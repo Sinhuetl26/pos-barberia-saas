@@ -1,0 +1,7 @@
+Evalúa estas 9 capturas de una página pública de reservas para barberías en México. Objetivo: experiencia profesional y fácil para clientes que reservan desde el celular sin crear una cuenta.
+
+Orden: 01 página completa escritorio (1440 px), 02 página completa móvil (390 px), 03 selección de servicio, 04 profesional, 05 día sin disponibilidad, 06 horarios, 07 formulario, 08 preferencias opcionales y referencia, 09 formulario de escritorio. Son capturas actuales de una demo ficticia; los retratos son ilustraciones de ejemplo. No se confirmó otra cita para producir este paquete. No incluye pantalla de confirmación ni consulta de folio.
+
+Analiza jerarquía, tipografía, espacios, identidad, consistencia, comparación de servicios, claridad de las acciones, longitud del recorrido, formulario, preferencias opcionales y estados sin disponibilidad. Señala problemas concretos por archivo y priorízalos como alto, medio o bajo. Propón cambios específicos, explica su beneficio y distingue fallos visibles de hipótesis. Evalúa qué conservar. No asumas que algo funciona o falla internamente a partir de una captura; seguridad, persistencia, accesibilidad completa y rendimiento requieren pruebas distintas. No inventes métricas ni calificaciones sin criterios.
+
+Entrega: diagnóstico breve; tabla archivo/problema/prioridad/cambio; cinco mejoras prioritarias; preguntas que necesitan pruebas con usuarios. Sé exigente y evita elogios genéricos.

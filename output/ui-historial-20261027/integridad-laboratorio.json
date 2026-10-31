@@ -1,0 +1,21 @@
+{
+  "branchId": "d973e845-7661-458f-9aa9-a962d512010a",
+  "saleId": "e33e0953-fa95-499e-b980-c7e48622804c",
+  "folio": "A-000001",
+  "sales": 1,
+  "refunds": 1,
+  "saleTotal": 200,
+  "returned": 100,
+  "stockSequence": [
+    10,
+    8,
+    9
+  ],
+  "stock": 9,
+  "remainingReturnUnits": 1,
+  "cutId": "db8030bf-474e-4a34-8acb-e3f0845161d9",
+  "cutState": "CERRADO",
+  "counted": "100",
+  "difference": "0",
+  "previousBranchPreserved": true
+}

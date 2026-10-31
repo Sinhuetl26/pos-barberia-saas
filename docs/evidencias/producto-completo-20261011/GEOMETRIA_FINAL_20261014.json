@@ -1,0 +1,275 @@
+[
+  {
+    "view": "inicio",
+    "alerts": [],
+    "heading": "El día, en tus manos.",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "agenda",
+    "alerts": [],
+    "heading": "Cada cita, en su lugar",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "pos",
+    "alerts": [],
+    "heading": "La caja",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "inventario",
+    "alerts": [],
+    "heading": "Inventario & Kardex",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "clientes",
+    "alerts": [],
+    "heading": "Tus clientes",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "barberos",
+    "alerts": [],
+    "heading": "El equipo detrás del corte",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "reportes",
+    "alerts": [],
+    "heading": "Ventas y rendimiento",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "configuracion",
+    "alerts": [],
+    "heading": "Hazla tuya.",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "importacion",
+    "alerts": [],
+    "heading": "Tus datos, listos para trabajar",
+    "scroll": 390,
+    "width": 390
+  },
+  {
+    "view": "seguridad",
+    "alerts": [],
+    "heading": "Seguridad de tu cuenta",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "integraciones",
+    "alerts": [],
+    "heading": "Conexiones de tu barbería",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "notificaciones",
+    "alerts": [],
+    "heading": "Mensajes de tu barbería",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "historial-operacion",
+    "alerts": [],
+    "heading": "Historial de operaciones",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "accesos",
+    "alerts": [],
+    "heading": "Accesos y sucursales",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "suscripcion",
+    "alerts": [],
+    "heading": "Plan y licencia",
+    "scroll": 385,
+    "width": 390
+  },
+  {
+    "view": "agenda",
+    "alerts": [],
+    "heading": "Cada cita, en su lugar",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "pos",
+    "alerts": [],
+    "heading": "La caja",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "inventario",
+    "alerts": [],
+    "heading": "Inventario & Kardex",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "reportes",
+    "alerts": [],
+    "heading": "Ventas y rendimiento",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "configuracion",
+    "alerts": [],
+    "heading": "Hazla tuya.",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "importacion",
+    "alerts": [],
+    "heading": "Tus datos, listos para trabajar",
+    "scroll": 768,
+    "width": 768
+  },
+  {
+    "view": "seguridad",
+    "alerts": [],
+    "heading": "Seguridad de tu cuenta",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "integraciones",
+    "alerts": [],
+    "heading": "Conexiones de tu barbería",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "notificaciones",
+    "alerts": [],
+    "heading": "Mensajes de tu barbería",
+    "scroll": 763,
+    "width": 768
+  },
+  {
+    "view": "inicio",
+    "alerts": [],
+    "heading": "El día, en tus manos.",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "agenda",
+    "alerts": [],
+    "heading": "Cada cita, en su lugar",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "pos",
+    "alerts": [],
+    "heading": "La caja",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "inventario",
+    "alerts": [],
+    "heading": "Inventario & Kardex",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "clientes",
+    "alerts": [],
+    "heading": "Tus clientes",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "barberos",
+    "alerts": [],
+    "heading": "El equipo detrás del corte",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "reportes",
+    "alerts": [],
+    "heading": "Ventas y rendimiento",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "configuracion",
+    "alerts": [],
+    "heading": "Hazla tuya.",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "importacion",
+    "alerts": [],
+    "heading": "Tus datos, listos para trabajar",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "seguridad",
+    "alerts": [],
+    "heading": "Seguridad de tu cuenta",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "integraciones",
+    "alerts": [],
+    "heading": "Conexiones de tu barbería",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "notificaciones",
+    "alerts": [],
+    "heading": "Mensajes de tu barbería",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "historial-operacion",
+    "alerts": [],
+    "heading": "Historial de operaciones",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "accesos",
+    "alerts": [],
+    "heading": "Accesos y sucursales",
+    "scroll": 1361,
+    "width": 1366
+  },
+  {
+    "view": "suscripcion",
+    "alerts": [],
+    "heading": "Plan y licencia",
+    "scroll": 1361,
+    "width": 1366
+  }
+]

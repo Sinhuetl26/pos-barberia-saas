@@ -1,0 +1,18 @@
+{
+  "date": "2026-10-11T20:16:05.066Z",
+  "checks": [
+    "Inicio real owner",
+    "Inicio real barber",
+    "Inicio real other",
+    "Perfil público: tres profesionales y servicios, sin claves",
+    "Catálogo del dueño: seis artículos",
+    "Otro negocio no hereda catálogo",
+    "Barbero no ve reportes financieros del dueño",
+    "Saldo inicial conciliado con Kardex",
+    "Reserva pública reintentada y persistida una sola vez"
+  ],
+  "pass": true,
+  "count": 9,
+  "database": "file:C:/Users/Sinhue/Desktop/POS Barberia/.test-db-gVrUe0/test.db",
+  "scope": "Ficticio aislado; reserva API persistida, sin mensajes externos ni cargos. Navegador pendiente."
+}

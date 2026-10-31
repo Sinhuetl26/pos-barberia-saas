@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ticket A-000003</title>
+  <style>
+    @page {
+      margin: 0;
+      size: 58mm auto;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      width: 58mm;
+      max-width: 58mm;
+      margin: 0 auto;
+      padding: 8px 4px;
+      color: #000;
+      background: #fff;
+      overflow-wrap: anywhere;
+    }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .bold { font-weight: bold; }
+    .divider {
+      border-top: 1px dashed #000;
+      margin: 6px 0;
+    }
+    .double-divider {
+      border-top: 2px solid #000;
+      margin: 6px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: inherit;
+      table-layout: fixed;
+    }
+    td:last-child, th:last-child { width: 43%; }
+    td.text-right { white-space: nowrap; }
+    .header-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+    .barcode {
+      font-family: monospace;
+      letter-spacing: 3px;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    @media print {
+      body { width: 58mm; max-width: 58mm; margin: 0; padding: 2mm; }
+      .no-print { display: none !important; }
+    }
+    .print-bar {
+      background: #f1f5f9;
+      padding: 8px;
+      margin-bottom: 12px;
+      text-align: center;
+      border-radius: 6px;
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+    }
+    .btn {
+      padding: 6px 12px;
+      background: #0f172a;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      margin: 0 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-bar no-print">
+    <button class="btn" onclick="window.print()">🖨️ Imprimir (58mm)</button>
+    <span>Para cambiar ancho, vuelve al punto de venta.</span>
+  </div>
+
+  <div class="text-center">
+    <div class="header-title">ESTUDIO NORTE · DEMO DE CIERRE</div>
+    <div>Sucursal ficticia</div>
+    <div>Ubicación ficticia de demostración</div>
+    
+  </div>
+
+  <div class="divider"></div>
+
+  <div>
+    <div><strong>Folio:</strong> A-000003</div>
+    <div><strong>Fecha:</strong> 14/10/2026, 1:19:02 a.m.</div>
+    <div><strong>Atendido por:</strong> Alex</div>
+    <div><strong>Cobrado por:</strong> Alex ficticio</div>
+    <div><strong>Cliente:</strong> Recorrido ficticio final 14oct</div>
+  </div>
+
+  <div class="divider"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="text-align: left; padding-bottom: 4px;">DESCRIPCIÓN</th>
+        <th style="text-align: right; padding-bottom: 4px;">TOTAL</th>
+      </tr>
+    </thead>
+    <tbody>
+      
+      <tr>
+        <td style="text-align: left; padding: 2px 0;">1x Degradado</td>
+        <td style="text-align: right; padding: 2px 0; white-space: nowrap;">$250.00</td>
+      </tr>
+    
+      <tr>
+        <td style="text-align: left; padding: 2px 0;">1x Corte clásico</td>
+        <td style="text-align: right; padding: 2px 0; white-space: nowrap;">$200.00</td>
+      </tr>
+    
+      <tr>
+        <td style="text-align: left; padding: 2px 0;">1x Cera ficticia importada 14oct</td>
+        <td style="text-align: right; padding: 2px 0; white-space: nowrap;">$150.00</td>
+      </tr>
+    
+    </tbody>
+  </table>
+
+  
+
+  <div class="divider"></div>
+
+  <table>
+    <tr>
+      <td>Subtotal:</td>
+      <td class="text-right">$600.00</td>
+    </tr>
+    
+    
+    
+    <tr class="bold" style="font-size: 13px;">
+      <td style="padding-top: 4px;">TOTAL:</td>
+      <td class="text-right" style="padding-top: 4px;">$600.00</td>
+    </tr>
+  </table>
+
+  <div class="divider"></div>
+
+  <div><strong>Método de Pago:</strong> EFECTIVO</div>
+  <table><tr><td>Efectivo:</td><td class="text-right">$600.00</td></tr><tr><td>Recibido:</td><td class="text-right">$600.00</td></tr><tr><td>Cambio:</td><td class="text-right">$0.00</td></tr></table>
+
+  <div class="divider"></div>
+
+  <div class="text-center" style="margin-top: 8px;">
+    <div style="font-size: 9px; margin-top: 2px;">A-000003</div>
+    <div>Comprobante de venta · No es CFDI</div>
+    <div style="margin-top: 8px;">¡Gracias por su preferencia!</div>
+    <div>Vuelva pronto</div>
+  </div>
+
+  
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "scope": "named fictitious product demo, read-only independent verification",
+  "sale": {
+    "folio": "A-000003",
+    "total": 600
+  },
+  "stocks": [
+    {
+      "nombre": "Gel operativo ficticio",
+      "sku": "DEMO-GEL-ML",
+      "stockActual": 490
+    },
+    {
+      "nombre": "Cera ficticia importada 14oct",
+      "sku": "QA-IMPORT-20261014",
+      "stockActual": 1
+    }
+  ],
+  "newCommission": 195,
+  "cut": {
+    "estado": "CERRADO",
+    "fondoInicial": 100,
+    "conteoEfectivoReal": 675,
+    "descuadre": 0
+  },
+  "cashExpected": 675,
+  "expense": {
+    "concepto": "Gasto ficticio del recorrido final",
+    "importe": 25,
+    "metodoPago": "EFECTIVO"
+  },
+  "cashEquation": "100 + 600 - 25 = 675",
+  "untouchedPreviousCustody": {
+    "barber": 200,
+    "owner": 380
+  }
+}

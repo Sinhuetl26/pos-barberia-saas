@@ -1,0 +1,17 @@
+SYSTECH Studio - Recopilado visual de la demo local
+Fecha: 18 de octubre de 2026 (America/Mexico_City)
+
+01-panel-inicio.jpg: panel del dueño, captura completa.
+02-punto-de-venta.jpg: catálogo y ticket vacío, sin cobrar.
+03-reservas-portada.jpg: portada pública de la barbería.
+04-reservas-pagina-completa.jpg: página pública completa, incluidos servicios, equipo y contacto.
+05-reservas-servicios.jpg: detalle de servicios y precios.
+06-reservas-equipo.jpg: vista de perfiles; las tarjetas completas están en la captura04.
+07-reservas-formulario.jpg: primer paso de la reserva, sin enviar ninguna cita.
+08-login.jpg: acceso con campos vacíos; no contiene credenciales.
+
+Capturas JPEG originales del navegador, sin retoque. Algunas son de página completa y requieren ampliar para leerlas. Resolución del navegador de captura:1275px de ancho.
+
+Negocio, perfiles, ubicaciones y operación son ficticios. La página pública se capturó con sesión del dueño: por eso aparece «Volver a mi panel». El login se capturó sin introducir datos y sin cerrar las sesiones del usuario.
+
+No se crearon ventas, citas, clientes ni movimientos para estas imágenes. Las capturas muestran el estado de la demo, no certifican despliegue público, pagos reales, mensajería automática o impresión física.
