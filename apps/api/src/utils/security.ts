@@ -44,10 +44,12 @@ export function sanitizeCsvCell(value: any): string {
  * Generates a short-lived (120s), single-purpose print token (P2.2)
  * Eliminates the risk of exposing bearer user credentials in query strings
  */
-export function generatePrintToken(resourceType: 'CORTE' | 'VENTA' | 'CITA', resourceId: string, tenantId: string): string {
+export function generatePrintToken(resourceType: 'CORTE' | 'VENTA' | 'CITA', resourceId: string, tenantId: string, userId?: string, sessionVersion = 0): string {
   return jwt.sign(
     {
       scope: 'ephemeral_print',
+      uid: userId,
+      sv: sessionVersion,
       type: resourceType,
       rid: resourceId,
       tid: tenantId
@@ -65,9 +67,9 @@ export function verifyPrintToken(
   expectedType: 'CORTE' | 'VENTA' | 'CITA',
   expectedResourceId: string,
   expectedTenantId?: string
-): { valid: boolean; tenantId?: string; error?: string } {
+): { valid: boolean; tenantId?: string; userId?: string; sessionVersion?: number; error?: string } {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as any;
+    const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as any;
     if (payload.scope !== 'ephemeral_print') {
       return { valid: false, error: 'Token no es de tipo impresión' };
     }
@@ -77,7 +79,7 @@ export function verifyPrintToken(
     if (expectedTenantId && payload.tid !== expectedTenantId) {
       return { valid: false, error: 'Tenant inválido' };
     }
-    return { valid: true, tenantId: payload.tid };
+    return { valid: true, tenantId: payload.tid, userId: payload.uid, sessionVersion: payload.sv ?? 0 };
   } catch (err: any) {
     return { valid: false, error: err.message || 'Token expirado o inválido' };
   }

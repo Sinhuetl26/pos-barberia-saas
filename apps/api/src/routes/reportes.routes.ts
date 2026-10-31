@@ -6,11 +6,22 @@ import { Router } from 'express';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { sanitizeCsvCell } from '../utils/security';
+import { listExpenses, registerExpense, correctExpense, expenseCashOutflows } from '../services/operating-expense.service';
+import { SaleError } from '../services/financial-error';
+import { ownerIntelligence } from '../services/owner-intelligence.service';
+import { requirePlanCapability } from '../middleware/license';
 
 export const reportesRouter = Router();
 
 // C2 FIX: Require DUENO or GERENTE for all financial and analytical reports
 reportesRouter.use(requireAuth, requireRole('DUENO', 'GERENTE'));
+const expenseError=(res:any,error:any)=>res.status(error instanceof SaleError?error.statusCode:500).json({code:error instanceof SaleError?error.code:'SERVER_ERROR',error:error instanceof SaleError?error.message:'Conserva los datos y reintenta la misma operación.'});
+const advancedReports = requirePlanCapability('ADVANCED_REPORTS', 'La inteligencia, los gastos y el análisis avanzado');
+reportesRouter.get('/inteligencia',advancedReports,async(req:AuthenticatedRequest,res)=>{try{res.json(await ownerIntelligence(req.ctx!,req.query));}catch(error){expenseError(res,error);}});
+reportesRouter.get('/gastos',advancedReports,async(req:AuthenticatedRequest,res)=>{try{res.json(await listExpenses(req.ctx!,req.query));}catch(error){expenseError(res,error);}});
+reportesRouter.get('/gastos/salidas',advancedReports,async(req:AuthenticatedRequest,res)=>{try{res.json(await expenseCashOutflows(req.ctx!,req.query));}catch(error){expenseError(res,error);}});
+reportesRouter.post('/gastos',advancedReports,async(req:AuthenticatedRequest,res)=>{try{res.json(await registerExpense(req.ctx!,req.body));}catch(error){expenseError(res,error);}});
+reportesRouter.post('/gastos/:id/corregir',advancedReports,async(req:AuthenticatedRequest,res)=>{try{res.json(await correctExpense(req.ctx!,req.params.id,req.body));}catch(error){expenseError(res,error);}});
 
 reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
   try {
@@ -42,14 +53,15 @@ reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
       },
       include: {
         items: true,
+        devoluciones: true,
         barbero: true,
         comisiones: true
       }
     });
 
-    const totalVentas = ventas.reduce((sum, v) => sum + Number(v.total), 0);
+    const totalVentas = ventas.reduce((sum, v) => sum + (Number(v.total) - Number(v.totalDevuelto)), 0);
     const totalDescuentos = ventas.reduce((sum, v) => sum + Number(v.descuento), 0);
-    const totalPropinas = ventas.reduce((sum, v) => sum + Number(v.propina), 0);
+    const totalPropinas = ventas.reduce((sum, v) => sum + (Number(v.propina) - Number(v.propinaDevuelta)), 0);
     const countVentas = ventas.length;
     const ticketPromedio = countVentas > 0 ? totalVentas / countVentas : 0;
 
@@ -61,7 +73,7 @@ reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
     };
     ventas.forEach(v => {
       if ((metodosPago as any)[v.metodoPago] !== undefined) {
-        (metodosPago as any)[v.metodoPago] += Number(v.total);
+        (metodosPago as any)[v.metodoPago] += (Number(v.total) - Number(v.totalDevuelto));
       }
     });
 
@@ -69,8 +81,9 @@ reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
     ventas.forEach(v => {
       v.items.forEach(i => {
         const cur = itemMap.get(i.nombreItem) || { nombre: i.nombreItem, tipo: i.tipoItem, cantidad: 0, total: 0 };
-        cur.cantidad += i.cantidad;
-        cur.total += Number(i.subtotal);
+        const returned = v.devoluciones.flatMap(r => JSON.parse(r.itemsJson)).filter((r: any) => r.itemId === i.id);
+        cur.cantidad += i.cantidad - returned.reduce((sum: number, r: any) => sum + r.cantidad, 0);
+        cur.total += Number(i.subtotal) - Number(i.descuento) - returned.reduce((sum: number, r: any) => sum + r.monto, 0);
         itemMap.set(i.nombreItem, cur);
       });
     });
@@ -81,7 +94,7 @@ reportesRouter.get('/dashboard', async (req: AuthenticatedRequest, res) => {
       const b = v.barbero;
       const cur = barberoMap.get(b.id) || { id: b.id, nombre: b.nombre, ventas: 0, total: 0, comisiones: 0 };
       cur.ventas += 1;
-      cur.total += Number(v.total);
+      cur.total += (Number(v.total) - Number(v.totalDevuelto));
       const comisionVenta = v.comisiones.reduce((s, c) => s + Number(c.monto), 0);
       cur.comisiones += comisionVenta;
       barberoMap.set(b.id, cur);
@@ -164,7 +177,7 @@ reportesRouter.post('/resumen-semanal', async (req: AuthenticatedRequest, res) =
       }
     });
 
-    const totalIngresos = ventasSemana.reduce((sum, v) => sum + Number(v.total), 0);
+    const totalIngresos = ventasSemana.reduce((sum, v) => sum + (Number(v.total) - Number(v.totalDevuelto)), 0);
     const totalCitas = citasSemana.length;
     const citasCompletadas = citasSemana.filter(c => c.estado === 'COMPLETADA').length;
     const citasNoShow = citasSemana.filter(c => c.estado === 'NO_SHOW').length;
@@ -174,7 +187,7 @@ reportesRouter.post('/resumen-semanal', async (req: AuthenticatedRequest, res) =
     const barberMap: Record<string, { nombre: string; total: number }> = {};
     ventasSemana.forEach(v => {
       barberMap[v.barberoId] = barberMap[v.barberoId] || { nombre: v.barbero.nombre, total: 0 };
-      barberMap[v.barberoId].total += Number(v.total);
+      barberMap[v.barberoId].total += (Number(v.total) - Number(v.totalDevuelto));
     });
 
     let topBarbero = 'Sin ventas registradas';
@@ -208,7 +221,7 @@ reportesRouter.post('/resumen-semanal', async (req: AuthenticatedRequest, res) =
         canal: 'WHATSAPP',
         destinatario: tenant.telefono || 'Dueño',
         mensaje: resumenTexto,
-        estado: 'ENVIADO'
+        estado: 'PREPARADO'
       }
     });
 
@@ -235,15 +248,31 @@ reportesRouter.post('/resumen-semanal', async (req: AuthenticatedRequest, res) =
 reportesRouter.get('/exportar/ventas-csv', async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
+    const { periodo = 'mes', sucursalId, barberoId } = req.query as {
+      periodo?: string;
+      sucursalId?: string;
+      barberoId?: string;
+    };
+    const now = new Date();
+    let startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (periodo === 'hoy') startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    else if (periodo === 'semana') startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    else if (periodo === 'ano') startDate = new Date(now.getFullYear(), 0, 1);
 
     const ventas = await prisma.venta.findMany({
-      where: { tenantId },
+      where: {
+        tenantId,
+        fecha: { gte: startDate },
+        estado: { not: 'CANCELADA' },
+        ...(sucursalId ? { sucursalId } : {}),
+        ...(barberoId ? { barberoId } : {})
+      },
       include: { barbero: true, sucursal: true, cliente: true },
       orderBy: { fecha: 'desc' },
       take: 500
     });
 
-    const header = 'Folio,Fecha,Sucursal,Barbero,Cliente,Subtotal,Descuento,Propina,Total,MetodoPago,Estado\n';
+    const header = 'Folio,Fecha,Sucursal,Barbero,Cliente,Subtotal,Descuento,Propina,Total,MetodoPago,Estado,Devuelto,TotalNeto,CobradoPor\n';
 
     const rows = ventas.map(v => {
       const fecha = new Date(v.fecha).toISOString().split('T')[0];
@@ -258,12 +287,15 @@ reportesRouter.get('/exportar/ventas-csv', async (req: AuthenticatedRequest, res
         Number(v.propina || 0).toFixed(2),
         Number(v.total || 0).toFixed(2),
         sanitizeCsvCell(v.metodoPago),
-        sanitizeCsvCell(v.estado)
+        sanitizeCsvCell(v.estado),
+        Number(v.totalDevuelto || 0).toFixed(2),
+        v.total.minus(v.totalDevuelto).toFixed(2),
+        sanitizeCsvCell(v.cobradoPorNombre || '')
       ].join(',');
     }).join('\n');
 
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="ventas_systech.csv"');
+    res.setHeader('Content-Disposition', `attachment; filename="ventas_systech_${periodo}.csv"`);
     // Prepend UTF-8 BOM (\uFEFF) so Excel respects accents and special characters without encoding corruption
     res.send('\uFEFF' + header + rows);
   } catch (error) {

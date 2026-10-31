@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { SaleError } from '../services/financial-error';
+import { previewDataImport, confirmDataImport, exportImportData, importTemplate } from '../services/data-import.service';
+export const dataImportRouter=Router();
+dataImportRouter.use(requireAuth,requireRole('DUENO','GERENTE'));
+const errorResponse=(res:any,error:any)=>res.status(error instanceof SaleError?error.statusCode:500).json({code:error instanceof SaleError?error.code:'IMPORT_RESULT_UNKNOWN',error:error instanceof SaleError?error.message:'Conserva el archivo y la misma intención; reintenta para recuperar el resultado.'});
+dataImportRouter.post('/previsualizar',async(req:AuthenticatedRequest,res)=>{try{res.json(await previewDataImport(req.ctx!,req.body));}catch(error){errorResponse(res,error);}});
+dataImportRouter.post('/confirmar',async(req:AuthenticatedRequest,res)=>{try{res.json(await confirmDataImport(req.ctx!,req.body));}catch(error){errorResponse(res,error);}});
+dataImportRouter.get('/plantilla',async(req:AuthenticatedRequest,res)=>{try{res.type('text/csv; charset=utf-8').send(importTemplate(req.query.tipo));}catch(error){errorResponse(res,error);}});
+dataImportRouter.get('/exportar',async(req:AuthenticatedRequest,res)=>{try{res.type('text/csv; charset=utf-8').send(await exportImportData(req.ctx!,req.query));}catch(error){errorResponse(res,error);}});

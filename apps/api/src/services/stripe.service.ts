@@ -5,10 +5,12 @@
 
 import Stripe from 'stripe';
 import { PrismaClient } from '@prisma/client';
+import { configuredValue } from './provider-config.service';
+import { isLicensePlan, getLicensePlan, licenseQuote, licenseTenantFields } from './license-catalog.service';
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+const stripeSecretKey = configuredValue(process.env.STRIPE_SECRET_KEY) ? process.env.STRIPE_SECRET_KEY! : '';
 export const stripe = stripeSecretKey
-  ? new Stripe(stripeSecretKey, { apiVersion: '2023-08-16' })
+  ? new Stripe(stripeSecretKey, { apiVersion: '2023-08-16', timeout: 10000, maxNetworkRetries: 2 })
   : null;
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -27,7 +29,7 @@ export class StripeBillingService {
    * Strictly enforces signature in production (C4)
    */
   static constructWebhookEvent(rawBody: Buffer | string, signature: string): Stripe.Event {
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV !== 'test' || signature) {
       if (!stripeSecretKey || !webhookSecret) {
         throw new Error('STRIPE_SECRET_KEY y STRIPE_WEBHOOK_SECRET son estrictamente requeridos en producción');
       }
@@ -40,39 +42,11 @@ export class StripeBillingService {
       return stripe!.webhooks.constructEvent(rawBody, signature, webhookSecret);
     }
 
-    // In production or when secrets are present in other envs, verify if signature exists
-    if (stripe && webhookSecret && signature) {
-      try {
-        return stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-      } catch (err: any) {
-        throw new Error(`Firma de webhook de Stripe inválida: ${err.message}`);
-      }
-    }
-
-    // In test environment, allow mock payloads without signature
-    if (process.env.NODE_ENV === 'test') {
-      try {
-        const parsed = typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString('utf8'));
-        if (!parsed.id || !parsed.type) {
-          throw new Error('Formato de evento Stripe inválido');
-        }
-        return parsed as Stripe.Event;
-      } catch (err: any) {
-        throw new Error(`Error al decodificar webhook Stripe simulado: ${err.message}`);
-      }
-    }
-
-    // In development without secrets, allow mock payload with clear log
     try {
-      const parsed = typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString('utf8'));
-      if (!parsed.id || !parsed.type) {
-        throw new Error('Formato de evento Stripe inválido');
-      }
-      console.warn('⚠️ Webhook de Stripe procesado sin verificación criptográfica (solo permitido en desarrollo/test)');
+      const parsed = JSON.parse(typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8'));
+      if (!parsed.id || !parsed.type || !parsed.data?.object) throw new Error('Formato de evento inválido');
       return parsed as Stripe.Event;
-    } catch (err: any) {
-      throw new Error(`Error al decodificar webhook Stripe: ${err.message}`);
-    }
+    } catch { throw new Error('Evento simulado inválido.'); }
   }
 
   /**
@@ -81,6 +55,34 @@ export class StripeBillingService {
   static async processWebhookEvent(event: Stripe.Event, prisma: PrismaClient): Promise<WebhookResult> {
     const eventId = event.id;
     const eventType = event.type;
+    let remoteInvoiceSubscription: Stripe.Subscription | undefined;
+    let remoteCheckoutSubscription: Stripe.Subscription | undefined;
+
+    // Re-read invoices through the pinned SDK version: newer event schemas move
+    // the subscription field, and subscription metadata also resolves event order.
+    if (stripe && process.env.NODE_ENV !== 'test' && ['invoice.paid', 'invoice.payment_succeeded', 'invoice.payment_failed'].includes(eventType)) {
+      const invoiceId = (event.data.object as Stripe.Invoice).id;
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      event = { ...event, data: { ...event.data, object: invoice } } as unknown as Stripe.Event;
+      if (invoice.subscription && ['invoice.paid', 'invoice.payment_succeeded'].includes(eventType)) {
+        const id = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription.id;
+        remoteInvoiceSubscription = await stripe.subscriptions.retrieve(id);
+      }
+    }
+    if (stripe && process.env.NODE_ENV !== 'test' && eventType === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if (typeof session.subscription === 'string') remoteCheckoutSubscription = await stripe.subscriptions.retrieve(session.subscription);
+    }
+
+    try {
+    // Claim and financial effects commit together; failures remain retryable.
+    return await prisma.$transaction(async (prisma) => {
+    const existing = await prisma.eventoPago.findUnique({ where: { eventId } });
+    if (existing?.procesado) return { received: true, alreadyProcessed: true };
+    if (existing) {
+      const claim = await prisma.eventoPago.updateMany({ where: { eventId, procesado: false }, data: { fechaCreacion: new Date() } });
+      if (!claim.count) return { received: true, alreadyProcessed: true };
+    } else {
 
     // P3.5 FIX: Atomic claim pattern for concurrent webhooks
     // Attempt to claim the event record via unique constraint insertion.
@@ -95,19 +97,7 @@ export class StripeBillingService {
           procesado: false
         }
       });
-    } catch (claimErr: any) {
-      // P2002: Unique constraint failed on eventId
-      if (claimErr.code === 'P2002' || claimErr.message?.includes('Unique constraint')) {
-        const existing = await prisma.eventoPago.findUnique({ where: { eventId } });
-        if (existing) {
-          return {
-            received: true,
-            alreadyProcessed: true,
-            action: `SKIP_CONCURRENT_DUPLICATE_${eventType}`
-          };
-        }
-      }
-      throw claimErr;
+    } catch (claimErr) { throw claimErr; }
     }
 
     let actionTaken = 'NONE';
@@ -121,12 +111,23 @@ export class StripeBillingService {
           targetTenantId = (session.client_reference_id || session.metadata?.tenantId) as string;
           const customerId = session.customer as string;
           const subscriptionId = session.subscription as string;
-          const planComprado = (session.metadata?.plan as string) || 'PRO';
+          const planComprado = session.metadata?.plan;
+
+          if (!isLicensePlan(planComprado)) throw new Error('Plan desconocido en Stripe.');
+          if (process.env.NODE_ENV !== 'test' && (!customerId || !subscriptionId || session.mode !== 'subscription' || !['paid', 'no_payment_required'].includes(session.payment_status))) {
+            throw new Error('Checkout de licencia incompleto o sin pago confirmado.');
+          }
+          if (remoteCheckoutSubscription && (remoteCheckoutSubscription.metadata.tenantId !== targetTenantId || remoteCheckoutSubscription.metadata.plan !== planComprado || remoteCheckoutSubscription.customer !== customerId)) throw new Error('Checkout no coincide con la licencia.');
 
           if (targetTenantId) {
-            const limiteSucursales = planComprado === 'PRO' ? 999 : 1;
-            const limiteBarberos = planComprado === 'PRO' ? 999 : 3;
-            const montoMensual = planComprado === 'PRO' ? 999 : 499;
+            const definition = getLicensePlan(planComprado);
+            const limiteSucursales = definition.branchLimit;
+            const limiteBarberos = definition.barbersPerBranch;
+            const montoMensual = session.metadata?.montoMensual ? Number(session.metadata.montoMensual) : licenseQuote(planComprado).totalMxn;
+            if (!Number.isFinite(montoMensual) || montoMensual < 0) throw new Error('Monto inválido en Stripe.');
+            const current = await prisma.suscripcion.findUnique({ where: { tenantId: targetTenantId } });
+            if (current?.stripeSubscriptionId && current.stripeSubscriptionId !== subscriptionId && current.estadoPago !== 'canceled') throw new Error('El negocio ya tiene otra suscripción de Stripe.');
+            const nextPeriod = remoteCheckoutSubscription?.current_period_end ? new Date(remoteCheckoutSubscription.current_period_end * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
             await prisma.suscripcion.upsert({
               where: { tenantId: targetTenantId },
@@ -134,9 +135,10 @@ export class StripeBillingService {
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscriptionId,
                 estadoPago: 'active',
+                fechaSuspension: null,
                 montoMensual,
                 fechaUltimoCobro: new Date(),
-                fechaProximoCobro: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                fechaProximoCobro: nextPeriod
               },
               create: {
                 tenantId: targetTenantId,
@@ -145,16 +147,18 @@ export class StripeBillingService {
                 estadoPago: 'active',
                 montoMensual,
                 fechaUltimoCobro: new Date(),
-                fechaProximoCobro: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                fechaProximoCobro: nextPeriod
               }
             });
 
             // P1.4 FIX: Apply purchased plan and resource limits to tenant
+            const dbPlan = await prisma.plan.findUnique({ where: { codigo: planComprado } });
             await prisma.tenant.update({
               where: { id: targetTenantId },
               data: {
                 estado: 'ACTIVO',
                 plan: planComprado,
+                planId: dbPlan?.id || null,
                 limiteSucursales,
                 limiteBarberos
               }
@@ -180,14 +184,31 @@ export class StripeBillingService {
           const subscriptionId = invoice.subscription as string;
 
           // Find tenant by subscription or customer ID
-          const sub = await prisma.suscripcion.findFirst({
+          let sub = await prisma.suscripcion.findFirst({
             where: {
               OR: [
-                { stripeSubscriptionId: subscriptionId },
-                { stripeCustomerId: customerId }
+                ...(subscriptionId ? [{ stripeSubscriptionId: subscriptionId }] : customerId ? [{ stripeCustomerId: customerId }] : [])
               ]
             }
           });
+
+          // Stripe may deliver invoice.paid before checkout.session.completed.
+          // Only use metadata from a subscription invoice fetched from Stripe.
+          const subscriptionMetadata = (invoice as any).subscription_details?.metadata;
+          if (!sub && stripe && process.env.NODE_ENV !== 'test' && subscriptionId && customerId && subscriptionMetadata?.tenantId && isLicensePlan(subscriptionMetadata.plan)) {
+            const remote = remoteInvoiceSubscription!;
+            const tenantId = subscriptionMetadata.tenantId;
+            if (remote.metadata.tenantId !== tenantId || remote.metadata.plan !== subscriptionMetadata.plan || remote.customer !== customerId || invoice.status !== 'paid') throw new Error('Factura de licencia no coincide con la suscripción.');
+            const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+            if (!tenant) throw new Error('Negocio de la licencia no encontrado.');
+            const current = await prisma.suscripcion.findUnique({ where: { tenantId } });
+            if (current?.stripeSubscriptionId && current.stripeSubscriptionId !== subscriptionId && current.estadoPago !== 'canceled') throw new Error('El negocio ya tiene otra suscripción de Stripe.');
+            const amount = Number(remote.metadata.montoMensual);
+            if (!Number.isFinite(amount) || amount < 0) throw new Error('Monto de licencia inválido.');
+            sub = await prisma.suscripcion.upsert({ where: { tenantId }, update: { stripeSubscriptionId: subscriptionId, stripeCustomerId: customerId, montoMensual: amount }, create: { tenantId, stripeSubscriptionId: subscriptionId, stripeCustomerId: customerId, montoMensual: amount, estadoPago: 'active' } });
+            const dbPlan = await prisma.plan.findUnique({ where: { codigo: subscriptionMetadata.plan } });
+            await prisma.tenant.update({ where: { id: tenantId }, data: { ...licenseTenantFields(subscriptionMetadata.plan), planId: dbPlan?.id || null } });
+          }
 
           if (sub) {
             targetTenantId = sub.tenantId;
@@ -195,8 +216,9 @@ export class StripeBillingService {
               where: { id: sub.id },
               data: {
                 estadoPago: 'active',
+                fechaSuspension: null,
                 fechaUltimoCobro: new Date(),
-                fechaProximoCobro: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+                fechaProximoCobro: remoteInvoiceSubscription?.current_period_end ? new Date(remoteInvoiceSubscription.current_period_end * 1000) : invoice.period_end ? new Date(invoice.period_end * 1000) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
               }
             });
 
@@ -214,7 +236,7 @@ export class StripeBillingService {
               }
             });
             actionTaken = 'INVOICE_PAID_TENANT_ACTIVE';
-          }
+          } else if (subscriptionId) throw new Error('Suscripción aún no asociada; reintentar evento.');
           break;
         }
 
@@ -226,8 +248,7 @@ export class StripeBillingService {
           const sub = await prisma.suscripcion.findFirst({
             where: {
               OR: [
-                { stripeSubscriptionId: subscriptionId },
-                { stripeCustomerId: customerId }
+                ...(subscriptionId ? [{ stripeSubscriptionId: subscriptionId }] : customerId ? [{ stripeCustomerId: customerId }] : [])
               ]
             }
           });
@@ -257,7 +278,7 @@ export class StripeBillingService {
                 canal: 'WHATSAPP',
                 destinatario: 'Dueño',
                 mensaje: `⚠️ Tu pago de suscripción SYSTECH ha fallado. Cuentas con ${sub.diasGracia || 3} días de gracia para regularizar tu método de pago antes de la suspensión del servicio.`,
-                estado: 'ENVIADO'
+                estado: 'PENDIENTE'
               }
             });
 
@@ -270,7 +291,7 @@ export class StripeBillingService {
               }
             });
             actionTaken = 'INVOICE_FAILED_TENANT_IN_RISK';
-          }
+          } else if (subscriptionId) throw new Error('Suscripción aún no asociada; reintentar evento.');
           break;
         }
 
@@ -326,8 +347,16 @@ export class StripeBillingService {
         tenantId: targetTenantId
       };
     } catch (err: any) {
-      console.error(`Error procesando webhook Stripe [${eventType}]:`, err);
+      if (process.env.NODE_ENV !== 'test') console.error(`Error procesando webhook Stripe [${eventType}]:`, err.code || err.message);
       throw err;
+    }
+    }, { timeout: 10000 });
+    } catch (error: any) {
+      if (error.code === 'P2002') {
+        const committed = await prisma.eventoPago.findUnique({ where: { eventId } });
+        if (committed?.procesado) return { received: true, alreadyProcessed: true };
+      }
+      throw error;
     }
   }
 
@@ -335,12 +364,13 @@ export class StripeBillingService {
    * Automated Dunning verification job
    * Suspends tenants whose 3-day grace period has expired
    */
-  static async ejecutarDunning(prisma: PrismaClient) {
+  static async ejecutarDunning(prisma: PrismaClient, tenantId?: string) {
     const ahora = new Date();
 
     // A7 FIX: Find active tenants whose trial / billing period has expired without paid stripe subscription
     const tenantsVencidos = await prisma.tenant.findMany({
       where: {
+        ...(tenantId ? { id: tenantId } : {}),
         estado: 'ACTIVO',
         suscripcion: {
           fechaProximoCobro: { lte: ahora },
@@ -355,43 +385,45 @@ export class StripeBillingService {
       const diasGracia = t.suscripcion?.diasGracia || 3;
       const fechaSuspension = new Date(ahora.getTime() + diasGracia * 24 * 60 * 60 * 1000);
 
-      await prisma.$transaction([
-        prisma.tenant.update({
-          where: { id: t.id },
+      const changed = await prisma.$transaction(async tx => {
+        const claimed = await tx.tenant.updateMany({
+          where: { id: t.id, estado: 'ACTIVO', suscripcion: { fechaProximoCobro: { lte: ahora }, stripeSubscriptionId: null } },
           data: { estado: 'EN_RIESGO' }
-        }),
-        prisma.suscripcion.update({
+        });
+        if (!claimed.count) return false;
+        await tx.suscripcion.update({
           where: { tenantId: t.id },
           data: {
             estadoPago: 'past_due',
             fechaSuspension
           }
-        }),
-        prisma.notificacionLog.create({
+        });
+        await tx.notificacionLog.create({
           data: {
             tenantId: t.id,
             tipo: 'SUSCRIPCION_RIESGO',
             canal: 'WHATSAPP',
             destinatario: 'Dueño',
             mensaje: `⚠️ Tu periodo de prueba o suscripción ha concluido. Cuentas con ${diasGracia} días de gracia para activar tu plan antes de que el servicio sea suspendido.`,
-            estado: 'ENVIADO'
+            estado: 'PENDIENTE'
           }
-        }),
-        prisma.auditoriaLog.create({
+        });
+        await tx.auditoriaLog.create({
           data: {
             tenantId: t.id,
             usuarioEmail: 'dunning-cron@systech.mx',
             accion: 'PERIODO_PRUEBA_VENCIDO',
             detalles: `Periodo vencido. Cuenta puesta EN_RIESGO con ${diasGracia} días de gracia hasta ${fechaSuspension.toISOString()}.`
           }
-        })
-      ]);
-      marcadosEnRiesgo.push(t.id);
+        });
+        return true;
+      });
+      if (changed) marcadosEnRiesgo.push(t.id);
     }
 
     // Find tenants in EN_RIESGO whose grace period has expired
     const tenantsEnRiesgo = await prisma.tenant.findMany({
-      where: { estado: 'EN_RIESGO' },
+      where: { estado: 'EN_RIESGO', ...(tenantId ? { id: tenantId } : {}) },
       include: { suscripcion: true }
     });
 
@@ -402,35 +434,37 @@ export class StripeBillingService {
       const debeSuspender = sub?.fechaSuspension && sub.fechaSuspension <= ahora;
 
       if (debeSuspender) {
-        await prisma.$transaction([
-          prisma.tenant.update({
-            where: { id: t.id },
+        const changed = await prisma.$transaction(async tx => {
+          const claimed = await tx.tenant.updateMany({
+            where: { id: t.id, estado: 'EN_RIESGO', suscripcion: { fechaSuspension: { lte: ahora } } },
             data: { estado: 'SUSPENDIDO' }
-          }),
-          prisma.suscripcion.update({
+          });
+          if (!claimed.count) return false;
+          await tx.suscripcion.update({
             where: { tenantId: t.id },
             data: { estadoPago: 'suspended' }
-          }),
-          prisma.notificacionLog.create({
+          });
+          await tx.notificacionLog.create({
             data: {
               tenantId: t.id,
               tipo: 'SUSCRIPCION_SUSPENDIDA',
               canal: 'WHATSAPP',
               destinatario: 'Dueño',
               mensaje: '🚫 Tu suscripción a SYSTECH ha sido suspendida debido a que concluyó el periodo de gracia sin registrar un pago exitoso. Contacta a soporte para reactivar tu cuenta.',
-              estado: 'ENVIADO'
+              estado: 'PENDIENTE'
             }
-          }),
-          prisma.auditoriaLog.create({
+          });
+          await tx.auditoriaLog.create({
             data: {
               tenantId: t.id,
               usuarioEmail: 'dunning-cron@systech.mx',
               accion: 'SUSPENSION_AUTOMATICA_DUNNING',
               detalles: 'Suspensión ejecutada tras expirar los 3 días de gracia.'
             }
-          })
-        ]);
-        suspendidos.push(t.id);
+          });
+          return true;
+        });
+        if (changed) suspendidos.push(t.id);
       }
     }
 

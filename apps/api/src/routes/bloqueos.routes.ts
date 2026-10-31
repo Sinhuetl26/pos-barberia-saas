@@ -3,12 +3,20 @@
 // ==========================================
 
 import { Router } from 'express';
+import { createScheduleBlock, deleteScheduleBlock } from '../services/booking-operations.service';
 import { prisma } from '@systech/database';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
+import { previewScheduleImpact, confirmScheduleImpact, listSpecialSchedules } from '../services/schedule-impact.service';
 
 export const bloqueosRouter = Router();
 
 bloqueosRouter.use(requireAuth);
+
+const impactError=(res:any,error:any)=>res.status(error.statusCode||500).json({code:error.code||'SCHEDULE_FAILED',error:error.statusCode?error.message:'No pudimos guardar disponibilidad. Conserva la intención y reintenta.'});
+bloqueosRouter.post('/impacto',async(req:AuthenticatedRequest,res)=>{try{res.json(await previewScheduleImpact(req.ctx!,req.body));}catch(error){impactError(res,error);}});
+bloqueosRouter.post('/ausencias',async(req:AuthenticatedRequest,res)=>{try{if(req.body.tipo==='HORARIO_ESPECIAL')return res.status(400).json({code:'INVALID_CHANGE',error:'Usa la configuración de turno especial.'});res.json(await confirmScheduleImpact(req.ctx!,req.body));}catch(error){impactError(res,error);}});
+bloqueosRouter.post('/horarios',async(req:AuthenticatedRequest,res)=>{try{res.json(await confirmScheduleImpact(req.ctx!,{...req.body,tipo:'HORARIO_ESPECIAL'}));}catch(error){impactError(res,error);}});
+bloqueosRouter.get('/horarios',async(req:AuthenticatedRequest,res)=>{try{if(typeof req.query.sucursalId!=='string')return res.status(400).json({code:'INVALID_BRANCH',error:'Elige sucursal.'});res.json(await listSpecialSchedules(req.ctx!,req.query.sucursalId,req.query.fecha as string|undefined));}catch(error){impactError(res,error);}});
 
 bloqueosRouter.get('/', async (req: AuthenticatedRequest, res) => {
   try {
@@ -28,94 +36,5 @@ bloqueosRouter.get('/', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-bloqueosRouter.post('/', async (req: AuthenticatedRequest, res) => {
-  try {
-    const tenantId = req.ctx!.tenantId;
-    const { sucursalId, barberoId, fechaInicio, fechaFin, motivo } = req.body;
-
-    const sucursal = await prisma.sucursal.findFirst({
-      where: { id: sucursalId, tenantId, eliminadoEn: null }
-    });
-    if (!sucursal) {
-      return res.status(400).json({ code: 'BAD_REQUEST', error: 'Sucursal no pertenece a esta barbería' });
-    }
-
-    if (barberoId) {
-      const barbero = await prisma.barbero.findFirst({
-        where: { id: barberoId, sucursal: { tenantId }, eliminadoEn: null }
-      });
-      if (!barbero) {
-        return res.status(400).json({ code: 'BAD_REQUEST', error: 'Barbero no pertenece a esta barbería' });
-      }
-    }
-
-    // P1.2 RBAC: If BARBERO, verify they only block their own schedule and cannot create branch-wide blocks
-    if (req.ctx!.rol === 'BARBERO') {
-      const userBarbero = await prisma.barbero.findFirst({
-        where: {
-          sucursal: { tenantId },
-          OR: [
-            { email: req.ctx!.email },
-            { id: (req.ctx as any)?.barberoId || undefined }
-          ]
-        }
-      });
-      if (!userBarbero) {
-        return res.status(403).json({ code: 'BARBER_PROFILE_NOT_LINKED', error: 'Cuenta de barbero no vinculada a un perfil activo.' });
-      }
-      if (!barberoId || barberoId !== userBarbero.id) {
-        return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede crear bloqueos para su propio horario personal.' });
-      }
-    }
-
-    const bloqueo = await prisma.bloqueoHorario.create({
-      data: {
-        tenantId,
-        sucursalId,
-        barberoId: barberoId || null,
-        fechaInicio: new Date(fechaInicio),
-        fechaFin: new Date(fechaFin),
-        motivo: motivo || 'Bloqueo general'
-      }
-    });
-
-    res.json(bloqueo);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al crear bloqueo de horario' });
-  }
-});
-
-bloqueosRouter.delete('/:id', async (req: AuthenticatedRequest, res) => {
-  try {
-    const tenantId = req.ctx!.tenantId;
-    const { id } = req.params;
-
-    const existing = await prisma.bloqueoHorario.findFirst({
-      where: { id, tenantId }
-    });
-    if (!existing) {
-      return res.status(404).json({ code: 'NOT_FOUND', error: 'Bloqueo no encontrado' });
-    }
-
-    // P1.2 RBAC: If BARBERO, can only delete their own personal blocks
-    if (req.ctx!.rol === 'BARBERO') {
-      const userBarbero = await prisma.barbero.findFirst({
-        where: {
-          sucursal: { tenantId },
-          OR: [
-            { email: req.ctx!.email },
-            { id: (req.ctx as any)?.barberoId || undefined }
-          ]
-        }
-      });
-      if (!userBarbero || existing.barberoId !== userBarbero.id) {
-        return res.status(403).json({ code: 'FORBIDDEN', error: 'No tiene permisos para eliminar bloqueos de la sucursal u otros barberos.' });
-      }
-    }
-
-    await prisma.bloqueoHorario.delete({ where: { id } });
-    res.json({ message: 'Bloqueo eliminado' });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al eliminar bloqueo' });
-  }
-});
+bloqueosRouter.post('/',async(req:AuthenticatedRequest,res)=>{try{res.json(await createScheduleBlock(req.ctx,req.body));}catch(error:any){res.status(error.statusCode||500).json({code:error.code||'BLOCK_FAILED',error:error.statusCode?error.message:'No se pudo guardar el bloqueo.'});}});
+bloqueosRouter.delete('/:id',async(req:AuthenticatedRequest,res)=>{try{res.json(await deleteScheduleBlock(req.ctx,req.params.id));}catch(error:any){res.status(error.statusCode||500).json({code:error.code||'BLOCK_FAILED',error:error.statusCode?error.message:'No se pudo eliminar el bloqueo.'});}});

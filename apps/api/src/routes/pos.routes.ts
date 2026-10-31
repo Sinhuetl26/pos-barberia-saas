@@ -1,3 +1,4 @@
+import { requirePrintAuth } from '../middleware/printAuth';
 // ==========================================
 // SYSTECH STUDIO - POINT OF SALE (POS) ROUTES
 // Fast checkout, authoritative pricing, kardex, commissions, tickets
@@ -5,555 +6,71 @@
 
 import { Router } from 'express';
 import { prisma } from '@systech/database';
+import { receiptCollectorName } from '../utils/receipt-identity';
 import jwt from 'jsonwebtoken';
 import { requireAuth, requireRole, AuthenticatedRequest, JWT_SECRET } from '../middleware/auth';
 import { createSaleSchema, validateBody } from '../validators/schemas';
-import { calculateSaleTotals } from '../services/pricing.service';
+import { refundSale } from '../services/refund.service';
+import { processSale, SaleError } from '../services/pos-sale.service';
 import { escapeHtml, generatePrintToken, verifyPrintToken } from '../utils/security';
+import { requestDiscountApproval, listDiscountApprovals, decideDiscountApproval } from '../services/discount-policy.service';
+import { requirePlanCapability } from '../middleware/license';
 
 export const posRouter = Router();
 
 // Require Auth for operational POS routes, allowing ticket-html to authenticate with either Bearer or ephemeral printToken
 posRouter.use((req, res, next) => {
   if (req.path.endsWith('/ticket-html')) {
-    return next();
+    return requirePrintAuth('VENTA')(req as any, res, next);
   }
   return requireAuth(req as any, res, next);
 });
 
-// Process Fast Sale (< 30 seconds)
+const approvalError=(res:any,error:any)=>res.status(error.statusCode||500).json({code:error.code||'APPROVAL_RESULT_UNKNOWN',error:error.statusCode?error.message:'No se confirmó la aprobación; conserva la intención y reintenta.'});
+const discountApprovals = requirePlanCapability('DISCOUNT_APPROVALS', 'Las autorizaciones de descuento');
+posRouter.get('/aprobaciones',discountApprovals,async(req:AuthenticatedRequest,res)=>{try{res.json(await listDiscountApprovals(req.ctx!,req.query.sucursalId as string));}catch(error){approvalError(res,error);}});
+posRouter.post('/aprobaciones',discountApprovals,async(req:AuthenticatedRequest,res)=>{try{res.json(await requestDiscountApproval(req.ctx!,req.body));}catch(error){approvalError(res,error);}});
+posRouter.post('/aprobaciones/:id/aprobar',requireRole('DUENO','GERENTE'),discountApprovals,async(req:AuthenticatedRequest,res)=>{try{res.json(await decideDiscountApproval(req.ctx!,req.params.id,req.body));}catch(error){approvalError(res,error);}});
+
+// Resolve an uncertain result even when its original product/barber is now inactive.
+posRouter.get('/intenciones/:clave', async (req: AuthenticatedRequest, res) => {
+  const clave = req.params.clave;
+  if (!/^[a-zA-Z0-9._:-]{1,128}$/.test(clave)) return res.status(400).json({ code: 'INVALID_IDEMPOTENCY_KEY', error: 'Clave de cobro inválida.' });
+  try {
+    const operation = await prisma.pOSOperacion.findFirst({ where: { tenantId: req.ctx!.tenantId, clave } });
+    const venta = operation?.ventaId ? await prisma.venta.findFirst({ where: { id: operation.ventaId, tenantId: req.ctx!.tenantId }, include: { items: true, devoluciones: true, barbero: true, sucursal: true, cliente: true } }) : null;
+    if (!venta) return res.status(404).json({ code: 'SALE_INTENTION_NOT_FOUND', error: 'No hay una venta confirmada disponible para esta intención.' });
+    res.json({ success: true, venta, ...JSON.parse(operation!.respuesta || '{}'), replayed: true });
+  } catch { res.status(503).json({ code: 'SALE_RESULT_UNKNOWN', error: 'No se pudo consultar el resultado del cobro.' }); }
+});
+
+// Register one sale per durable intention; all financial effects commit together.
 posRouter.post('/', validateBody(createSaleSchema), async (req: AuthenticatedRequest, res) => {
   try {
-    const tenantId = req.ctx!.tenantId;
-    const {
-      sucursalId,
-      barberoId,
-      clienteId,
-      citaId,
-      metodoPago,
-      detallesPago,
-      montoEfectivo,
-      montoTarjeta,
-      efectivoRecibido,
-      idempotencyKey,
-      descuento = 0,
-      propina = 0,
-      items = []
-    } = req.body;
-
-    const effIdempotency = idempotencyKey || (req.headers['idempotency-key'] as string | undefined);
-    if (effIdempotency) {
-      const existingSale = await prisma.venta.findFirst({
-        where: {
-          tenantId,
-          detallesPago: { contains: effIdempotency }
-        },
-        include: {
-          items: true,
-          barbero: true,
-          sucursal: true,
-          cliente: true
-        }
-      });
-      if (existingSale) {
-        return res.json({
-          success: true,
-          venta: existingSale,
-          replayed: true,
-          comisionGenerada: 0,
-          lowStockAlerts: []
-        });
-      }
+    const header = req.headers['idempotency-key'];
+    const key = req.body.idempotencyKey || header;
+    if (key && (typeof key !== 'string' || !/^[a-zA-Z0-9._:-]{1,128}$/.test(key))) {
+      return res.status(400).json({ code: 'INVALID_IDEMPOTENCY_KEY', error: 'Clave de cobro inválida.' });
     }
-
-    const sucursal = await prisma.sucursal.findFirst({
-      where: { id: sucursalId, tenantId }
-    });
-    if (!sucursal) {
-      return res.status(400).json({ code: 'BAD_REQUEST', error: 'Sucursal no pertenece a su barbería' });
+    if (header && req.body.idempotencyKey && header !== req.body.idempotencyKey) {
+      return res.status(400).json({ code: 'IDEMPOTENCY_KEY_MISMATCH', error: 'Las claves de cobro deben coincidir.' });
     }
-
-    const barbero = await prisma.barbero.findFirst({
-      where: { id: barberoId, sucursal: { tenantId } }
-    });
-    if (!barbero) {
-      return res.status(404).json({ code: 'BARBER_NOT_FOUND', error: 'Barbero no encontrado o no pertenece a esta barbería' });
-    }
-
-    // P1.2 & P1.6 RBAC: If logged-in user is BARBERO, verify they only attribute sales to themselves (fail closed)
-    if (req.ctx!.rol === 'BARBERO') {
-      const userBarbero = await prisma.barbero.findFirst({
-        where: {
-          sucursal: { tenantId },
-          OR: [
-            { email: req.ctx!.email },
-            { id: (req.ctx as any)?.barberoId || undefined }
-          ]
-        }
-      });
-      if (!userBarbero) {
-        return res.status(403).json({
-          code: 'BARBER_PROFILE_NOT_LINKED',
-          error: 'Su cuenta con rol de Barbero no está vinculada a un perfil de barbero activo en esta barbería.'
-        });
-      }
-      if (barberoId !== userBarbero.id) {
-        return res.status(403).json({
-          code: 'FORBIDDEN',
-          error: 'Un barbero solo puede registrar ventas asignadas a sí mismo'
-        });
-      }
-    }
-
-    // C5 FIX: Validate clienteId belongs strictly to this tenant
-    if (clienteId) {
-      const validCliente = await prisma.clienteFinal.findFirst({
-        where: { id: clienteId, tenantId }
-      });
-      if (!validCliente) {
-        return res.status(404).json({ code: 'INVALID_CLIENTE', error: 'El cliente no pertenece a esta barbería' });
-      }
-    }
-
-    // C5 & P1.8 FIX: Validate citaId belongs strictly to this tenant and check cancellation
-    let validCita: any = null;
-    if (citaId) {
-      validCita = await prisma.cita.findFirst({
-        where: { id: citaId, tenantId }
-      });
-      if (!validCita) {
-        return res.status(404).json({ code: 'INVALID_CITA', error: 'La cita no pertenece a esta barbería' });
-      }
-      if (validCita.estado === 'CANCELADA') {
-        return res.status(400).json({ code: 'CITA_CANCELLED', error: 'No se puede cobrar una cita cancelada' });
-      }
-    }
-
-    const comisionServPct = Number(barbero.comisionServiciosPct || 50);
-    const comisionProdPct = Number(barbero.comisionProductosPct || 10);
-
-    // Fetch product records strictly for this tenant
-    const productIds = items.map((i: any) => i.productoId);
-    const dbProducts = await prisma.producto.findMany({
-      where: { id: { in: productIds }, tenantId }
-    });
-
-    // P1.9: Branch safety validation on products
-    for (const prod of dbProducts) {
-      if (prod.sucursalId && prod.sucursalId !== sucursalId) {
-        return res.status(400).json({
-          code: 'INVALID_SUCURSAL_PRODUCT',
-          error: `El producto "${prod.nombre}" no pertenece a la sucursal del cobro`
-        });
-      }
-    }
-
-    const productMap = new Map(dbProducts.map(p => [p.id, p]));
-
-    // Authoritative calculation using pricing service
-    const calculation = calculateSaleTotals(
-      productMap as any,
-      items,
-      Number(descuento) || 0,
-      Number(propina) || 0,
-      comisionServPct,
-      comisionProdPct
-    );
-    // P1.3 FIX: Enforce discount authority - Barbers cannot exceed 20% discount without Manager/Owner
-    if (req.ctx!.rol === 'BARBERO' && calculation.subtotal > 0) {
-      const discountPct = (calculation.descuento / calculation.subtotal) * 100;
-      if (discountPct > 20.01) {
-        return res.status(403).json({
-          code: 'DISCOUNT_LIMIT_EXCEEDED',
-          error: `Un barbero solo puede aplicar hasta 20% de descuento autónomo (${discountPct.toFixed(1)}% solicitado). Descuentos mayores requieren autorización de un Dueño o Gerente.`
-        });
-      }
-    }
-
-    // P0.3: Authoritative payment validation on server
-    const total = calculation.total;
-    let paymentDetailsRecord: any = {};
-    const detallesObj = (typeof detallesPago === 'object' && detallesPago !== null) ? detallesPago : null;
-
-    if (metodoPago === 'EFECTIVO') {
-      const efectivoRecibidoNum = Number(
-        efectivoRecibido ??
-        detallesObj?.efectivoRecibido ??
-        montoEfectivo ??
-        total
-      );
-      if (efectivoRecibidoNum < total - 0.01) {
-        return res.status(400).json({
-          code: 'INSUFFICIENT_PAYMENT',
-          error: `El efectivo recibido ($${efectivoRecibidoNum.toFixed(2)}) es menor al total a pagar ($${total.toFixed(2)})`
-        });
-      }
-      const cambio = Math.max(0, Math.round((efectivoRecibidoNum - total) * 100) / 100);
-      paymentDetailsRecord = {
-        metodo: 'EFECTIVO',
-        efectivoRecibido: efectivoRecibidoNum,
-        montoEfectivo: total,
-        cambio,
-        total,
-        idempotencyKey: effIdempotency || undefined
-      };
-    } else if (metodoPago === 'MIXTO') {
-      const mEfectivo = Number(
-        montoEfectivo ??
-        detallesObj?.montoEfectivo ??
-        0
-      );
-      const mTarjeta = Number(
-        montoTarjeta ??
-        detallesObj?.montoTarjeta ??
-        0
-      );
-
-      if (mEfectivo < 0 || mTarjeta < 0) {
-        return res.status(400).json({
-          code: 'INVALID_PAYMENT',
-          error: 'Los montos en pago mixto no pueden ser negativos'
-        });
-      }
-
-      if (Math.abs((mEfectivo + mTarjeta) - total) > 0.05) {
-        return res.status(400).json({
-          code: 'PAYMENT_MISMATCH',
-          error: `En pago mixto, la suma de efectivo ($${mEfectivo.toFixed(2)}) y tarjeta ($${mTarjeta.toFixed(2)}) debe coincidir exactamente con el total ($${total.toFixed(2)})`
-        });
-      }
-
-      const efRecibido = Number(
-        efectivoRecibido ??
-        detallesObj?.efectivoRecibido ??
-        mEfectivo
-      );
-      if (efRecibido < mEfectivo - 0.01) {
-        return res.status(400).json({
-          code: 'INSUFFICIENT_CASH_PART',
-          error: `El efectivo recibido ($${efRecibido.toFixed(2)}) es menor a la porción en efectivo requerida ($${mEfectivo.toFixed(2)})`
-        });
-      }
-      const cambio = Math.max(0, Math.round((efRecibido - mEfectivo) * 100) / 100);
-      paymentDetailsRecord = {
-        metodo: 'MIXTO',
-        montoEfectivo: mEfectivo,
-        montoTarjeta: mTarjeta,
-        efectivoRecibido: efRecibido,
-        cambio,
-        total,
-        idempotencyKey: effIdempotency || undefined
-      };
-    } else if (metodoPago === 'TARJETA') {
-      paymentDetailsRecord = {
-        metodo: 'TARJETA',
-        total,
-        idempotencyKey: effIdempotency || undefined
-      };
-    } else if (metodoPago === 'TRANSFERENCIA') {
-      paymentDetailsRecord = {
-        metodo: 'TRANSFERENCIA',
-        total,
-        idempotencyKey: effIdempotency || undefined
-      };
-    }
-
-    const lowStockAlerts: any[] = [];
-
-    // Transaction execution
-    const result = await prisma.$transaction(async (tx) => {
-      // A1 FIX: Calculate folio with atomic Secuencia upsert to guarantee collision-free consecutive folios
-      const secuencia = await tx.secuencia.upsert({
-        where: {
-          tenantId_sucursalId_tipo: {
-            tenantId,
-            sucursalId,
-            tipo: 'VENTA'
-          }
-        },
-        update: {
-          ultimoValor: { increment: 1 }
-        },
-        create: {
-          tenantId,
-          sucursalId,
-          tipo: 'VENTA',
-          ultimoValor: (await tx.venta.count({ where: { tenantId, sucursalId } })) + 1
-        }
-      });
-      const serie = 'A';
-      const folioConsecutivo = secuencia.ultimoValor;
-      const folio = `${serie}-${String(folioConsecutivo).padStart(6, '0')}`;
-
-      const venta = await tx.venta.create({
-        data: {
-          tenantId,
-          sucursalId,
-          barberoId,
-          clienteId: clienteId || null,
-          citaId: citaId || null,
-          folio,
-          serie,
-          folioConsecutivo,
-          estado: 'COMPLETADA',
-          subtotal: calculation.subtotal,
-          descuento: calculation.descuento,
-          propina: calculation.propina,
-          total: calculation.total,
-          metodoPago,
-          detallesPago: JSON.stringify(paymentDetailsRecord),
-          items: {
-            create: calculation.preparedItems.map(p => ({
-              productoId: p.productoId,
-              nombreItem: p.nombreItem,
-              tipoItem: p.tipoItem,
-              cantidad: p.cantidad,
-              precioUnitario: p.precioUnitario,
-              subtotal: p.subtotal
-            }))
-          }
-        },
-        include: {
-          items: true,
-          barbero: true,
-          sucursal: true,
-          cliente: true
-        }
-      });
-
-      // A2 FIX: Atomic Stock deduction with live check to prevent negative inventory
-      for (const item of calculation.preparedItems) {
-        if (item.tipoItem === 'PRODUCTO') {
-          const liveProd = await tx.producto.findFirst({
-            where: { id: item.productoId, tenantId }
-          });
-          if (!liveProd) {
-            const err: any = new Error(`Producto ${item.nombreItem} no encontrado`);
-            err.statusCode = 404;
-            throw err;
-          }
-
-          // P2.1 FIX: Atomic conditional stock decrement (prevents race conditions and negative inventory)
-          const updateResult = await tx.producto.updateMany({
-            where: {
-              id: item.productoId,
-              tenantId,
-              stockActual: { gte: item.cantidad }
-            },
-            data: {
-              stockActual: { decrement: item.cantidad }
-            }
-          });
-
-          if (updateResult.count === 0) {
-            const err: any = new Error(`Stock insuficiente para "${liveProd.nombre}". Existencias actuales insuficientes para completar la venta en concurrencia.`);
-            err.statusCode = 400;
-            err.code = 'INSUFFICIENT_STOCK';
-            throw err;
-          }
-
-          const stockAnterior = liveProd.stockActual;
-          const stockNuevo = stockAnterior - item.cantidad;
-
-          await tx.kardexMovimiento.create({
-            data: {
-              tenantId,
-              sucursalId,
-              productoId: liveProd.id,
-              tipoMovimiento: 'VENTA_POS',
-              cantidad: -item.cantidad,
-              stockAnterior,
-              stockNuevo,
-              motivo: `Venta ${folio}`
-            }
-          });
-
-          if (stockNuevo <= liveProd.stockMinimo) {
-            lowStockAlerts.push({
-              nombre: liveProd.nombre,
-              stockNuevo,
-              stockMinimo: liveProd.stockMinimo
-            });
-          }
-        }
-      }
-
-      // Commission creation
-      await tx.comision.create({
-        data: {
-          tenantId,
-          ventaId: venta.id,
-          barberoId,
-          monto: calculation.totalComision,
-          porcentaje: comisionServPct,
-          pagada: false
-        }
-      });
-
-      // C5 FIX: Update appointment only if belonging to tenant
-      if (citaId) {
-        await tx.cita.updateMany({
-          where: { id: citaId, tenantId },
-          data: { estado: 'COMPLETADA' }
-        });
-      }
-
-      // A3, C5 & P1.8 FIX: Update customer stats idempotently (do not double increment if cita was already COMPLETADA)
-      if (clienteId) {
-        const wasAlreadyCompleted = validCita && validCita.estado === 'COMPLETADA';
-        await tx.clienteFinal.updateMany({
-          where: { id: clienteId, tenantId },
-          data: {
-            gastoTotal: { increment: calculation.total },
-            ...(wasAlreadyCompleted ? {} : { totalVisitas: { increment: 1 } }),
-            fechaUltimaVisita: new Date()
-          }
-        });
-      }
-
-      return venta;
-    });
-
-    for (const alert of lowStockAlerts) {
-      await prisma.notificacionLog.create({
-        data: {
-          tenantId,
-          tipo: 'STOCK_MINIMO',
-          canal: 'WHATSAPP',
-          destinatario: 'Dueño',
-          mensaje: `⚠️ Alerta de Inventario: "${alert.nombre}" tiene solo ${alert.stockNuevo} unidades restantes (Mínimo: ${alert.stockMinimo}).`,
-          estado: 'ENVIADO'
-        }
-      }).catch(() => {});
-    }
-
-    res.json({
-      success: true,
-      venta: result,
-      comisionGenerada: calculation.totalComision,
-      lowStockAlerts
-    });
+    res.json(await processSale(req.ctx as any, req.body, key as string | undefined));
   } catch (error: any) {
-    console.error('Error al procesar venta:', error);
-    const status = error.statusCode || 500;
-    const code = error.code || (status === 400 ? 'BAD_REQUEST' : 'SERVER_ERROR');
-    res.status(status).json({
-      code,
-      error: error.message || 'Error al procesar la venta en el POS'
-    });
+    const status = error instanceof SaleError ? error.statusCode : 500;
+    if (status === 500) console.error('Error interno POS:', error.code || error.name);
+    const rolledBackPolicy=['PRICE_CONFIRMATION_REQUIRED','DISCOUNT_APPROVAL_INVALID','APPROVAL_CART_CHANGED','DISCOUNT_LIMIT_EXCEEDED','DISCOUNT_REASON_REQUIRED','APPROVER_UNAVAILABLE'];
+    res.status(status).json({ code: error instanceof SaleError ? error.code : 'SALE_RESULT_UNKNOWN', definitive: error instanceof SaleError && (status === 400 || [403,409].includes(status)&&rolledBackPolicy.includes(error.code)),
+      error: error instanceof SaleError ? error.message : 'No se confirmó el resultado. Reintenta la misma intención de cobro.' });
   }
 });
 
-// Cancel / Return Sale with stock, Kardex, and commission reversal
-// C2 FIX: Require DUENO or GERENTE; A4 FIX: Block cancellation if commissions are paid
-posRouter.post('/:id/cancelar', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
-  try {
-    const tenantId = req.ctx!.tenantId;
-    const userEmail = req.ctx!.email;
-    const { id } = req.params;
-    const { motivo } = req.body;
-
-    if (!motivo) {
-      return res.status(400).json({ error: 'El motivo de cancelación es obligatorio' });
-    }
-
-    const venta = await prisma.venta.findFirst({
-      where: { id, tenantId },
-      include: { items: true, comisiones: true }
-    });
-
-    if (!venta) return res.status(404).json({ error: 'Venta no encontrada en su barbería' });
-    if (venta.estado === 'CANCELADA') {
-      return res.status(400).json({ error: 'Esta venta ya se encuentra cancelada' });
-    }
-
-    // A4 FIX: Block cancellation if commission is already paid/liquidated
-    const comisionPagada = venta.comisiones?.some(c => c.pagada);
-    if (comisionPagada) {
-      return res.status(400).json({
-        code: 'COMMISSION_ALREADY_PAID',
-        error: 'No se puede cancelar una venta cuya comisión ya fue liquidada a nómina.'
-      });
-    }
-
-    await prisma.$transaction(async (tx) => {
-      // 1. Update sale status
-      await tx.venta.update({
-        where: { id: venta.id },
-        data: {
-          estado: 'CANCELADA',
-          motivoCancelacion: motivo,
-          canceladoPor: userEmail
-        }
-      });
-
-      // 2. Reverse stock & register Kardex return
-      for (const item of venta.items) {
-        if (item.tipoItem === 'PRODUCTO') {
-          const prod = await tx.producto.findUnique({ where: { id: item.productoId } });
-          if (prod) {
-            const stockAnterior = prod.stockActual;
-            const stockNuevo = stockAnterior + item.cantidad;
-
-            await tx.producto.update({
-              where: { id: prod.id },
-              data: { stockActual: stockNuevo }
-            });
-
-            await tx.kardexMovimiento.create({
-              data: {
-                tenantId,
-                sucursalId: venta.sucursalId,
-                productoId: prod.id,
-                tipoMovimiento: 'CANCELACION_VENTA',
-                cantidad: item.cantidad,
-                stockAnterior,
-                stockNuevo,
-                motivo: `Devolución por cancelación de venta ${venta.folio}: ${motivo}`,
-                usuarioId: userEmail
-              }
-            });
-          }
-        }
-      }
-
-      // 3. Reverse commissions
-      await tx.comision.deleteMany({
-        where: { ventaId: venta.id }
-      });
-
-      // 4. Reverse customer spending and visits if applicable (A4)
-      if (venta.clienteId) {
-        await tx.clienteFinal.update({
-          where: { id: venta.clienteId },
-          data: {
-            gastoTotal: { decrement: venta.total },
-            totalVisitas: { decrement: 1 }
-          }
-        });
-      }
-
-      // 5. Audit Log
-      await tx.auditoriaLog.create({
-        data: {
-          tenantId,
-          usuarioEmail: userEmail,
-          accion: 'CANCELACION_VENTA',
-          detalles: `Cancelación de venta ${venta.folio} ($${Number(venta.total).toFixed(2)} MXN). Motivo: ${motivo}`
-        }
-      });
-    });
-
-    res.json({
-      success: true,
-      message: `Venta ${venta.folio} cancelada exitosamente. Stock y comisiones revertidos.`,
-      folio: venta.folio
-    });
-  } catch (error: any) {
-    console.error('Error al cancelar venta:', error);
-    res.status(500).json({ code: 'SERVER_ERROR', error: error.message || 'Error al cancelar la venta' });
-  }
-});
+const returnHandler = (cancel: boolean) => async (req: AuthenticatedRequest, res: any) => {
+  try { res.json(await refundSale(req.ctx as any, req.params.id, req.body, cancel)); }
+  catch (error: any) { res.status(error instanceof SaleError ? error.statusCode : 503).json({ code: error.code || 'FINANCIAL_RESULT_UNKNOWN', error: error instanceof SaleError ? error.message : 'Resultado no confirmado; reintenta la misma devolución.' }); }
+};
+posRouter.post('/:id/cancelar', requireRole('DUENO', 'GERENTE'), returnHandler(true));
+posRouter.post('/:id/devolver', requireRole('DUENO', 'GERENTE'), returnHandler(false));
 
 // Get sales history with filters
 posRouter.get('/', async (req: AuthenticatedRequest, res) => {
@@ -569,7 +86,7 @@ posRouter.get('/', async (req: AuthenticatedRequest, res) => {
     // C2: For BARBERO role, restrict sales strictly to their own barber record
     if (req.ctx!.rol === 'BARBERO') {
       const ownBarber = await prisma.barbero.findFirst({
-        where: { sucursal: { tenantId }, email: req.ctx!.email }
+        where: { sucursal: { tenantId }, id: req.ctx!.barberoId || '__unlinked__' }
       });
       barberoId = ownBarber ? ownBarber.id : 'unauthorized-barber-filter';
     }
@@ -592,7 +109,7 @@ posRouter.get('/', async (req: AuthenticatedRequest, res) => {
         ...(barberoId ? { barberoId } : {})
       },
       include: {
-        items: true,
+        items: true, devoluciones: true,
         barbero: true,
         sucursal: true,
         cliente: true,
@@ -615,7 +132,7 @@ posRouter.get('/:id/ticket', async (req: AuthenticatedRequest, res) => {
     const venta = await prisma.venta.findFirst({
       where: { id, tenantId },
       include: {
-        items: true,
+        items: true, devoluciones: true,
         barbero: true,
         sucursal: true,
         cliente: true,
@@ -625,14 +142,17 @@ posRouter.get('/:id/ticket', async (req: AuthenticatedRequest, res) => {
 
     if (!venta) return res.status(404).json({ code: 'NOT_FOUND', error: 'Venta no encontrada en su barbería' });
 
+    const collectorName = await receiptCollectorName(prisma, tenantId, venta.cobradoPorId, venta.cobradoPorNombre);
+
     const lines = [
       `💈 *${venta.tenant.nombre.toUpperCase()}*`,
       `📍 ${venta.sucursal.nombre} - ${venta.sucursal.direccion || ''}`,
       `📞 Tel: ${venta.sucursal.telefono || venta.tenant.telefono || ''}`,
       `--------------------------------`,
       `Folio: ${venta.folio}`,
-      `Fecha: ${new Date(venta.fecha).toLocaleString('es-MX')}`,
+      `Fecha: ${new Date(venta.fecha).toLocaleString('es-MX', { timeZone: venta.sucursal.zonaHoraria })}`,
       `Atendido por: ${venta.barbero.nombre}`,
+      `Cobrado por: ${collectorName}`,
       venta.cliente ? `Cliente: ${venta.cliente.nombre}` : '',
       `--------------------------------`,
       `DETALLE DE COMPRA:`
@@ -646,7 +166,9 @@ posRouter.get('/:id/ticket', async (req: AuthenticatedRequest, res) => {
     lines.push(`Subtotal: $${Number(venta.subtotal).toFixed(2)}`);
     if (Number(venta.descuento) > 0) lines.push(`Descuento: -$${Number(venta.descuento).toFixed(2)}`);
     if (Number(venta.propina) > 0) lines.push(`Propina: $${Number(venta.propina).toFixed(2)}`);
+    if (Number(venta.impuesto) > 0) lines.push(`Impuesto incluido: $${Number(venta.impuesto).toFixed(2)}`);
     lines.push(`*TOTAL: $${Number(venta.total).toFixed(2)}*`);
+    if (Number(venta.totalDevuelto) > 0) { lines.push(`Devuelto: $${Number(venta.totalDevuelto).toFixed(2)}`); lines.push(`Neto conservado: $${(Number(venta.total) - Number(venta.totalDevuelto)).toFixed(2)}`); }
     lines.push(`Método de Pago: ${venta.metodoPago}`);
     lines.push(`--------------------------------`);
     lines.push(`¡Gracias por su preferencia! Vuelva pronto.`);
@@ -655,7 +177,7 @@ posRouter.get('/:id/ticket', async (req: AuthenticatedRequest, res) => {
     const customerPhone = venta.cliente?.telefono ? `52${venta.cliente.telefono.replace(/[^0-9]/g, '')}` : '';
 
     res.json({
-      venta,
+      venta: { ...venta, cobradoPorNombre: collectorName },
       whatsappText,
       whatsappUrl: customerPhone ? `https://wa.me/${customerPhone}?text=${encodeURIComponent(whatsappText)}` : null,
       ticketHtmlUrl: `/api/ventas/${id}/ticket-html?width=58mm`
@@ -673,7 +195,7 @@ posRouter.post('/:id/print-token', async (req: AuthenticatedRequest, res) => {
     const venta = await prisma.venta.findFirst({ where: { id, tenantId } });
     if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
 
-    const printToken = generatePrintToken('VENTA', id, tenantId);
+    const printToken = generatePrintToken('VENTA', id, tenantId, req.ctx!.userId, req.ctx!.sessionVersion);
     res.json({ success: true, printToken });
   } catch (error) {
     res.status(500).json({ error: 'Error al generar token de impresión' });
@@ -685,29 +207,7 @@ posRouter.post('/:id/print-token', async (req: AuthenticatedRequest, res) => {
 posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    let tenantId = req.ctx?.tenantId || null;
-
-    if (!tenantId) {
-      const authHeader = req.headers['authorization'];
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        try {
-          const payload = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET) as any;
-          tenantId = payload.tid;
-        } catch (e) {}
-      }
-    }
-
-    const printToken = req.query.printToken as string | undefined;
-    if (!tenantId && printToken) {
-      const verified = verifyPrintToken(printToken, 'VENTA', id);
-      if (verified.valid) {
-        tenantId = verified.tenantId!;
-      }
-    }
-
-    if (!tenantId) {
-      return res.status(401).send('<h1>No autorizado: Se requiere token de impresión temporal o sesión activa.</h1>');
-    }
+    const tenantId = req.ctx!.tenantId;
 
     const widthParam = (req.query.width as string) === '80mm' ? '80mm' : '58mm';
     const autoprint = req.query.autoprint === 'true';
@@ -715,7 +215,7 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
     const venta = await prisma.venta.findFirst({
       where: { id, tenantId },
       include: {
-        items: true,
+        items: true, devoluciones: true,
         barbero: true,
         sucursal: true,
         cliente: true,
@@ -727,7 +227,11 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
       return res.status(404).send('<h1>Venta no encontrada</h1>');
     }
 
+    const collectorName = await receiptCollectorName(prisma, tenantId, venta.cobradoPorId, venta.cobradoPorNombre);
+
     const is58mm = widthParam === '58mm';
+    let payment:any={};try{payment=JSON.parse(venta.detallesPago||'{}');}catch{/* Historical tickets may have no structured payment. */}
+    const paymentRows=[['Efectivo',payment.montoEfectivo],['Tarjeta',payment.montoTarjeta],['Recibido',payment.efectivoRecibido],['Cambio',payment.cambio]].filter(([,value])=>typeof value==='number'&&Number.isFinite(value)&&value>=0).map(([label,value])=>`<tr><td>${label}:</td><td class="text-right">$${Number(value).toFixed(2)}</td></tr>`).join('');
     const itemsHtml = venta.items.map(item => `
       <tr>
         <td style="text-align: left; padding: 2px 0;">${item.cantidad}x ${escapeHtml(item.nombreItem)}</td>
@@ -759,6 +263,7 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
       padding: ${is58mm ? '8px 4px' : '12px 8px'};
       color: #000;
       background: #fff;
+      overflow-wrap: anywhere;
     }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
@@ -775,7 +280,10 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
       width: 100%;
       border-collapse: collapse;
       font-size: inherit;
+      table-layout: fixed;
     }
+    td:last-child, th:last-child { width: 43%; }
+    td.text-right { white-space: nowrap; }
     .header-title {
       font-size: ${is58mm ? '14px' : '16px'};
       font-weight: bold;
@@ -788,7 +296,7 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
       margin-top: 4px;
     }
     @media print {
-      body { width: 100%; margin: 0; padding: 2mm; }
+      body { width: ${widthParam}; max-width: ${widthParam}; margin: 0; padding: 2mm; }
       .no-print { display: none !important; }
     }
     .print-bar {
@@ -797,6 +305,7 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
       margin-bottom: 12px;
       text-align: center;
       border-radius: 6px;
+      display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
     }
     .btn {
       padding: 6px 12px;
@@ -813,8 +322,7 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
 <body>
   <div class="print-bar no-print">
     <button class="btn" onclick="window.print()">🖨️ Imprimir (${widthParam})</button>
-    <a href="?width=58mm" class="btn" style="text-decoration:none;">58mm</a>
-    <a href="?width=80mm" class="btn" style="text-decoration:none;">80mm</a>
+    <span>Para cambiar ancho, vuelve al punto de venta.</span>
   </div>
 
   <div class="text-center">
@@ -828,8 +336,9 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
 
   <div>
     <div><strong>Folio:</strong> ${escapeHtml(venta.folio)}</div>
-    <div><strong>Fecha:</strong> ${new Date(venta.fecha).toLocaleString('es-MX')}</div>
+    <div><strong>Fecha:</strong> ${new Date(venta.fecha).toLocaleString('es-MX',{timeZone:venta.sucursal.zonaHoraria})}</div>
     <div><strong>Atendido por:</strong> ${escapeHtml(venta.barbero.nombre)}</div>
+    <div><strong>Cobrado por:</strong> ${escapeHtml(collectorName)}</div>
     ${venta.cliente ? `<div><strong>Cliente:</strong> ${escapeHtml(venta.cliente.nombre)}</div>` : ''}
   </div>
 
@@ -846,6 +355,8 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
       ${itemsHtml}
     </tbody>
   </table>
+
+  ${Number(venta.totalDevuelto) > 0 ? `<div class="divider"></div><div>Devuelto: $${Number(venta.totalDevuelto).toFixed(2)}</div><div>Neto conservado: $${(Number(venta.total) - Number(venta.totalDevuelto)).toFixed(2)}</div>` : ''}
 
   <div class="divider"></div>
 
@@ -864,6 +375,7 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
       <td>Propina:</td>
       <td class="text-right">$${Number(venta.propina).toFixed(2)}</td>
     </tr>` : ''}
+    ${Number(venta.impuesto) > 0 ? `<tr><td>Impuesto incluido:</td><td class="text-right">$${Number(venta.impuesto).toFixed(2)}</td></tr>` : ''}
     <tr class="bold" style="font-size: ${is58mm ? '13px' : '15px'};">
       <td style="padding-top: 4px;">TOTAL:</td>
       <td class="text-right" style="padding-top: 4px;">$${Number(venta.total).toFixed(2)}</td>
@@ -873,12 +385,13 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
   <div class="divider"></div>
 
   <div><strong>Método de Pago:</strong> ${escapeHtml(venta.metodoPago)}</div>
+  <table>${paymentRows}</table>
 
   <div class="divider"></div>
 
   <div class="text-center" style="margin-top: 8px;">
-    <div class="barcode">||| | |||| || ||| |</div>
-    <div style="font-size: 9px; margin-top: 2px;">${venta.folio}</div>
+    <div style="font-size: 9px; margin-top: 2px;">${escapeHtml(venta.folio)}</div>
+    <div>Comprobante de venta · No es CFDI</div>
     <div style="margin-top: 8px;">¡Gracias por su preferencia!</div>
     <div>Vuelva pronto</div>
   </div>
@@ -888,6 +401,9 @@ posRouter.get('/:id/ticket-html', async (req: any, res: any) => {
 </html>`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control','no-store');
+    res.setHeader('Referrer-Policy','no-referrer');
+    res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
     res.send(html);
   } catch (error) {
     res.status(500).send('<h1>Error al generar ticket imprimible</h1>');

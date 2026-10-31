@@ -7,6 +7,8 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { StripeBillingService, stripe } from '../services/stripe.service';
+import { createLicenseCheckout, billingAppUrl } from '../services/billing-checkout.service';
+import { getPublicLicenseCatalog, getLicensePlan, licenseQuote, isLicensePlan, getLicenseUsage, changeLocalLicense } from '../services/license-catalog.service';
 
 export const suscripcionRouter = Router();
 
@@ -14,25 +16,25 @@ export const suscripcionRouter = Router();
 // 1. PUBLIC WEBHOOK ENDPOINT (NO JWT AUTH REQUIRED)
 // ======================================================================
 suscripcionRouter.post('/webhook', async (req: Request, res: Response) => {
-  const signature = req.headers['stripe-signature'] as string;
-  const rawBody = (req as any).rawBody || JSON.stringify(req.body);
-
+  let event;
   try {
-    const event = StripeBillingService.constructWebhookEvent(rawBody, signature || '');
-    const result = await StripeBillingService.processWebhookEvent(event, prisma);
-    
-    return res.status(200).json(result);
-  } catch (error: any) {
-    console.error('Error en webhook de Stripe:', error.message);
-    return res.status(400).json({
-      error: `Webhook Error: ${error.message}`
-    });
+    event = StripeBillingService.constructWebhookEvent((req as any).rawBody, String(req.headers['stripe-signature'] || ''));
+  } catch {
+    return res.status(400).json({ error: 'Evento de Stripe no válido.' });
+  }
+  try {
+    return res.json(await StripeBillingService.processWebhookEvent(event, prisma));
+  } catch {
+    return res.status(500).json({ error: 'No fue posible procesar el evento. Stripe puede reintentarlo.' });
   }
 });
 
 // ======================================================================
 // 2. AUTHENTICATED ENDPOINTS (REQUIRE JWT)
 // ======================================================================
+suscripcionRouter.get('/catalogo', (_req, res, next) => {
+  try { res.json(getPublicLicenseCatalog()); } catch (error) { next(error); }
+});
 suscripcionRouter.use(requireAuth);
 
 // Get Current Subscription Details
@@ -40,6 +42,7 @@ suscripcionRouter.get('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const tenant = req.ctx!.tenant;
+    const plan = getLicensePlan(tenant.plan);
 
     const sub = await prisma.suscripcion.findUnique({
       where: { tenantId }
@@ -51,12 +54,14 @@ suscripcionRouter.get('/', async (req: AuthenticatedRequest, res: Response) => {
         nombre: tenant.nombre,
         plan: tenant.plan,
         estado: tenant.estado,
-        limiteSucursales: tenant.limiteSucursales,
-        limiteBarberos: tenant.limiteBarberos
+        limiteSucursales: plan.branchLimit,
+        limiteBarberos: plan.barbersPerBranch
       },
+      catalogo: getPublicLicenseCatalog(),
+      capacidad: await getLicenseUsage(prisma, tenantId, plan),
       suscripcion: sub || {
-        montoMensual: tenant.plan === 'PRO' ? 999 : 499,
-        estadoPago: 'active',
+        montoMensual: licenseQuote(tenant.plan).totalMxn,
+        estadoPago: 'trialing',
         diasGracia: 3
       }
     });
@@ -82,256 +87,50 @@ suscripcionRouter.post('/validar-cupon', async (req: AuthenticatedRequest, res: 
   }
 });
 
-// Create Stripe Checkout Session
-suscripcionRouter.post('/crear-checkout-session', async (req: AuthenticatedRequest, res: Response) => {
+// License checkout and portal are owner-only. SYSTECH never collects card data.
+suscripcionRouter.post('/crear-checkout-session', requireRole('DUENO'), async (req: AuthenticatedRequest, res, next) => {
   try {
-    const tenantId = req.ctx!.tenantId;
     const { plan, codigoCupon } = req.body;
-
-    if (!['BASICO', 'PRO'].includes(plan)) {
-      return res.status(400).json({ error: 'Plan inválido' });
+    if (!isLicensePlan(plan) || (codigoCupon !== undefined && (typeof codigoCupon !== 'string' || codigoCupon.length > 100))) {
+      return res.status(400).json({ error: 'Plan o cupón inválido.' });
     }
-
-    let precioBase = plan === 'PRO' ? 999 : 499;
-    let descuentoAplicado = 0;
-
-    if (codigoCupon) {
-      const cupon = await StripeBillingService.validarCupon(codigoCupon, tenantId, prisma);
-      if (cupon.valido) {
-        if (cupon.descuentoPct) {
-          descuentoAplicado = (precioBase * cupon.descuentoPct) / 100;
-        } else if (cupon.descuentoFijo) {
-          descuentoAplicado = cupon.descuentoFijo;
-        }
-      }
-    }
-
-    const precioFinal = Math.max(0, precioBase - descuentoAplicado);
-
-    const isProd = process.env.NODE_ENV === 'production';
-
-    // In production, reject if Stripe SDK is not configured
-    if (isProd && !stripe) {
-      return res.status(503).json({
-        code: 'PAYMENT_GATEWAY_NOT_CONFIGURED',
-        error: 'La integración de Stripe no está configurada en el servidor de producción. Configure STRIPE_SECRET_KEY.'
-      });
-    }
-
-    let checkoutUrl: string | null = null;
-    if (stripe) {
-      try {
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          mode: 'subscription',
-          line_items: [
-            {
-              price_data: {
-                currency: 'mxn',
-                product_data: {
-                  name: `Plan ${plan} - SYSTECH Studio`,
-                  description: `Suscripción mensual recurrente (${plan})`
-                },
-                unit_amount: Math.round(precioFinal * 100),
-                recurring: { interval: 'month' }
-              },
-              quantity: 1
-            }
-          ],
-          client_reference_id: tenantId,
-          metadata: {
-            tenantId,
-            plan,
-            codigoCupon: codigoCupon || ''
-          },
-          success_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?session_id={CHECKOUT_SESSION_ID}&status=success`,
-          cancel_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?status=cancel`
-        });
-        if (session.url) {
-          checkoutUrl = session.url;
-        }
-      } catch (stripeErr: any) {
-        console.warn('Error al invocar Stripe Checkout SDK:', stripeErr.message);
-        if (isProd) {
-          return res.status(502).json({
-            code: 'STRIPE_GATEWAY_ERROR',
-            error: `Error al comunicarse con la pasarela de pagos de Stripe: ${stripeErr.message}`
-          });
-        }
-      }
-    }
-
-    // Only allow simulation fallback in test or local development environments
-    if (!checkoutUrl) {
-      if (isProd) {
-        return res.status(502).json({
-          code: 'STRIPE_SESSION_FAILED',
-          error: 'No fue posible generar una sesión de pago válida con Stripe.'
-        });
-      }
-      checkoutUrl = `https://checkout.stripe.com/c/pay/cs_test_${tenantId}_${Date.now()}`;
-    }
-
-    res.json({
-      success: true,
-      plan,
-      precioBase,
-      descuentoAplicado,
-      precioFinal,
-      checkoutUrl,
-      moneda: 'MXN'
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al crear checkout session' });
-  }
+    res.json(await createLicenseCheckout(req.ctx!.tenantId, plan, codigoCupon));
+  } catch (error) { next(error); }
 });
 
-// Customer Portal Session (Manage cards & cancellations)
-suscripcionRouter.post('/portal-cliente', async (req: AuthenticatedRequest, res: Response) => {
+suscripcionRouter.post('/portal-cliente', requireRole('DUENO'), async (req: AuthenticatedRequest, res, next) => {
   try {
-    const tenantId = req.ctx!.tenantId;
-    const isProd = process.env.NODE_ENV === 'production';
-    const sub = await prisma.suscripcion.findUnique({ where: { tenantId } });
-
-    if (isProd && (!stripe || !sub?.stripeCustomerId)) {
-      return res.status(400).json({
-        code: 'NO_STRIPE_CUSTOMER',
-        error: 'No se encontró un identificador de cliente en Stripe para esta cuenta. Para gestionar tarjetas, complete un cobro inicial.'
-      });
-    }
-
-    let portalUrl: string | null = null;
-    if (stripe && sub?.stripeCustomerId) {
-      try {
-        const portalSession = await stripe.billingPortal.sessions.create({
-          customer: sub.stripeCustomerId,
-          return_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion`
-        });
-        if (portalSession.url) {
-          portalUrl = portalSession.url;
-        }
-      } catch (portalErr: any) {
-        console.warn('Error al invocar Stripe Billing Portal SDK:', portalErr.message);
-        if (isProd) {
-          return res.status(502).json({
-            code: 'STRIPE_PORTAL_ERROR',
-            error: `Error al abrir portal de facturación en Stripe: ${portalErr.message}`
-          });
-        }
-      }
-    }
-
-    if (!portalUrl) {
-      if (isProd) {
-        return res.status(502).json({
-          code: 'STRIPE_PORTAL_FAILED',
-          error: 'No fue posible abrir el portal de cliente de Stripe.'
-        });
-      }
-      portalUrl = `https://billing.stripe.com/p/session/test_${sub?.stripeCustomerId || tenantId}`;
-    }
-
-    res.json({
-      success: true,
-      portalUrl
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al abrir portal de cliente' });
-  }
+    const sub = await prisma.suscripcion.findUnique({ where: { tenantId: req.ctx!.tenantId } });
+    if (!stripe || !sub?.stripeCustomerId) return res.status(409).json({ error: 'El portal estará disponible después de conectar Stripe y activar una licencia.' });
+    const session = await stripe.billingPortal.sessions.create({ customer: sub.stripeCustomerId, return_url: billingAppUrl() + '/app/suscripcion' });
+    res.json({ success: true, portalUrl: session.url });
+  } catch (error) { next(error); }
 });
 
 // Upgrade / Downgrade Plan
 // C3 FIX: Requires DUENO role. In production, requires real Stripe checkout; directly modifying plan only in test/dev
-suscripcionRouter.post('/cambiar-plan', requireRole('DUENO'), async (req: AuthenticatedRequest, res: Response) => {
+suscripcionRouter.post('/cambiar-plan', requireRole('DUENO'), async (req: AuthenticatedRequest, res: Response, next) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { nuevoPlan } = req.body;
     const isProd = process.env.NODE_ENV === 'production';
 
-    if (!['BASICO', 'PRO'].includes(nuevoPlan)) {
-      return res.status(400).json({ error: 'Plan inválido. Opciones: BASICO o PRO' });
+    if (!isLicensePlan(nuevoPlan)) {
+      return res.status(400).json({ error: 'Plan inválido. Selecciona Esencial, Pro o Cadena.' });
     }
 
-    // In production, initiate real Stripe Checkout session
     if (isProd) {
-      if (!stripe) {
-        return res.status(503).json({
-          code: 'STRIPE_NOT_CONFIGURED',
-          error: 'La pasarela de Stripe no está configurada para procesar pagos de cambio de plan.'
-        });
+      const existing = await prisma.suscripcion.findUnique({ where: { tenantId } });
+      if (existing?.stripeSubscriptionId && existing.estadoPago !== 'canceled') {
+        return res.status(409).json({ error: 'Administra tu plan en el portal de facturación de tu suscripción actual.' });
       }
-
-      try {
-        const priceAmount = nuevoPlan === 'PRO' ? 99900 : 49900;
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card'],
-          mode: 'subscription',
-          line_items: [
-            {
-              price_data: {
-                currency: 'mxn',
-                product_data: {
-                  name: `Plan ${nuevoPlan} - SYSTECH Studio`,
-                  description: `Actualización de plan recurrente (${nuevoPlan})`
-                },
-                unit_amount: priceAmount,
-                recurring: { interval: 'month' }
-              },
-              quantity: 1
-            }
-          ],
-          client_reference_id: tenantId,
-          metadata: {
-            tenantId,
-            plan: nuevoPlan
-          },
-          success_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?plan=${nuevoPlan}&status=success`,
-          cancel_url: `${req.headers.origin || 'http://localhost:5173'}/suscripcion?status=cancel`
-        });
-
-        return res.json({
-          requiresPayment: true,
-          message: 'Para cambiar de plan en producción, complete el proceso de pago seguro en Stripe.',
-          checkoutUrl: session.url
-        });
-      } catch (stripeErr: any) {
-        return res.status(502).json({
-          code: 'STRIPE_CHECKOUT_FAILED',
-          error: `Error al iniciar pasarela de Stripe: ${stripeErr.message}`
-        });
-      }
+      return res.json({ ...(await createLicenseCheckout(tenantId, nuevoPlan)), requiresPayment: true });
     }
 
-    const limiteSucursales = nuevoPlan === 'PRO' ? 999 : 1;
-    const limiteBarberos = nuevoPlan === 'PRO' ? 999 : 3;
-    const montoMensual = nuevoPlan === 'PRO' ? 999 : 499;
-
-    const dbPlan = await prisma.plan.findUnique({ where: { codigo: nuevoPlan } });
-
-    const tenant = await prisma.tenant.update({
-      where: { id: tenantId },
-      data: { plan: nuevoPlan, planId: dbPlan?.id || null, limiteSucursales, limiteBarberos }
-    });
-
-    await prisma.suscripcion.upsert({
-      where: { tenantId },
-      update: { montoMensual },
-      create: { tenantId, montoMensual, estadoPago: 'active' }
-    });
-
-    await prisma.auditoriaLog.create({
-      data: {
-        tenantId,
-        usuarioEmail: req.ctx?.email || 'dueno@barberia.com',
-        accion: `CAMBIO_PLAN_${nuevoPlan}`,
-        detalles: `Cambio de plan a ${nuevoPlan} por el usuario.`
-      }
-    });
+    const tenant = await changeLocalLicense(tenantId, nuevoPlan, req.ctx!.email);
 
     res.json({ message: `Plan cambiado a ${nuevoPlan}`, tenant });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al cambiar plan' });
-  }
+  } catch (error) { next(error); }
 });
 
 // Run Dunning Job
@@ -413,7 +212,7 @@ suscripcionRouter.post('/simular-pago', async (req: AuthenticatedRequest, res: R
         create: {
           tenantId,
           estadoPago: nuevoEstadoPago,
-          montoMensual: 499
+          montoMensual: licenseQuote(req.ctx!.tenant.plan).totalMxn
         }
       })
     ]);

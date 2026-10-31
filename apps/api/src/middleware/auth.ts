@@ -6,6 +6,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@systech/database';
+import { resolveScope } from '../services/authorization.service';
+import { authorizeRequest, canonicalPath } from './authorization';
 
 const rawSecret = process.env.JWT_SECRET;
 if (!rawSecret || rawSecret.length < 32 || /change|example|systech-super|systech-secure/i.test(rawSecret)) {
@@ -20,7 +22,10 @@ export interface AuthContext {
   tenantId: string;
   rol: string;
   email: string;
+  sessionVersion: number;
   tenant: any;
+  barberoId: string | null;
+  branchIds: string[] | null;
 }
 
 export interface AuthenticatedRequest extends Request {
@@ -44,15 +49,21 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
   }
 
   const token = authHeader.substring(7).trim();
+  let payload: { sub: string; tid: string; rol: string; email?: string; sv?: number };
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as { sub: string; tid: string; rol: string; email: string };
-
+    const verified = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    if (typeof verified === 'string' || !verified || typeof verified.sub !== 'string' || typeof verified.tid !== 'string' || typeof verified.rol !== 'string' || (verified.sv !== undefined && (!Number.isSafeInteger(verified.sv) || verified.sv < 0))) throw new Error();
+    payload = verified as typeof payload;
+  } catch {
+    return res.status(401).json({ code: 'TOKEN_INVALIDO', error: 'Token inválido o expirado' });
+  }
+  try {
     // Check user active status and live role/tenant in database (A14 & P3.3 FIX)
     const dbUser = await prisma.usuario.findUnique({
       where: { id: payload.sub },
-      select: { id: true, activo: true, rol: true, eliminadoEn: true, tenantId: true, barberoId: true }
+      select: { id: true, sessionVersion: true, emailVerifiedAt: true, verificationRequired: true, invitationPending: true, activo: true, rol: true, email: true, eliminadoEn: true, tenantId: true, sucursalId: true, sucursalesAsignadasJson: true, barberoId: true }
     });
-    if (!dbUser || !dbUser.activo || dbUser.eliminadoEn) {
+    if (!dbUser || !dbUser.activo || dbUser.eliminadoEn || dbUser.invitationPending) {
       return res.status(401).json({ code: 'USUARIO_INACTIVO', error: 'Cuenta de usuario inactiva o deshabilitada' });
     }
 
@@ -60,22 +71,15 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
     if (dbUser.rol !== payload.rol) {
       return res.status(401).json({ code: 'TOKEN_ROLE_MISMATCH', error: 'El rol de usuario ha cambiado. Inicie sesión nuevamente.' });
     }
-    if (dbUser.tenantId && payload.tid !== dbUser.tenantId) {
+    if (payload.tid !== dbUser.tenantId) {
       return res.status(401).json({ code: 'TOKEN_TENANT_MISMATCH', error: 'La asociación de barbería ha cambiado. Inicie sesión nuevamente.' });
     }
 
-    let tenantId = payload.tid;
-    let tenant = null;
-
-    if (tenantId) {
-      tenant = await prisma.tenant.findUnique({
-        where: { id: tenantId },
-        include: { suscripcion: true }
-      });
-    } else if (payload.rol === 'SUPER_ADMIN') {
-      tenant = await prisma.tenant.findFirst({ where: { slug: 'systech-global' } }) || await prisma.tenant.findFirst();
-      if (tenant) tenantId = tenant.id;
-    }
+    if ((payload.sv ?? 0) !== dbUser.sessionVersion) return res.status(401).json({ code: 'SESION_REVOCADA', error: 'La sesión terminó. Inicia sesión nuevamente.' });
+    const accountPath = /^\/(auth|tenant|onboarding)\/(me|security(?:\/.*)?)$/.test(canonicalPath(req));
+    if ((dbUser.verificationRequired || process.env.NODE_ENV === 'production') && !dbUser.emailVerifiedAt && !accountPath) return res.status(403).json({ code: 'EMAIL_NO_VERIFICADO', error: 'Verifica tu correo para continuar.' });
+    const tenantId = dbUser.tenantId;
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { suscripcion: true } });
 
     if (!tenant) {
       return res.status(401).json({ code: 'TENANT_NOT_FOUND', error: 'El tenant especificado no existe o fue eliminado' });
@@ -86,7 +90,7 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
     const ALLOWED_SUSPENDED_PREFIXES = ['/api/suscripcion', '/api/admin', '/api/auth'];
     const isBillingOrAdmin = ALLOWED_SUSPENDED_PREFIXES.some(prefix => pathToCheck === prefix || pathToCheck.startsWith(prefix + '/')) || payload.rol === 'SUPER_ADMIN';
 
-    if (tenant.estado === 'SUSPENDIDO' && !isBillingOrAdmin) {
+    if (['SUSPENDIDO', 'CANCELADO'].includes(tenant.estado) && !isBillingOrAdmin) {
       return res.status(403).json({
         code: 'SUSCRIPCION_SUSPENDIDA',
         error: 'Suscripción suspendida por falta de pago.',
@@ -95,11 +99,15 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
       });
     }
 
+    const access = await resolveScope(dbUser, canonicalPath(req));
     req.ctx = {
       userId: payload.sub,
       tenantId: tenant.id,
       rol: payload.rol,
-      email: payload.email,
+      email: dbUser.email,
+      sessionVersion: dbUser.sessionVersion,
+      barberoId: access.barberoId,
+      branchIds: access.branchIds,
       tenant
     };
 
@@ -109,9 +117,15 @@ export const requireAuth = async (req: AuthenticatedRequest, res: Response, next
     req.userRole = payload.rol;
     req.userId = payload.sub;
 
-    next();
-  } catch (error) {
-    return res.status(401).json({ code: 'TOKEN_INVALIDO', error: 'Token inválido o expirado' });
+    return await authorizeRequest(req, res, next, access);
+  } catch (error: any) {
+    // A database outage does not invalidate a signed session. Fail closed and
+    // allow a retry without sending the user through login or clearing a sale.
+    if (typeof error?.code === 'string' && /^P\d{4}$/.test(error.code)) {
+      res.setHeader('Retry-After', '5');
+      return res.status(503).json({ code: 'ACCESS_CHECK_UNAVAILABLE', error: 'No pudimos comprobar el acceso. Espera unos segundos y vuelve a intentar.' });
+    }
+    return next(error);
   }
 };
 

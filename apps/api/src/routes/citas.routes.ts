@@ -4,13 +4,23 @@
 // ======================================================================
 
 import { Router } from 'express';
+import { createBooking, changeBookingStatus, rescheduleInternal } from '../services/booking-operations.service';
+import { bookingDateBounds } from '../services/booking-time.service';
 import { prisma } from '@systech/database';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth';
 import { generateBookingFolio, generateSecureCancellationKey } from '../services/booking.service';
+import { bookingReferenceSummary } from '../services/cut-reference.service';
+import { listArrivals, joinArrivalQueue, operateArrival } from '../services/arrival-queue.service';
+import { appointmentConflicts } from '../services/schedule-exceptions.service';
 
 export const citasRouter = Router();
 
 citasRouter.use(requireAuth);
+
+const queueError=(res:any,error:any)=>res.status(error.statusCode||500).json({code:error.code||'QUEUE_FAILED',error:error.statusCode?error.message:'No se confirmó el resultado de la fila; conserva la intención y reintenta.'});
+citasRouter.get('/fila',async(req:AuthenticatedRequest,res)=>{try{if(typeof req.query.sucursalId!=='string')return res.status(400).json({code:'INVALID_BRANCH',error:'Elige sucursal.'});res.json(await listArrivals(req.ctx!,req.query.sucursalId));}catch(error){queueError(res,error);}});
+citasRouter.post('/fila',async(req:AuthenticatedRequest,res)=>{try{res.json(await joinArrivalQueue(req.ctx!,req.body));}catch(error){queueError(res,error);}});
+for(const [path,operation]of Object.entries({asignar:'ASIGNAR',reasignar:'REASIGNAR',atender:'ATENDER',retirar:'RETIRAR'}))citasRouter.post(`/fila/:id/${path}`,async(req:AuthenticatedRequest,res)=>{try{res.json(await operateArrival(req.ctx!,req.params.id,req.body,operation as any));}catch(error){queueError(res,error);}});
 
 // Get internal appointments with filters
 citasRouter.get('/', async (req: AuthenticatedRequest, res) => {
@@ -26,20 +36,19 @@ citasRouter.get('/', async (req: AuthenticatedRequest, res) => {
     // C2: For BARBERO role, restrict appointments strictly to their own barber record
     if (req.ctx!.rol === 'BARBERO') {
       const ownBarber = await prisma.barbero.findFirst({
-        where: { sucursal: { tenantId }, email: req.ctx!.email }
+        where: { sucursal: { tenantId }, id: req.ctx!.barberoId || '__unlinked__' }
       });
       barberoId = ownBarber ? ownBarber.id : 'unauthorized-barber-filter';
     }
 
     let dateFilter = {};
     if (fecha) {
-      const d = new Date(fecha);
-      const start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
-      const end = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
-      dateFilter = { fechaHora: { gte: start, lte: end } };
+      const branch=await prisma.sucursal.findFirst({where:{tenantId,...(sucursalId?{id:sucursalId}:{})}});
+      if(!branch)return res.status(404).json({error:'Sucursal no disponible.'});
+      dateFilter={fechaHora:bookingDateBounds(fecha,branch.zonaHoraria)};
     }
 
-    const citas = await prisma.cita.findMany({
+    const citas: any[] = await prisma.cita.findMany({
       where: {
         tenantId,
         ...dateFilter,
@@ -51,274 +60,35 @@ citasRouter.get('/', async (req: AuthenticatedRequest, res) => {
         cliente: true,
         barbero: true,
         sucursal: true,
-        venta: true
-      },
+        venta: true,
+        referencia: { select: { citaId: true } }
+      } as any,
       orderBy: { fechaHora: 'asc' }
     });
 
-    res.json(citas);
-  } catch (error) {
-    console.error('Error al obtener citas:', error);
-    res.status(500).json({ error: 'Error al obtener citas' });
+    res.json((await appointmentConflicts(prisma,citas)).map(bookingReferenceSummary));
+  } catch (error:any) {
+    res.status(error.statusCode||500).json({ error: error.statusCode?error.message:'Error al obtener citas' });
   }
 });
 
-// Create internal appointment
-citasRouter.post('/', async (req: AuthenticatedRequest, res) => {
+// Reference photos require a live staff session and the same scoped appointment access as the agenda.
+citasRouter.get('/:id/referencia', async (req: AuthenticatedRequest, res) => {
   try {
-    const tenantId = req.ctx!.tenantId;
-    const {
-      sucursalId,
-      barberoId,
-      clienteNombre,
-      clienteTelefono,
-      clienteEmail,
-      servicioId,
-      nombreServicio,
-      fechaHora,
-      duracionMinutos = 30,
-      notas,
-      precioEstimado
-    } = req.body;
-
-    const sucursal = await prisma.sucursal.findFirst({ where: { id: sucursalId, tenantId } });
-    if (!sucursal) return res.status(400).json({ code: 'BAD_REQUEST', error: 'Sucursal no válida para su barbería' });
-
-    const barbero = await prisma.barbero.findFirst({ where: { id: barberoId, sucursal: { tenantId } } });
-    if (!barbero) return res.status(400).json({ code: 'BAD_REQUEST', error: 'Barbero no válido para su barbería' });
-
-    // P1.2 & P1.6 RBAC: If logged-in user is BARBERO, verify they only create appointments for themselves (fail closed)
-    if (req.ctx!.rol === 'BARBERO') {
-      const userBarbero = await prisma.barbero.findFirst({
-        where: {
-          sucursal: { tenantId },
-          OR: [
-            { email: req.ctx!.email },
-            { id: (req.ctx as any)?.barberoId || undefined }
-          ]
-        }
-      });
-      if (!userBarbero) {
-        return res.status(403).json({ code: 'BARBER_PROFILE_NOT_LINKED', error: 'Cuenta de barbero no vinculada a un perfil de barbero activo.' });
-      }
-      if (barberoId !== userBarbero.id) {
-        return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede agendar citas en su propia agenda' });
-      }
-    }
-
-    let cliente = await prisma.clienteFinal.findFirst({
-      where: { tenantId, telefono: clienteTelefono }
-    });
-
-    if (!cliente) {
-      cliente = await prisma.clienteFinal.create({
-        data: {
-          tenantId,
-          nombre: clienteNombre,
-          telefono: clienteTelefono,
-          email: clienteEmail || null
-        }
-      });
-    }
-
-    const codigoReserva = generateBookingFolio();
-    const tokenCancelacion = generateSecureCancellationKey();
-
-    const cita = await prisma.cita.create({
-      data: {
-        tenantId,
-        sucursalId,
-        barberoId,
-        clienteId: cliente.id,
-        servicioId,
-        nombreServicio,
-        fechaHora: new Date(fechaHora),
-        duracionMinutos: parseInt(duracionMinutos) || 30,
-        bufferMinutos: 10,
-        notas,
-        precioEstimado: precioEstimado ? Number(precioEstimado) : 250,
-        codigoReserva,
-        tokenCancelacion,
-        estado: 'CONFIRMADA'
-      },
-      include: {
-        cliente: true,
-        barbero: true,
-        sucursal: true
-      }
-    });
-
-    res.json(cita);
-  } catch (error) {
-    console.error('Error al crear cita interna:', error);
-    res.status(500).json({ error: 'Error al crear cita interna' });
-  }
+    const cita: any = await prisma.cita.findFirst({ where: { id: req.params.id, tenantId: req.ctx!.tenantId } });
+    if (!cita) return res.status(404).json({ code: 'NOT_FOUND', error: 'Cita no disponible.' });
+    const reference = await (prisma as any).citaReferencia.findFirst({ where: { citaId: cita.id, cita: { tenantId: req.ctx!.tenantId } } });
+    res.setHeader('Cache-Control', 'no-store'); res.setHeader('Referrer-Policy', 'no-referrer');
+    res.json({ tipoCorte: cita.tipoCorte ?? null, fotoReferencia: reference?.imagen ?? null });
+  } catch { res.status(500).json({ error: 'No pudimos consultar la referencia de esta cita.' }); }
 });
 
-// Update appointment status with No-Show tracking & visit accounting
-citasRouter.put('/:id/status', async (req: AuthenticatedRequest, res) => {
-  try {
-    const tenantId = req.ctx!.tenantId;
-    const { id } = req.params;
-    const { estado } = req.body;
+// Public and internal appointments share locking and schedule rules.
+citasRouter.post('/',async(req:AuthenticatedRequest,res)=>{try{res.json(await createBooking(req.body,false,req.ctx));}catch(error:any){res.status(error.statusCode || 500).json({code:error.code || 'BOOKING_FAILED',error:error.statusCode?error.message:'No se pudo completar la operación de agenda.'});}});
+citasRouter.put('/:id/status',async(req:AuthenticatedRequest,res)=>{try{res.json(await changeBookingStatus(req.ctx,req.params.id,req.body.estado));}catch(error:any){res.status(error.statusCode || 500).json({code:error.code || 'BOOKING_FAILED',error:error.statusCode?error.message:'No se pudo completar la operación de agenda.'});}});
 
-    const validStates = ['PENDIENTE', 'CONFIRMADA', 'EN_CURSO', 'COMPLETADA', 'CANCELADA', 'NO_SHOW'];
-    if (!validStates.includes(estado)) {
-      return res.status(400).json({ code: 'INVALID_STATUS', error: `Estado inválido. Opciones: ${validStates.join(', ')}` });
-    }
-
-    const existingCita = await prisma.cita.findFirst({
-      where: { id, tenantId },
-      include: { cliente: true }
-    });
-    if (!existingCita) {
-      return res.status(404).json({ code: 'NOT_FOUND', error: 'Cita no encontrada en su barbería' });
-    }
-
-    // P1.2 & P1.6 RBAC: If logged in as BARBERO, verify they only manage their own appointments (fail closed)
-    if (req.ctx!.rol === 'BARBERO') {
-      const userBarbero = await prisma.barbero.findFirst({
-        where: {
-          sucursal: { tenantId },
-          OR: [
-            { email: req.ctx!.email },
-            { id: (req.ctx as any)?.barberoId || undefined }
-          ]
-        }
-      });
-      if (!userBarbero) {
-        return res.status(403).json({ code: 'BARBER_PROFILE_NOT_LINKED', error: 'Cuenta de barbero no vinculada a un perfil de barbero activo.' });
-      }
-      if (existingCita.barberoId !== userBarbero.id) {
-        return res.status(403).json({ code: 'FORBIDDEN', error: 'Un barbero solo puede gestionar sus propias citas' });
-      }
-    }
-
-    // P1.8 FIX: Validate state transition
-    if (existingCita.estado === 'CANCELADA' && estado === 'COMPLETADA') {
-      return res.status(400).json({ code: 'INVALID_TRANSITION', error: 'No se puede marcar como completada una cita previamente cancelada' });
-    }
-
-    // Check if the appointment has already been billed through POS
-    const existingVenta = await prisma.venta.findUnique({
-      where: { citaId: id }
-    });
-
-    // A3 & P1.8 FIX: Idempotency check - only increment visits if status changed to COMPLETADA and not already billed
-    const shouldIncrementNoShow = estado === 'NO_SHOW' && existingCita.estado !== 'NO_SHOW' && Boolean(existingCita.clienteId);
-    const shouldIncrementVisits = estado === 'COMPLETADA' && existingCita.estado !== 'COMPLETADA' && Boolean(existingCita.clienteId) && !existingVenta;
-
-    const [cita] = await prisma.$transaction([
-      prisma.cita.update({
-        where: { id },
-        data: { estado }
-      }),
-      // Track customer lifecycle metrics idempotently
-      ...(shouldIncrementNoShow
-        ? [
-            prisma.clienteFinal.update({
-              where: { id: existingCita.clienteId! },
-              data: { noShows: { increment: 1 } }
-            }),
-            prisma.auditoriaLog.create({
-              data: {
-                tenantId,
-                usuarioEmail: req.ctx?.email || 'admin@barberia.com',
-                accion: 'CITA_NO_SHOW',
-                detalles: `Cita #${existingCita.codigoReserva} marcada como NO-SHOW para cliente ${existingCita.cliente?.nombre}`
-              }
-            })
-          ]
-        : []),
-      ...(shouldIncrementVisits
-        ? [
-            prisma.clienteFinal.update({
-              where: { id: existingCita.clienteId! },
-              data: {
-                totalVisitas: { increment: 1 },
-                fechaUltimaVisita: new Date()
-              }
-            })
-          ]
-        : [])
-    ]);
-
-    res.json(cita);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar estado de la cita' });
-  }
-});
-
-// Walk-in Client Turn (Sin cita previa - cola rápida)
-citasRouter.post('/walk-in', async (req: AuthenticatedRequest, res) => {
-  try {
-    const tenantId = req.ctx!.tenantId;
-    const { sucursalId, barberoId, clienteNombre, clienteTelefono, servicioId } = req.body;
-
-    if (!sucursalId || !clienteNombre) {
-      return res.status(400).json({ error: 'Sucursal y nombre de cliente son requeridos para walk-in' });
-    }
-
-    // Resolve or create walk-in customer
-    let cliente = await prisma.clienteFinal.findFirst({
-      where: { tenantId, telefono: clienteTelefono || '5500000000' }
-    });
-
-    if (!cliente) {
-      cliente = await prisma.clienteFinal.create({
-        data: {
-          tenantId,
-          nombre: clienteNombre,
-          telefono: clienteTelefono || '5500000000'
-        }
-      });
-    }
-
-    // Pick target barber or first active
-    let targetBarberoId = barberoId;
-    if (!targetBarberoId) {
-      const b = await prisma.barbero.findFirst({ where: { sucursalId, activo: true } });
-      targetBarberoId = b?.id;
-    }
-
-    if (!targetBarberoId) {
-      return res.status(400).json({ error: 'No hay barberos disponibles para el turno' });
-    }
-
-    const folio = generateBookingFolio();
-    const tokenCancelacion = generateSecureCancellationKey();
-
-    const walkInCita = await prisma.cita.create({
-      data: {
-        tenantId,
-        sucursalId,
-        barberoId: targetBarberoId,
-        clienteId: cliente.id,
-        servicioId: servicioId || null,
-        nombreServicio: 'Walk-in (Turno en sala)',
-        fechaHora: new Date(),
-        duracionMinutos: 30,
-        bufferMinutos: 10,
-        codigoReserva: folio,
-        tokenCancelacion,
-        estado: 'EN_CURSO',
-        notas: 'Cliente en sala (Walk-in)'
-      },
-      include: {
-        cliente: true,
-        barbero: true
-      }
-    });
-
-    res.json({
-      success: true,
-      mensaje: `Turno walk-in asignado con éxito a ${walkInCita.barbero.nombre}`,
-      cita: walkInCita
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al registrar turno walk-in' });
-  }
-});
+// Walk-ins are assigned only to a currently free professional.
+citasRouter.post('/walk-in',async(req:AuthenticatedRequest,res)=>{try{const cita:any=await createBooking(req.body,false,req.ctx,undefined,true);res.json({success:true,mensaje:'Turno asignado.',cita});}catch(error:any){res.status(error.statusCode || 500).json({code:error.code || 'BOOKING_FAILED',error:error.statusCode?error.message:'No se pudo completar la operación de agenda.'});}});
 
 // Get Waitlist Entries (Lista de Espera)
 citasRouter.get('/lista-espera', async (req: AuthenticatedRequest, res) => {
@@ -340,3 +110,5 @@ citasRouter.get('/lista-espera', async (req: AuthenticatedRequest, res) => {
     res.status(500).json({ error: 'Error al consultar lista de espera' });
   }
 });
+
+citasRouter.put('/:id/reprogramar',async(req:AuthenticatedRequest,res)=>{try{res.json(await rescheduleInternal(req.ctx,req.params.id,req.body));}catch(error:any){res.status(error.statusCode||500).json({code:error.code||'BOOKING_FAILED',error:error.statusCode?error.message:'No se pudo reprogramar la cita.'});}});

@@ -3,14 +3,22 @@
 // ==========================================
 
 import { Router } from 'express';
+import { validateInitialSetup } from '../services/onboarding.service';
+import { resolveScope } from '../services/authorization.service';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, JWT_SECRET, AuthenticatedRequest } from '../middleware/auth';
 import { loginRateLimiter, registerRateLimiter, onboardingRateLimiter } from '../middleware/rateLimit';
 import { loginSchema, registerSchema, validateBody } from '../validators/schemas';
+import { getLicensePlan, licenseQuote, licenseTenantFields, isLicensePlan, withLicenseLock } from '../services/license-catalog.service';
 
+import { accountSecurityRouter } from './account-security.routes';
+import { tenantSettingsSchema, tenantWithPersonalization, normalizeBookingPersonalization } from '../services/booking-personalization.service';
+import { queueAction, passwordValid, passwordMessage } from '../services/account-security.service';
+const dummyPasswordHash = bcrypt.hashSync('unused-dummy-password-for-timing', 12);
 export const authRouter = Router();
+authRouter.use(accountSecurityRouter);
 
 // Login endpoint (P1.6 FIX: Rate limited against brute-force)
 authRouter.post('/login', loginRateLimiter, validateBody(loginSchema), async (req, res) => {
@@ -32,17 +40,17 @@ authRouter.post('/login', loginRateLimiter, validateBody(loginSchema), async (re
 
     // A13 FIX: Constant-time comparison to prevent timing enumeration
     if (!user) {
-      await bcrypt.compare(password, '$2a$12$e8uqgXhWJn5Qn5W35VqN0OX8rK8xQ1dE3/J1fQn9j1WnK8rK8xQ1d');
+      await bcrypt.compare(password, dummyPasswordHash);
       return res.status(401).json({ code: 'INVALID_CREDENTIALS', error: 'Credenciales inválidas' });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-    if (!isValidPassword || !user.activo || user.eliminadoEn) {
+    if (!isValidPassword || !user.activo || user.eliminadoEn || user.invitationPending) {
       return res.status(401).json({ code: 'INVALID_CREDENTIALS', error: 'Credenciales inválidas' });
     }
 
     const token = jwt.sign(
-      { sub: user.id, tid: user.tenantId, rol: user.rol, email: user.email },
+      { sub: user.id, tid: user.tenantId, rol: user.rol, email: user.email, sv: user.sessionVersion },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -56,6 +64,7 @@ authRouter.post('/login', loginRateLimiter, validateBody(loginSchema), async (re
       }
     }).catch(() => {});
 
+    const access = await resolveScope(user);
     // M2 FIX: Sanitize tenant response to only needed fields
     res.json({
       token,
@@ -64,8 +73,10 @@ authRouter.post('/login', loginRateLimiter, validateBody(loginSchema), async (re
         nombre: user.nombre,
         email: user.email,
         rol: user.rol,
+        emailVerifiedAt: user.emailVerifiedAt, verificationRequired: user.verificationRequired || process.env.NODE_ENV === 'production',
         telefono: user.telefono,
         sucursalId: user.sucursalId,
+        barberoId: user.barberoId,
         tenantId: user.tenantId
       },
       tenant: {
@@ -73,12 +84,24 @@ authRouter.post('/login', loginRateLimiter, validateBody(loginSchema), async (re
         nombre: user.tenant.nombre,
         slug: user.tenant.slug,
         plan: user.tenant.plan,
-        estado: user.tenant.estado
+        estado: user.tenant.estado,
+        telefono: user.tenant.telefono,
+        emailContacto: user.tenant.emailContacto,
+        direccion: user.tenant.direccion,
+        logoUrl: user.tenant.logoUrl,
+        slogan: user.tenant.slogan,
+        descripcion: user.tenant.descripcion,
+        portadaUrl: user.tenant.portadaUrl,
+        instagram: user.tenant.instagram,
+        facebook: user.tenant.facebook,
+        tiktok: user.tenant.tiktok,
+        whatsappPublico: user.tenant.whatsappPublico,
+        personalizacionWeb: normalizeBookingPersonalization((user.tenant as any).personalizacionWeb)
       },
-      sucursales: user.tenant.sucursales
+      sucursales: user.tenant.sucursales.filter(b => !b.eliminadoEn && (access.branchIds === null || access.branchIds.includes(b.id)))
     });
   } catch (error) {
-    console.error('Error en /auth/login:', error);
+    console.error('AUTH_OPERATION_FAILED');
     res.status(500).json({ code: 'SERVER_ERROR', error: 'Error al procesar inicio de sesión' });
   }
 });
@@ -111,8 +134,8 @@ authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), 
       uniqueSlug = `${baseSlug}-${counter++}`;
     }
 
-    const selectedPlan = plan.toUpperCase() === 'PRO' ? 'PRO' : 'BASICO';
-    const monto = selectedPlan === 'PRO' ? 999 : 499;
+    const selectedPlan = getLicensePlan(plan).code;
+    const monto = licenseQuote(selectedPlan).totalMxn;
 
     const dbPlan = await prisma.plan.findUnique({ where: { codigo: selectedPlan } });
     const passwordHash = await bcrypt.hash(password, 12); // A13 FIX: Async bcrypt with 12 rounds
@@ -123,14 +146,12 @@ authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), 
         data: {
           nombre: nombreBarberia.trim(),
           slug: uniqueSlug,
-          plan: selectedPlan,
           planId: dbPlan?.id || null,
           estado: 'ACTIVO',
           emailContacto: cleanEmail,
           telefono: telefono || null,
-          direccion: direccion || 'Matriz Principal',
-          limiteSucursales: selectedPlan === 'PRO' ? 999 : 1,
-          limiteBarberos: selectedPlan === 'PRO' ? 999 : 3
+          direccion: direccion || '',
+          ...licenseTenantFields(selectedPlan)
         }
       });
 
@@ -149,7 +170,7 @@ authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), 
         data: {
           tenantId: tenant.id,
           nombre: 'Matriz Principal',
-          direccion: direccion || 'Dirección Comercial',
+          direccion: direccion || null,
           telefono: telefono || null,
           horarioApertura: '09:00',
           horarioCierre: '20:00',
@@ -163,68 +184,11 @@ authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), 
           nombre: nombreDueno.trim(),
           email: cleanEmail,
           passwordHash,
+          verificationRequired: true,
           rol: 'DUENO',
           telefono: telefono || null,
           sucursalId: sucursal.id
         }
-      });
-
-      await tx.barbero.create({
-        data: {
-          sucursalId: sucursal.id,
-          nombre: nombreDueno.trim(),
-          email: cleanEmail,
-          telefono: telefono || null,
-          comisionServiciosPct: 50.0,
-          comisionProductosPct: 10.0,
-          diasDescanso: 'Domingo',
-          horarioInicio: '09:00',
-          horarioFin: '20:00'
-        }
-      });
-
-      await tx.producto.createMany({
-        data: [
-          {
-            tenantId: tenant.id,
-            sucursalId: sucursal.id,
-            nombre: 'Corte Clásico Caballero',
-            tipo: 'SERVICIO',
-            categoria: 'Cortes',
-            duracionMinutos: 35,
-            precioVenta: 250,
-            costo: 0,
-            stockActual: 9999,
-            stockMinimo: 0,
-            sku: 'SRV-001'
-          },
-          {
-            tenantId: tenant.id,
-            sucursalId: sucursal.id,
-            nombre: 'Perfilado de Barba Ritual',
-            tipo: 'SERVICIO',
-            categoria: 'Barba',
-            duracionMinutos: 25,
-            precioVenta: 180,
-            costo: 0,
-            stockActual: 9999,
-            stockMinimo: 0,
-            sku: 'SRV-002'
-          },
-          {
-            tenantId: tenant.id,
-            sucursalId: sucursal.id,
-            nombre: 'Pomada / Cera Capilar Mate 100ml',
-            tipo: 'PRODUCTO',
-            categoria: 'Styling',
-            duracionMinutos: 0,
-            precioVenta: 220,
-            costo: 110,
-            stockActual: 24,
-            stockMinimo: 5,
-            sku: 'PRD-001'
-          }
-        ]
       });
 
       await tx.auditoriaLog.create({
@@ -236,11 +200,12 @@ authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), 
         }
       });
 
+      await queueAction(tx, user.id, 'VERIFY');
       return { tenant, user, sucursal };
     });
 
     const token = jwt.sign(
-      { sub: user.id, tid: tenant.id, rol: user.rol, email: user.email },
+      { sub: user.id, tid: tenant.id, rol: user.rol, email: user.email, sv: user.sessionVersion },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
@@ -252,6 +217,7 @@ authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), 
         nombre: user.nombre,
         email: user.email,
         rol: user.rol,
+        emailVerifiedAt: user.emailVerifiedAt, verificationRequired: user.verificationRequired || process.env.NODE_ENV === 'production',
         telefono: user.telefono,
         sucursalId: user.sucursalId,
         tenantId: tenant.id
@@ -261,12 +227,13 @@ authRouter.post('/register', registerRateLimiter, validateBody(registerSchema), 
         nombre: tenant.nombre,
         slug: tenant.slug,
         plan: tenant.plan,
-        estado: tenant.estado
+        estado: tenant.estado,
+        personalizacionWeb: normalizeBookingPersonalization((tenant as any).personalizacionWeb)
       },
       sucursales: [sucursal]
     });
   } catch (error) {
-    console.error('Error en /auth/register:', error);
+    console.error('AUTH_OPERATION_FAILED');
     res.status(500).json({ code: 'SERVER_ERROR', error: 'Error al registrar la nueva barbería' });
   }
 });
@@ -288,19 +255,21 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res) => {
           rol: true,
           telefono: true,
           sucursalId: true,
+          barberoId: true,
+          emailVerifiedAt: true, verificationRequired: true,
           tenantId: true
         }
       });
     }
 
-    res.json({ user, tenant });
+    res.json({ user: user ? { ...user, verificationRequired: user.verificationRequired || process.env.NODE_ENV === 'production', branchIds: req.ctx!.branchIds, barberoId: req.ctx!.barberoId } : null, tenant: tenant ? tenantWithPersonalization(tenant) : null });
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener sesión' });
   }
 });
 
 // Update Tenant Settings (P1.6 FIX: requireRole DUENO, GERENTE)
-authRouter.put('/tenant/settings', requireAuth, requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+authRouter.put('/tenant/settings', requireAuth, requireRole('DUENO'), validateBody(tenantSettingsSchema), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const {
@@ -316,7 +285,8 @@ authRouter.put('/tenant/settings', requireAuth, requireRole('DUENO', 'GERENTE'),
       instagram,
       facebook,
       tiktok,
-      whatsappPublico
+      whatsappPublico,
+      personalizacionWeb
     } = req.body;
 
     const dataToUpdate: any = {};
@@ -332,23 +302,34 @@ authRouter.put('/tenant/settings', requireAuth, requireRole('DUENO', 'GERENTE'),
     if (facebook !== undefined) dataToUpdate.facebook = facebook;
     if (tiktok !== undefined) dataToUpdate.tiktok = tiktok;
     if (whatsappPublico !== undefined) dataToUpdate.whatsappPublico = whatsappPublico;
+    if (slug) dataToUpdate.slug = slug;
 
-    if (slug) {
-      const cleanSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
-      const existing = await prisma.tenant.findUnique({ where: { slug: cleanSlug } });
-      if (!existing || existing.id === tenantId) {
-        dataToUpdate.slug = cleanSlug;
+    // Lock this tenant before reading JSON so simultaneous partial saves do not lose each other's options.
+    const updated = await withLicenseLock(tenantId, async tx => {
+      const current = await tx.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+      if (personalizacionWeb?.descripcionesServicios) {
+        const ids = Object.keys(personalizacionWeb.descripcionesServicios);
+        const owned = await tx.producto.count({ where: { id: { in: ids }, tenantId, tipo: 'SERVICIO' } });
+        if (owned !== ids.length) throw Object.assign(new Error('Las descripciones deben corresponder a servicios de tu barbería.'), { statusCode: 400 });
       }
-    }
-
-    const updated = await prisma.tenant.update({
-      where: { id: tenantId },
-      data: dataToUpdate,
-      include: { suscripcion: true, sucursales: true }
+      if (personalizacionWeb !== undefined) dataToUpdate.personalizacionWeb = JSON.stringify({
+        ...normalizeBookingPersonalization((current as any).personalizacionWeb), ...personalizacionWeb
+      });
+      const tenant = await tx.tenant.update({
+        where: { id: tenantId }, data: dataToUpdate,
+        include: { suscripcion: true, sucursales: true }
+      });
+      await tx.auditoriaLog.create({ data: {
+        tenantId, usuarioEmail: req.ctx!.email, accion: 'CONFIGURACION_ACTUALIZADA',
+        detalles: `Campos actualizados: ${Object.keys(dataToUpdate).sort().join(', ')}`
+      } });
+      return tenant;
     });
 
-    res.json(updated);
-  } catch (error) {
+    res.json(tenantWithPersonalization(updated));
+  } catch (error: any) {
+    if (error?.code === 'P2002') return res.status(409).json({ code: 'SLUG_ALREADY_EXISTS', error: 'Este enlace ya pertenece a otra barbería. Elige uno diferente.' });
+    if (error?.statusCode === 400) return res.status(400).json({ error: error.message });
     res.status(500).json({ error: 'Error al actualizar configuración de barbería' });
   }
 });
@@ -381,9 +362,9 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
       horarioCierre = '20:00',
       plan = 'BASICO',
       serviciosSeleccionados = [],
-      nombreBarbero = 'Barbero Principal',
+      nombreBarbero,
       comisionServicios = 50,
-      comisionProductosPct = 10
+      comisionProductosPct = req.body.comisionProductos ?? 10
     } = req.body;
 
     if (!nombreBarberia || typeof nombreBarberia !== 'string' || !nombreBarberia.trim()) {
@@ -394,14 +375,15 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
       return res.status(400).json({ code: 'VALIDATION_ERROR', error: 'Correo electrónico del dueño inválido' });
     }
 
-    if (!passwordDueno || typeof passwordDueno !== 'string' || passwordDueno.length < 8) {
-      return res.status(400).json({ code: 'VALIDATION_ERROR', error: 'La contraseña es obligatoria y debe tener al menos 8 caracteres' });
+    if (!passwordValid(passwordDueno)) {
+      return res.status(400).json({ code: 'VALIDATION_ERROR', error: passwordMessage });
     }
 
     if (!nombreDueno || typeof nombreDueno !== 'string' || !nombreDueno.trim()) {
       return res.status(400).json({ code: 'VALIDATION_ERROR', error: 'El nombre del dueño es obligatorio' });
     }
 
+    const setup=validateInitialSetup(req.body);
     const cleanEmail = emailDueno.trim().toLowerCase();
     const existing = await prisma.usuario.findUnique({ where: { email: cleanEmail } });
     if (existing) {
@@ -415,6 +397,7 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
       .replace(/^-+|-+$/g, '');
     const slug = `${baseSlug}-${Math.floor(100 + Math.random() * 900)}`;
 
+    if (!isLicensePlan(plan)) return res.status(400).json({ code: 'INVALID_LICENSE_PLAN', error: 'Plan inválido.' });
     const dbPlan = await prisma.plan.findUnique({ where: { codigo: plan } });
     const passwordHash = await bcrypt.hash(passwordDueno, 12);
 
@@ -423,21 +406,19 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
         data: {
           nombre: nombreBarberia.trim(),
           slug,
-          plan,
           planId: dbPlan?.id || null,
           estado: 'ACTIVO',
           telefono: telefono || null,
           emailContacto: cleanEmail,
           direccion: direccionSucursal || null,
-          limiteSucursales: plan === 'PRO' ? 999 : 1,
-          limiteBarberos: plan === 'PRO' ? 999 : 3
+          ...licenseTenantFields(plan)
         }
       });
 
       await tx.suscripcion.create({
         data: {
           tenantId: tenant.id,
-          montoMensual: plan === 'PRO' ? 999 : 499,
+          montoMensual: licenseQuote(plan).totalMxn,
           estadoPago: 'active',
           fechaProximoCobro: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
         }
@@ -449,8 +430,11 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
           nombre: nombreSucursal ? nombreSucursal.trim() : 'Matriz Principal',
           direccion: direccionSucursal || null,
           telefono: telefono || null,
-          horarioApertura,
-          horarioCierre
+          horarioApertura:setup.horarioApertura,
+          horarioCierre:setup.horarioCierre,
+          zonaHoraria:setup.zonaHoraria,
+          diasLaborales:setup.diasLaborales,
+          configuradaEn:new Date()
         }
       });
 
@@ -460,24 +444,27 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
           nombre: nombreDueno.trim(),
           email: cleanEmail,
           passwordHash,
+          verificationRequired: true,
           rol: 'DUENO',
           telefono: telefono || null,
           sucursalId: sucursal.id
         }
       });
 
-      const barbero = await tx.barbero.create({
+      await queueAction(tx, dueno.id, 'VERIFY');
+      const barbero = setup.nombreBarbero ? await tx.barbero.create({
         data: {
           sucursalId: sucursal.id,
-          nombre: nombreBarbero ? nombreBarbero.trim() : nombreDueno.trim(),
-          comisionServiciosPct: Number(comisionServicios) || 50,
-          comisionProductosPct: Number(comisionProductosPct) || 10,
+          nombre: setup.nombreBarbero,
+          comisionServiciosPct: setup.comisionServicios,
+          comisionProductosPct: setup.comisionProductosPct,
           horarioInicio: horarioApertura,
-          horarioFin: horarioCierre
+          horarioFin: horarioCierre,
+          diasDescanso:setup.diasDescanso
         }
-      });
+      }) : null;
 
-      for (const serv of (Array.isArray(serviciosSeleccionados) ? serviciosSeleccionados : [])) {
+      for (const serv of setup.serviciosSeleccionados) {
         await tx.producto.create({
           data: {
             tenantId: tenant.id,
@@ -485,10 +472,10 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
             nombre: serv.nombre || 'Servicio',
             tipo: 'SERVICIO',
             categoria: serv.categoria || 'Cortes',
-            duracionMinutos: Number(serv.duracionMinutos) || 30,
-            precioVenta: Number(serv.precioVenta) || 250,
+            duracionMinutos: serv.duracionMinutos,
+            precioVenta: serv.precioVenta,
             costo: Number(serv.costo) || 0,
-            stockActual: 9999,
+            stockActual: 0,
             stockMinimo: 0,
             sku: `SRV-${Math.floor(100 + Math.random() * 900)}`
           }
@@ -521,10 +508,7 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
           email: dueno.email,
           rol: dueno.rol
         },
-        barbero: {
-          id: barbero.id,
-          nombre: barbero.nombre
-        }
+        barbero: barbero ? {id:barbero.id,nombre:barbero.nombre} : null
       };
     });
 
@@ -532,10 +516,9 @@ authRouter.post('/onboarding/setup', onboardingRateLimiter, async (req, res) => 
       success: true,
       message: 'Barbería configurada con éxito',
       ...result,
-      publicBookingUrl: `/reservar/${result.tenant.slug}`
+      publicBookingUrl: `/b/${result.tenant.slug}`
     });
-  } catch (error) {
-    console.error('Error en onboarding:', error);
-    res.status(500).json({ error: 'Error al completar la configuración inicial' });
+  } catch (error:any) {
+    res.status(error.status||500).json({ error: error.status?error.message:'Error al completar la configuración inicial' });
   }
 });

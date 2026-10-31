@@ -3,11 +3,15 @@
 // Resend / SMTP integration, responsive HTML templates, fallback logger
 // ======================================================================
 
+import {escapeHtml} from '../utils/security';
+import { configuredValue } from './provider-config.service';
+
 export interface EmailOptions {
   to: string;
   subject: string;
   html: string;
   from?: string;
+  idempotencyKey?: string;
 }
 
 export interface EmailResult {
@@ -20,21 +24,24 @@ export interface EmailResult {
 
 export class EmailService {
   private static resendApiKey = process.env.RESEND_API_KEY || '';
-  private static defaultFrom = process.env.EMAIL_FROM || 'SYSTECH Studio <notificaciones@systech.mx>';
+  static sender() { return process.env.EMAIL_FROM || 'SYSTECH Studio <notificaciones@systech.mx>'; }
 
   /**
    * Send transactional email using Resend or local dev fallback
    */
   static async enviarEmail(options: EmailOptions): Promise<EmailResult> {
-    const { to, subject, html, from = this.defaultFrom } = options;
+    const { to, subject, html, from = this.sender() } = options;
 
-    if (this.resendApiKey) {
+    if (configuredValue(this.resendApiKey)) {
+      if (!configuredValue(process.env.EMAIL_FROM)) return { success: false, provider: 'DEV_CONSOLE', error: 'Configura el remitente del correo transaccional.' };
       try {
         const response = await fetch('https://api.resend.com/emails', {
           method: 'POST',
+          signal: AbortSignal.timeout(10000),
           headers: {
             'Authorization': `Bearer ${this.resendApiKey}`,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...(options.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : {})
           },
           body: JSON.stringify({ from, to: [to], subject, html })
         });
@@ -62,7 +69,10 @@ export class EmailService {
       }
     }
 
-    // Local dev fallback
+    if (process.env.NODE_ENV === 'production') {
+      return { success: false, provider: 'DEV_CONSOLE', error: 'El correo transaccional aún no está configurado.' };
+    }
+    // Explicit preview only; this result must never be treated as a real delivery.
     return {
       success: true,
       messageId: `dev_msg_${Date.now()}`,
@@ -87,7 +97,7 @@ export class EmailService {
         .map(
           item => `
           <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 10px 0; color: #1e293b;">${item.cantidad}x ${item.nombre}</td>
+            <td style="padding: 10px 0; color: #1e293b;">${item.cantidad}x ${escapeHtml(item.nombre)}</td>
             <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #0f172a;">$${item.subtotal.toFixed(2)} MXN</td>
           </tr>`
         )
@@ -96,11 +106,11 @@ export class EmailService {
       return `
         <div style="max-width: 540px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
           <div style="background: #0f172a; padding: 24px; text-align: center; color: #ffffff;">
-            <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">${data.tenantNombre}</h1>
-            <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">${data.sucursalNombre}</p>
+            <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">${escapeHtml(data.tenantNombre)}</h1>
+            <p style="margin: 4px 0 0 0; font-size: 13px; color: #94a3b8;">${escapeHtml(data.sucursalNombre)}</p>
           </div>
           <div style="padding: 24px;">
-            <p style="margin: 0 0 16px 0; font-size: 14px; color: #64748b;">Comprobante de compra • Folio <strong>#${data.folio}</strong></p>
+            <p style="margin: 0 0 16px 0; font-size: 14px; color: #64748b;">Comprobante de compra • Folio <strong>#${escapeHtml(data.folio)}</strong></p>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
               ${itemsHtml}
             </table>
@@ -109,7 +119,7 @@ export class EmailService {
               <span style="font-size: 22px; font-weight: 800; color: #0f172a;">$${data.total.toFixed(2)} MXN</span>
             </div>
             <div style="margin-top: 24px; padding: 12px; background: #f8fafc; border-radius: 8px; font-size: 12px; color: #64748b; text-align: center;">
-              Atendido por: <strong>${data.barberoNombre}</strong> • ${data.fecha}<br/>
+              Atendido por: <strong>${escapeHtml(data.barberoNombre)}</strong> • ${escapeHtml(data.fecha)}<br/>
               ¡Gracias por tu preferencia!
             </div>
           </div>
@@ -129,8 +139,8 @@ export class EmailService {
             <h1 style="margin: 0; font-size: 20px; font-weight: 700;">⚠️ Problema con tu pago de suscripción</h1>
           </div>
           <div style="padding: 24px;">
-            <p style="font-size: 15px; color: #334155; line-height: 1.5;">Hola <strong>${data.duenoNombre}</strong>,</p>
-            <p style="font-size: 14px; color: #475569; line-height: 1.5;">El cargo recurrente de <strong>$${data.monto.toFixed(2)} MXN</strong> para tu barbería <strong>${data.tenantNombre}</strong> no pudo ser completado.</p>
+            <p style="font-size: 15px; color: #334155; line-height: 1.5;">Hola <strong>${escapeHtml(data.duenoNombre)}</strong>,</p>
+            <p style="font-size: 14px; color: #475569; line-height: 1.5;">El cargo recurrente de <strong>$${data.monto.toFixed(2)} MXN</strong> para tu barbería <strong>${escapeHtml(data.tenantNombre)}</strong> no pudo ser completado.</p>
             <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 14px; margin: 20px 0; color: #991b1b; font-size: 14px;">
               <strong>Periodo de gracia:</strong> Cuentas con <strong>${data.diasGracia} días</strong> antes de la suspensión temporal de los módulos de cobro y agenda.
             </div>

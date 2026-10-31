@@ -18,7 +18,6 @@ export function createRateLimiter(options: {
   name?: string;
 }) {
   const store = new Map<string, RateLimitEntry>();
-  const isTest = process.env.NODE_ENV === 'test';
 
   // Periodic cleanup of expired entries every 5 minutes
   setInterval(() => {
@@ -32,9 +31,8 @@ export function createRateLimiter(options: {
 
   return (req: Request, res: Response, next: NextFunction) => {
     const ip = req.ip || req.socket?.remoteAddress || '127.0.0.1';
-    const isLocalhost = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
-    // In test environment, explicit test header, or local development, allow generous limit
-    const isTest = process.env.NODE_ENV === 'test' || req.headers['x-test-suite'] === 'true' || (process.env.NODE_ENV !== 'production' && isLocalhost);
+    // Only the server-controlled test environment can relax legacy limits.
+    const isTest = process.env.NODE_ENV === 'test';
     const effectiveLimit = isTest ? options.max * 100 : options.max;
 
     const key = `${options.name || 'limiter'}:${ip}`;

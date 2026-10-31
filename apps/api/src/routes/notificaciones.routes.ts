@@ -1,3 +1,4 @@
+import { verifyMetaWebhook } from '../middleware/metaWebhook';
 // ======================================================================
 // SYSTECH STUDIO - NOTIFICACIONES & WHATSAPP ROUTES
 // Cloud API Dispatch, Automated Reminders, Opt-out & Notification Logs
@@ -7,6 +8,7 @@ import { Router, Response } from 'express';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { WhatsAppService } from '../services/whatsapp.service';
+import { scheduleJobs } from '../services/job-scheduler.service';
 
 export const notificacionesRouter = Router();
 
@@ -20,7 +22,8 @@ notificacionesRouter.get('/meta-webhook', (req: any, res: any) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  const expectedToken = process.env.META_WA_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'systech_wa_verify_token';
+  const expectedToken = process.env.META_WA_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || (process.env.NODE_ENV === 'test' ? 'systech_wa_verify_token' : '');
+  if (!expectedToken) return res.status(503).send('Verificación del proveedor no configurada');
 
   if (mode === 'subscribe' && token === expectedToken) {
     return res.status(200).send(challenge);
@@ -33,7 +36,8 @@ notificacionesRouter.get('/webhook', (req: any, res: any) => {
   const mode = req.query['hub.mode'];
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
-  const expectedToken = process.env.META_WA_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'systech_wa_verify_token';
+  const expectedToken = process.env.META_WA_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || (process.env.NODE_ENV === 'test' ? 'systech_wa_verify_token' : '');
+  if (!expectedToken) return res.status(503).send('Verificación del proveedor no configurada');
   if (mode === 'subscribe' && token === expectedToken) {
     return res.status(200).send(challenge);
   }
@@ -41,7 +45,7 @@ notificacionesRouter.get('/webhook', (req: any, res: any) => {
 });
 
 // 2. Meta WhatsApp Status Webhook (sent, delivered, read, failed)
-notificacionesRouter.post('/meta-webhook', async (req: any, res: any) => {
+notificacionesRouter.post('/meta-webhook', verifyMetaWebhook, async (req: any, res: any) => {
   try {
     const body = req.body;
     if (body.object === 'whatsapp_business_account' || body.entry) {
@@ -68,7 +72,7 @@ notificacionesRouter.post('/meta-webhook', async (req: any, res: any) => {
   }
 });
 
-notificacionesRouter.post('/webhook', async (req: any, res: any) => {
+notificacionesRouter.post('/webhook', verifyMetaWebhook, async (req: any, res: any) => {
   try {
     const body = req.body;
     if (body.object === 'whatsapp_business_account' || body.entry) {
@@ -98,6 +102,14 @@ notificacionesRouter.post('/webhook', async (req: any, res: any) => {
 // Authenticated Notification Endpoints
 // ======================================================================
 notificacionesRouter.use(requireAuth);
+
+// Durable internal sale notices, independent of external messaging subscriptions.
+notificacionesRouter.get('/ventas', requireRole('DUENO'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const logs = await prisma.notificacionLog.findMany({ where: { tenantId: req.ctx!.tenantId, tipo: 'VENTA_CONFIRMADA', canal: 'INTERNO' }, orderBy: [{ fecha: 'desc' }, { id: 'desc' }], take: 50 });
+    res.json(logs.map(log => ({ id: log.id, fecha: log.fecha, ...JSON.parse(log.mensaje) })));
+  } catch { res.status(503).json({ error: 'No se pudieron consultar los avisos de ventas.' }); }
+});
 
 // Get Notifications Log
 notificacionesRouter.get('/', async (req: AuthenticatedRequest, res: Response) => {
@@ -201,7 +213,7 @@ notificacionesRouter.post('/opt-out', async (req: AuthenticatedRequest, res: Res
 // Automated Reminders Scan (24h and 2h before appointments)
 notificacionesRouter.post('/procesar-recordatorios', async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const resultado = await WhatsAppService.procesarRecordatoriosAutomaticos(prisma);
+    const resultado = await scheduleJobs();
     res.json({
       success: true,
       resultado

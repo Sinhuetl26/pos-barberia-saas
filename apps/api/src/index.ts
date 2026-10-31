@@ -3,12 +3,15 @@
 // Multi-Tenant SaaS Platform for Barbershops
 // ======================================================================
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { prisma } from '@systech/database';
 
 // Modular Route Handlers
+import {mailWebhookRouter} from './routes/mail-webhook.routes';
+import { usuariosRouter } from './routes/usuarios.routes';
 import { authRouter } from './routes/auth.routes';
 import { adminRouter } from './routes/admin.routes';
 import { citasRouter } from './routes/citas.routes';
@@ -25,7 +28,9 @@ import { suscripcionRouter } from './routes/suscripcion.routes';
 import { sucursalesRouter } from './routes/sucursales.routes';
 import { clientesRouter } from './routes/clientes.routes';
 import { proveedoresRouter, ordenesCompraRouter } from './routes/proveedores.routes';
-import { CronService } from './services/cron.service';
+import { jobsRouter } from './routes/jobs.routes';
+import { integracionesRouter } from './routes/integraciones.routes';
+import { operacionRouter } from './routes/operacion.routes';
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -54,12 +59,16 @@ app.use(cors({
   },
   credentials: true
 }));
+// CSV previews keep their own bounded envelope; other routes retain 100 KB.
+app.post(['/api/operacion/importacion/previsualizar', '/api/operacion/importacion/confirmar'], express.json({ limit: '350kb' }));
 app.use(express.json({
   limit: '100kb',
   verify: (req: any, _res, buf) => {
     req.rawBody = buf;
   }
 }));
+
+app.use('/api/mail/webhook',mailWebhookRouter);
 
 // --- HEALTH CHECK ---
 app.get('/api/health', async (req, res) => {
@@ -80,6 +89,7 @@ app.get('/api/health', async (req, res) => {
 
 // --- MOUNT MODULAR API ROUTERS ---
 app.use('/api/auth', authRouter);
+app.use('/api/usuarios', usuariosRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/citas', citasRouter);
 app.use('/api/public', publicRouter);
@@ -92,14 +102,17 @@ app.use('/api', inventarioRouter); // /api/productos & /api/inventario/*
 app.use('/api/notificaciones', notificacionesRouter);
 app.use('/api/reportes', reportesRouter);
 app.use('/api/suscripcion', suscripcionRouter);
+app.use('/api/integraciones', integracionesRouter);
+app.use('/api/operacion', operacionRouter);
 app.use('/api/sucursales', sucursalesRouter);
 app.use('/api/clientes', clientesRouter);
 app.use('/api/proveedores', proveedoresRouter);
 app.use('/api/ordenes-compra', ordenesCompraRouter);
+app.use('/api/jobs', jobsRouter);
 
 // Backwards compatibility mappings
 app.use('/api/onboarding', authRouter); // /api/onboarding/templates & /api/onboarding/setup
-app.use('/api/tenant', authRouter);     // /api/tenant/settings
+app.use('/api/tenant', authRouter);     // Legacy alias: /api/tenant/tenant/settings
 
 // 404 Route Not Found Handler
 app.use('/api/*', (req, res) => {
@@ -111,13 +124,13 @@ app.use('/api/*', (req, res) => {
 
 // Centralized Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled API Error:', err);
   const status = err.status || err.statusCode || 500;
+  if (process.env.NODE_ENV !== 'test') console.error('API Error:', err.code || 'SERVER_ERROR');
   const isProd = process.env.NODE_ENV === 'production';
 
   res.status(status).json({
     code: err.code || 'SERVER_ERROR',
-    error: isProd ? 'Ocurrió un error inesperado en el servidor' : (err.message || 'Error interno')
+    error: !err.status && !err.statusCode ? 'Ocurrió un error inesperado en el servidor' : (err.message || 'Error interno')
   });
 });
 
@@ -125,8 +138,6 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 if (process.env.NO_LISTEN !== 'true') {
   app.listen(port, () => {
     console.log(`SYSTECH API Multi-Tenant (Modular Architecture) listening on port ${port}`);
-    // A7 & A8: Start Background Scheduler for reminders and dunning
-    CronService.init(prisma);
   });
 }
 

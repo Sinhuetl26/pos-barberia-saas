@@ -4,14 +4,62 @@
 // ==========================================
 
 import { Router } from 'express';
+import { SaleError } from '../services/financial-error';
+import { createInventoryProduct, moveInventory } from '../services/inventory-ledger.service';
+import { listInventoryCounts, startInventoryCount, saveInventoryCount, confirmInventoryCount } from '../services/inventory-count.service';
+import { stockQuantity, inventoryUnitCost } from '../services/inventory-quantity.service';
+import { serviceRecipes, publishRecipe, correctServiceConsumption, consumptionHistory } from '../services/service-consumption.service';
+import { reconcileSupplies } from '../services/inventory-reconciliation.service';
+import { professionalTariffs, publishProfessionalTariff, resolvedCatalog } from '../services/professional-pricing.service';
+import { getDiscountPolicy, publishDiscountPolicy } from '../services/discount-policy.service';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import { createProductSchema, validateBody } from '../validators/schemas';
+import { requirePlanCapability } from '../middleware/license';
 
 export const inventarioRouter = Router();
 
 // Protect product and inventory routes with requireAuth
 inventarioRouter.use(['/productos', '/inventario'], requireAuth);
+
+const commercialError=(res:any,error:any)=>res.status(error.statusCode||500).json({code:error.code||'COMMERCIAL_RESULT_UNKNOWN',error:error.statusCode?error.message:'No se confirmó el resultado; conserva la intención y reintenta.'});
+inventarioRouter.get('/productos/precios',async(req:AuthenticatedRequest,res)=>{try{res.json(await resolvedCatalog(req.ctx!,req.query));}catch(error){commercialError(res,error);}});
+const professionalPricing = requirePlanCapability('PROFESSIONAL_PRICING', 'Las tarifas por profesional');
+const discountApprovals = requirePlanCapability('DISCOUNT_APPROVALS', 'Las políticas y autorizaciones de descuento');
+inventarioRouter.get('/inventario/tarifas',requireRole('DUENO','GERENTE'),professionalPricing,async(req:AuthenticatedRequest,res)=>{try{res.json(await professionalTariffs(req.ctx!,req.query.sucursalId as string));}catch(error){commercialError(res,error);}});
+inventarioRouter.post('/inventario/tarifas',requireRole('DUENO','GERENTE'),professionalPricing,async(req:AuthenticatedRequest,res)=>{try{res.json(await publishProfessionalTariff(req.ctx!,req.body));}catch(error){commercialError(res,error);}});
+// POS reads the effective policy in every plan; only publishing advanced rules is a Pro capability.
+inventarioRouter.get('/inventario/politica-descuentos',async(req:AuthenticatedRequest,res)=>{try{res.json(await getDiscountPolicy(req.ctx!,req.query.sucursalId as string));}catch(error){commercialError(res,error);}});
+inventarioRouter.post('/inventario/politica-descuentos',requireRole('DUENO','GERENTE'),discountApprovals,async(req:AuthenticatedRequest,res)=>{try{res.json(await publishDiscountPolicy(req.ctx!,req.body));}catch(error){commercialError(res,error);}});
+
+const countError = (res: any, error: any) => res.status(error instanceof SaleError ? error.statusCode : 500).json({ code: error instanceof SaleError ? error.code : 'SERVER_ERROR', error: error instanceof SaleError ? error.message : 'No pudimos guardar el conteo. Conserva los datos y reintenta.' });
+inventarioRouter.get('/inventario/conteos', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await listInventoryCounts(req.ctx!, req.query.sucursalId as string | undefined)); } catch (error) { countError(res, error); }
+});
+inventarioRouter.post('/inventario/conteos', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await startInventoryCount(req.ctx!, req.body, req.get('Idempotency-Key'))); } catch (error) { countError(res, error); }
+});
+inventarioRouter.put('/inventario/conteos/:id', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await saveInventoryCount(req.ctx!, req.params.id, req.body, req.get('Idempotency-Key'))); } catch (error) { countError(res, error); }
+});
+inventarioRouter.post('/inventario/conteos/:id/confirmar', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await confirmInventoryCount(req.ctx!, req.params.id, req.body, req.get('Idempotency-Key'))); } catch (error) { countError(res, error); }
+});
+inventarioRouter.get('/inventario/recetas/:servicioId', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await serviceRecipes(req.ctx!, req.params.servicioId)); } catch (error) { countError(res,error); }
+});
+inventarioRouter.post('/inventario/recetas/:servicioId', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await publishRecipe(req.ctx!,req.params.servicioId,req.body,req.get('Idempotency-Key'))); } catch (error) { countError(res,error); }
+});
+inventarioRouter.get('/inventario/insumos/conciliacion', requireRole('DUENO','GERENTE'),async(req:AuthenticatedRequest,res)=>{
+  try{res.json(await reconcileSupplies(req.ctx!,req.query));}catch(error){countError(res,error);}
+});
+inventarioRouter.get('/inventario/consumos',requireRole('DUENO','GERENTE'),async(req:AuthenticatedRequest,res)=>{
+  try{if(typeof req.query.sucursalId!=='string')throw new SaleError(400,'INVALID_BRANCH','Elige una sucursal.');res.json(await consumptionHistory(req.ctx!,req.query.sucursalId));}catch(error){countError(res,error);}
+});
+inventarioRouter.post('/inventario/consumos/:id/corregir',requireRole('DUENO','GERENTE'),async(req:AuthenticatedRequest,res)=>{
+  try{res.json(await correctServiceConsumption(req.ctx!,req.params.id,req.body,req.get('Idempotency-Key')));}catch(error){countError(res,error);}
+});
 
 // Get catalog (Products & Services)
 inventarioRouter.get('/productos', async (req: AuthenticatedRequest, res) => {
@@ -35,7 +83,7 @@ inventarioRouter.get('/productos', async (req: AuthenticatedRequest, res) => {
     });
 
     const filtered = bajoStock === 'true'
-      ? productos.filter(p => p.tipo === 'PRODUCTO' && p.stockActual <= p.stockMinimo)
+      ? productos.filter(p => p.tipo === 'PRODUCTO' && Number(p.stockActual) <= Number(p.stockMinimo))
       : productos;
 
     res.json(filtered);
@@ -44,67 +92,17 @@ inventarioRouter.get('/productos', async (req: AuthenticatedRequest, res) => {
   }
 });
 
-// Create product or service (C2: requireRole DUENO, GERENTE)
-inventarioRouter.post('/productos', requireRole('DUENO', 'GERENTE'), validateBody(createProductSchema), async (req: AuthenticatedRequest, res) => {
-  try {
-    const tenantId = req.ctx!.tenantId;
-    const {
-      sucursalId,
-      nombre,
-      tipo = 'PRODUCTO',
-      categoria = 'General',
-      duracionMinutos = 30,
-      sku,
-      precioVenta,
-      costo = 0,
-      stockActual = 0,
-      stockMinimo = 0
-    } = req.body;
-
-    if (sucursalId) {
-      const sucursal = await prisma.sucursal.findFirst({
-        where: { id: sucursalId, tenantId, eliminadoEn: null }
-      });
-      if (!sucursal) {
-        return res.status(400).json({ code: 'BAD_REQUEST', error: 'Sucursal no encontrada en su barbería' });
-      }
-    }
-
-    const producto = await prisma.producto.create({
-      data: {
-        tenantId,
-        sucursalId: sucursalId || null,
-        nombre: nombre.trim(),
-        tipo,
-        categoria,
-        duracionMinutos: parseInt(duracionMinutos as any) || 30,
-        sku: sku || (tipo === 'PRODUCTO' ? `PRD-${Math.floor(100 + Math.random() * 900)}` : `SRV-${Math.floor(100 + Math.random() * 900)}`),
-        precioVenta: Number(precioVenta),
-        costo: Number(costo),
-        stockActual: tipo === 'PRODUCTO' ? parseInt(stockActual as any) || 0 : 9999,
-        stockMinimo: tipo === 'PRODUCTO' ? parseInt(stockMinimo as any) || 0 : 0
-      }
-    });
-
-    if (tipo === 'PRODUCTO' && (parseInt(stockActual as any) || 0) > 0 && sucursalId) {
-      await prisma.kardexMovimiento.create({
-        data: {
-          tenantId,
-          sucursalId,
-          productoId: producto.id,
-          tipoMovimiento: 'ENTRADA_COMPRA',
-          cantidad: producto.stockActual,
-          stockAnterior: 0,
-          stockNuevo: producto.stockActual,
-          motivo: 'Inventario inicial'
-        }
-      });
-    }
-
-    res.json(producto);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al crear producto o servicio' });
+// Initial stock, ledger and intention commit together.
+inventarioRouter.post('/productos', requireRole('DUENO', 'GERENTE'), (req, res, next) => {
+  // Do not let coercion turn booleans/null/blank into physical quantities.
+  for (const field of ['stockActual', 'stockMinimo', 'costo', 'precioVenta']) {
+    const value = req.body?.[field];
+    if (value !== undefined && (!['number', 'string'].includes(typeof value) || typeof value === 'string' && !value.trim())) return res.status(400).json({ code: 'INVALID_QUANTITY', error: `${field} debe ser un número válido.` });
   }
+  next();
+}, validateBody(createProductSchema), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await createInventoryProduct(req.ctx!, req.body, req.get('Idempotency-Key'))); }
+  catch (error: any) { res.status(error instanceof SaleError ? error.statusCode : 500).json({ code: error instanceof SaleError ? error.code : 'SERVER_ERROR', error: error instanceof SaleError ? error.message : 'Error al crear producto o servicio' }); }
 });
 
 // Update product or service (C2: requireRole DUENO, GERENTE)
@@ -113,118 +111,63 @@ inventarioRouter.put('/productos/:id', requireRole('DUENO', 'GERENTE'), async (r
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
     const data = req.body;
+    if (data.precioVenta !== undefined && (!Number.isFinite(Number(data.precioVenta)) || Number(data.precioVenta) < 0 || Number(data.precioVenta) > 1_000_000_000 || Math.abs(Number(data.precioVenta) * 100 - Math.round(Number(data.precioVenta) * 100)) > 0.00001)) {
+      return res.status(400).json({ code: 'INVALID_PRICE', error: 'El precio debe ser positivo o cero y tener hasta dos decimales.' });
+    }
+    if (data.tasaImpuesto !== undefined && (typeof data.tasaImpuesto !== 'number' || !Number.isFinite(data.tasaImpuesto) || data.tasaImpuesto < 0 || data.tasaImpuesto > 100)) {
+      return res.status(400).json({ code: 'INVALID_TAX_RATE', error: 'La tasa incluida debe estar entre 0 y 100.' });
+    }
 
+    if (data.stockActual !== undefined) return res.status(400).json({ code: 'STOCK_CHANGE_REQUIRES_MOVEMENT', error: 'Registra el cambio de stock como movimiento para conservar el historial.' });
+    if (data.nombre !== undefined && (typeof data.nombre !== 'string' || data.nombre.trim().length < 2)) return res.status(400).json({ code: 'INVALID_NAME', error: 'Nombre de producto requerido.' });
+    if (data.sku !== undefined && data.sku !== null && (typeof data.sku !== 'string' || data.sku.length > 100)) return res.status(400).json({ code: 'INVALID_SKU', error: 'SKU inválido.' });
+    if (data.imagen !== undefined && data.imagen !== null && (typeof data.imagen !== 'string' || data.imagen.length > 70000 || !/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]*={0,2}$/.test(data.imagen))) return res.status(400).json({ code: 'INVALID_IMAGE', error: 'La foto debe ser un JPG preparado por SYSTECH.' });
+    if (data.costo !== undefined) inventoryUnitCost(data.costo);
     const existing = await prisma.producto.findFirst({
       where: { id, tenantId, eliminadoEn: null }
     });
     if (!existing) {
       return res.status(404).json({ code: 'NOT_FOUND', error: 'Producto no encontrado en su barbería' });
     }
+    if(data.unidad!==undefined&&data.unidad!==existing.unidad||data.naturaleza!==undefined&&data.naturaleza!==existing.naturaleza)return res.status(400).json({code:'UNIT_IMMUTABLE',error:'Unidad y clasificación no se reinterpretan en un artículo con historia. Crea un artículo nuevo.'});
+    if(data.stockMinimo!==undefined)stockQuantity(data.stockMinimo,existing.unidad,true);
 
-    const producto = await prisma.producto.update({
+    const producto = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`UPDATE "Tenant" SET "id"="id" WHERE "id"=${tenantId}`;
+      if (data.sku?.trim()) {
+        const duplicates = await tx.$queryRaw<{ count: bigint }[]>`SELECT COUNT(*) AS "count" FROM "Producto" WHERE "tenantId"=${tenantId} AND "id"<>${id} AND "eliminadoEn" IS NULL AND lower("sku")=lower(${data.sku.trim()})`;
+        if (Number(duplicates[0].count)) throw new SaleError(409, 'SKU_EXISTS', 'Ese SKU ya está en el catálogo de la barbería.');
+      }
+      return tx.producto.update({
       where: { id },
       data: {
         nombre: data.nombre ? data.nombre.trim() : undefined,
+        imagen: data.imagen === undefined ? undefined : data.imagen || null,
         categoria: data.categoria,
         duracionMinutos: data.duracionMinutos ? parseInt(data.duracionMinutos) : undefined,
-        sku: data.sku,
+        sku: data.sku === undefined ? undefined : data.sku?.trim() || null,
         precioVenta: data.precioVenta !== undefined ? Number(data.precioVenta) : undefined,
+        tasaImpuesto: data.tasaImpuesto,
         costo: data.costo !== undefined ? Number(data.costo) : undefined,
-        stockMinimo: data.stockMinimo !== undefined ? parseInt(data.stockMinimo) : undefined,
+        stockMinimo: data.stockMinimo !== undefined ? Number(data.stockMinimo) : undefined,
         activo: data.activo !== undefined ? data.activo : undefined
       }
+      });
     });
 
     res.json(producto);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al actualizar producto' });
+  } catch (error: any) {
+    res.status(error instanceof SaleError ? error.statusCode : 500).json({ code: error instanceof SaleError ? error.code : 'SERVER_ERROR', error: error instanceof SaleError ? error.message : 'Error al actualizar producto' });
   }
 });
 
-// Manual Kardex Adjustment (C2: requireRole DUENO, GERENTE; A15: strict validation)
+// Replayable stock intention; absolute adjustments require reference balance.
 inventarioRouter.post('/inventario/movimiento', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
-  try {
-    const tenantId = req.ctx!.tenantId;
-    const { productoId, tipoMovimiento, cantidad, motivo } = req.body;
-
-    const ALLOWED_TIPOS = ['ENTRADA_COMPRA', 'MERMA_DEVOLUCION', 'AJUSTE_INVENTARIO', 'USO_INTERNO'];
-    if (!ALLOWED_TIPOS.includes(tipoMovimiento)) {
-      return res.status(400).json({
-        code: 'INVALID_TYPE',
-        error: `Tipo de movimiento inválido. Permitidos: ${ALLOWED_TIPOS.join(', ')}`
-      });
-    }
-
-    const parsedQty = parseInt(cantidad);
-    if (isNaN(parsedQty)) {
-      return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'La cantidad debe ser un número entero válido' });
-    }
-
-    const prod = await prisma.producto.findFirst({
-      where: { id: productoId, tenantId, eliminadoEn: null }
-    });
-    if (!prod) return res.status(404).json({ code: 'NOT_FOUND', error: 'Producto no encontrado en su barbería' });
-
-    const stockAnterior = prod.stockActual;
-    let stockNuevo = stockAnterior;
-
-    if (tipoMovimiento === 'ENTRADA_COMPRA') {
-      if (parsedQty <= 0) {
-        return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'La cantidad para entrada debe ser mayor a 0' });
-      }
-      stockNuevo = stockAnterior + parsedQty;
-    } else if (tipoMovimiento === 'MERMA_DEVOLUCION' || tipoMovimiento === 'USO_INTERNO') {
-      if (parsedQty <= 0) {
-        return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'La cantidad a descontar debe ser mayor a 0' });
-      }
-      if (stockAnterior < parsedQty) {
-        return res.status(400).json({
-          code: 'INSUFFICIENT_STOCK',
-          error: `Stock insuficiente. Stock actual: ${stockAnterior}, requerido: ${parsedQty}`
-        });
-      }
-      stockNuevo = stockAnterior - parsedQty;
-    } else if (tipoMovimiento === 'AJUSTE_INVENTARIO') {
-      if (parsedQty < 0) {
-        return res.status(400).json({ code: 'INVALID_QUANTITY', error: 'El stock ajustado no puede ser negativo' });
-      }
-      stockNuevo = parsedQty;
-    }
-
-    // Resolve sucursalId (A15: avoid empty string)
-    let sucursalId = prod.sucursalId;
-    if (!sucursalId) {
-      const defaultSuc = await prisma.sucursal.findFirst({ where: { tenantId, eliminadoEn: null } });
-      sucursalId = defaultSuc?.id || null;
-    }
-
-    const [updatedProd, kardex] = await prisma.$transaction([
-      prisma.producto.update({
-        where: { id: productoId },
-        data: { stockActual: stockNuevo }
-      }),
-      prisma.kardexMovimiento.create({
-        data: {
-          tenantId,
-          sucursalId: sucursalId || '',
-          productoId,
-          tipoMovimiento,
-          cantidad: stockNuevo - stockAnterior,
-          stockAnterior,
-          stockNuevo,
-          motivo: motivo || `Ajuste manual ${tipoMovimiento}`
-        }
-      })
-    ]);
-
-    res.json({ producto: updatedProd, kardex });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al registrar movimiento de inventario' });
-  }
+  try { res.json(await moveInventory(req.ctx!, req.body, req.get('Idempotency-Key'))); }
+  catch (error: any) { res.status(error instanceof SaleError ? error.statusCode : 500).json({ code: error instanceof SaleError ? error.code : 'SERVER_ERROR', error: error instanceof SaleError ? error.message : 'Error al registrar movimiento de inventario' }); }
 });
-
 // Kardex Movement History
-inventarioRouter.get('/inventario/kardex', async (req: AuthenticatedRequest, res) => {
+inventarioRouter.get('/inventario/kardex', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
   try {
     const tenantId = req.ctx!.tenantId;
     const { productoId } = req.query as { productoId?: string };

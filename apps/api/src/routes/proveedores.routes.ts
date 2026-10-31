@@ -4,8 +4,27 @@
 // ======================================================================
 
 import { Router, Response } from 'express';
-import { prisma } from '@systech/database';
+import { prisma, Prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { SaleError } from '../services/financial-error';
+
+const inventoryNumber = (value: unknown) => ['number', 'string'].includes(typeof value) && !(typeof value === 'string' && !value.trim()) ? Number(value) : NaN;
+const validQuantity = (value: number) => Number.isSafeInteger(value) && value > 0 && value <= 1_000_000;
+const validCost = (value: number) => Number.isFinite(value) && value >= 0 && value <= 1_000_000_000 && new Prisma.Decimal(value).decimalPlaces() <= 6;
+
+// Same bounded conflict handling as POS: a failed transaction never confirms reception.
+async function receiptTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try { return await prisma.$transaction(operation, { maxWait: 15_000, timeout: 20_000 }); }
+    catch (error: any) {
+      const retryable = error.code === 'P2034' || (['P2028', 'P1008'].includes(error.code) && /locked|write conflict|timed out|expired/i.test(error.message));
+      if (retryable && attempt < 4) { await new Promise(resolve => setTimeout(resolve, 60 * 2 ** attempt + Math.random() * 40)); continue; }
+      if (retryable) throw new SaleError(503, 'RECEIPT_RETRY_REQUIRED', 'No se confirmó la recepción. Reintenta la misma orden.');
+      throw error;
+    }
+  }
+  throw new SaleError(503, 'RECEIPT_RETRY_REQUIRED', 'Reintenta la misma orden.');
+}
 
 export const proveedoresRouter = Router();
 
@@ -192,11 +211,11 @@ ordenesCompraRouter.post('/', requireRole('DUENO', 'GERENTE'), async (req: Authe
     const cleanItems = [];
 
     for (const item of items) {
-      const cantidad = Number(item.cantidad);
-      const costoUnitario = Number(item.costoUnitario || item.costo || 0);
+      const cantidad = inventoryNumber(item?.cantidad);
+      const costoUnitario = inventoryNumber(item?.costoUnitario ?? item?.costo ?? 0);
 
-      if (isNaN(cantidad) || cantidad <= 0) {
-        return res.status(400).json({ error: 'Cada item debe tener una cantidad mayor a 0' });
+      if (!validQuantity(cantidad) || !validCost(costoUnitario)) {
+        return res.status(400).json({ code: 'INVALID_PURCHASE_ITEM', error: 'Cantidad entera positiva y costo finito no negativo requeridos, dentro de rango.' });
       }
 
       const prod = await prisma.producto.findFirst({
@@ -205,6 +224,7 @@ ordenesCompraRouter.post('/', requireRole('DUENO', 'GERENTE'), async (req: Authe
       if (!prod) {
         return res.status(404).json({ error: `Producto con ID ${item.productoId} no encontrado` });
       }
+      if (prod.tipo !== 'PRODUCTO') return res.status(400).json({ code: 'INVALID_PRODUCT_TYPE', error: 'Los servicios no se reciben en inventario.' });
 
       const subtotal = cantidad * costoUnitario;
       totalCalculado += subtotal;
@@ -262,55 +282,45 @@ ordenesCompraRouter.post('/:id/recibir', requireRole('DUENO', 'GERENTE'), async 
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
 
-    const orden = await prisma.ordenCompra.findFirst({
-      where: { id, tenantId },
-      include: { proveedor: true }
-    });
-
-    if (!orden) {
-      return res.status(404).json({ error: 'Orden de compra no encontrada' });
-    }
-
-    if (orden.estado !== 'PENDIENTE') {
-      return res.status(400).json({ error: `La orden de compra ya se encuentra en estado "${orden.estado}"` });
-    }
-
-    let items: any[] = [];
-    try {
-      if (orden.notas && orden.notas.startsWith('{')) {
-        const parsed = JSON.parse(orden.notas);
-        items = parsed.items || [];
+    const result = await receiptTransaction(async tx => {
+      // Claim the order before checking its status, across API processes and retries.
+      await tx.$executeRaw`UPDATE "OrdenCompra" SET "id"="id" WHERE "id"=${id} AND "tenantId"=${tenantId}`;
+      const orden = await tx.ordenCompra.findFirst({ where: { id, tenantId }, include: { proveedor: true } });
+      if (!orden) throw new SaleError(404, 'NOT_FOUND', 'Orden de compra no encontrada.');
+      if (orden.estado === 'RECIBIDA') return { orden, replayed: true };
+      if (orden.estado !== 'PENDIENTE') throw new SaleError(409, 'INVALID_ORDER_STATE', `La orden se encuentra en estado ${orden.estado}.`);
+      let items: any[] = [];
+      try { items = JSON.parse(orden.notas || '{}').items; } catch {}
+      if (!Array.isArray(items) || !items.length || items.some(item => !item || typeof item.productoId !== 'string' || !validQuantity(inventoryNumber(item.cantidad)) || !validCost(inventoryNumber(item.costoUnitario)))) {
+        throw new SaleError(400, 'INVALID_PURCHASE_ITEM', 'La orden contiene cantidades o costos inválidos; revisa sus renglones.');
       }
-    } catch (e) {}
-
-    if (items.length === 0) {
-      return res.status(400).json({ error: 'La orden no contiene items para recibir en almacén' });
-    }
-
-    // Atomic transaction: update order status, update product stock & cost, and write Kardex entry
-    const result = await prisma.$transaction(async (tx) => {
-      const updatedOrden = await tx.ordenCompra.update({
-        where: { id },
-        data: {
-          estado: 'RECIBIDA',
-          fechaEntrega: new Date()
-        }
-      });
+      // POS locks branch then sorted products. Use the same order before reading balances.
+      await tx.$executeRaw`UPDATE "Sucursal" SET "id"="id" WHERE "id"=${orden.sucursalId} AND "tenantId"=${tenantId}`;
+      const branch = await tx.sucursal.findFirst({ where: { id: orden.sucursalId, tenantId, eliminadoEn: null } });
+      if (!branch) throw new SaleError(400, 'INVALID_BRANCH', 'Sucursal no disponible.');
+      const ids = [...new Set<string>(items.map(item => item.productoId))].sort();
+      for (const productId of ids) await tx.$executeRaw`UPDATE "Producto" SET "id"="id" WHERE "id"=${productId} AND "tenantId"=${tenantId}`;
+      const claimed = await tx.ordenCompra.updateMany({ where: { id, tenantId, estado: 'PENDIENTE' }, data: { estado: 'RECIBIDA', fechaEntrega: new Date() } });
+      if (claimed.count !== 1) throw new SaleError(409, 'INVALID_ORDER_STATE', 'La orden cambió de estado.');
 
       for (const item of items) {
         const liveProd = await tx.producto.findFirst({
-          where: { id: item.productoId, tenantId }
+          where: { id: item.productoId, tenantId, eliminadoEn: null, activo: true }
         });
-
-        if (liveProd) {
-          const stockAnterior = liveProd.stockActual;
-          const stockNuevo = stockAnterior + item.cantidad;
+        if (!liveProd || liveProd.tipo !== 'PRODUCTO' || liveProd.sucursalId && liveProd.sucursalId !== orden.sucursalId) {
+          throw new SaleError(400, 'INVALID_PRODUCT', 'Producto no disponible para recibir en esta sucursal.');
+        }
+        {
+          const cantidad = inventoryNumber(item.cantidad), costoUnitario = inventoryNumber(item.costoUnitario);
+          const stockAnterior = Number(liveProd.stockActual);
+          const stockNuevo = stockAnterior + cantidad;
+          if (!Number.isFinite(stockNuevo) || new Prisma.Decimal(stockNuevo).decimalPlaces() > 3 || stockNuevo < 0 || stockNuevo > 2_147_483_647) throw new SaleError(400, 'INVALID_STOCK', 'Stock resultante fuera de rango.');
 
           await tx.producto.update({
             where: { id: liveProd.id },
             data: {
-              stockActual: { increment: item.cantidad },
-              costo: item.costoUnitario > 0 ? item.costoUnitario : liveProd.costo
+              stockActual: { increment: cantidad },
+              costo: costoUnitario
             }
           });
 
@@ -320,11 +330,12 @@ ordenesCompraRouter.post('/:id/recibir', requireRole('DUENO', 'GERENTE'), async 
               sucursalId: orden.sucursalId,
               productoId: liveProd.id,
               tipoMovimiento: 'ENTRADA_COMPRA',
-              cantidad: item.cantidad,
+              cantidad,
               stockAnterior,
               stockNuevo,
               motivo: `Recepción Orden Compra ${orden.folio} (Proveedor: ${orden.proveedor.nombre})`,
-              usuarioId: req.ctx!.userId || null
+              usuarioId: req.ctx!.userId || null,
+              metadataJson: JSON.stringify({version:1,origen:'ORDEN_COMPRA',ordenCompraId:orden.id,referencia:orden.folio,proveedorId:orden.proveedorId,proveedorNombre:orden.proveedor.nombre,costoUnitario,unidad:liveProd.unidad,usuarioNombre:req.ctx!.email})
             }
           });
         }
@@ -339,16 +350,17 @@ ordenesCompraRouter.post('/:id/recibir', requireRole('DUENO', 'GERENTE'), async 
         }
       });
 
-      return updatedOrden;
+      return { orden: await tx.ordenCompra.findFirstOrThrow({ where: { id, tenantId } }), replayed: false };
     });
 
     res.json({
       success: true,
-      message: `Orden de compra ${orden.folio} recibida exitosamente. El inventario ha sido actualizado.`,
-      orden: result
+      message: `Orden de compra ${result.orden.folio} recibida exitosamente.`,
+      orden: result.orden,
+      replayed: result.replayed
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message || 'Error al recibir orden de compra' });
+    res.status(error instanceof SaleError ? error.statusCode : 500).json({ code: error instanceof SaleError ? error.code : 'SERVER_ERROR', error: error instanceof SaleError ? error.message : 'Error al recibir orden de compra' });
   }
 });
 
@@ -358,29 +370,24 @@ ordenesCompraRouter.post('/:id/cancelar', requireRole('DUENO', 'GERENTE'), async
     const tenantId = req.ctx!.tenantId;
     const { id } = req.params;
 
-    const orden = await prisma.ordenCompra.findFirst({
-      where: { id, tenantId }
-    });
+    const changed = await receiptTransaction(tx => tx.ordenCompra.updateMany({ where: { id, tenantId, estado: 'PENDIENTE' }, data: { estado: 'CANCELADA' } }));
+    const orden = await prisma.ordenCompra.findFirst({ where: { id, tenantId } });
 
     if (!orden) {
       return res.status(404).json({ error: 'Orden de compra no encontrada' });
     }
 
-    if (orden.estado !== 'PENDIENTE') {
-      return res.status(400).json({ error: 'Solo se pueden cancelar órdenes en estado PENDIENTE' });
+    if (!changed.count && orden.estado !== 'CANCELADA') {
+      return res.status(409).json({ code: 'INVALID_ORDER_STATE', error: 'Solo se pueden cancelar órdenes en estado PENDIENTE' });
     }
-
-    const updated = await prisma.ordenCompra.update({
-      where: { id },
-      data: { estado: 'CANCELADA' }
-    });
 
     res.json({
       success: true,
       message: `Orden de compra ${orden.folio} cancelada`,
-      orden: updated
+      orden,
+      replayed: !changed.count
     });
   } catch (error) {
-    res.status(500).json({ error: 'Error al cancelar orden de compra' });
+    res.status(error instanceof SaleError ? error.statusCode : 500).json({ code: error instanceof SaleError ? error.code : 'SERVER_ERROR', error: error instanceof SaleError ? error.message : 'Error al cancelar orden de compra' });
   }
 });

@@ -5,11 +5,13 @@
 
 import { z } from 'zod';
 import { Request, Response, NextFunction } from 'express';
+import { isLicensePlan } from '../services/license-catalog.service';
+import { optionalSafeWebUrl } from '../services/booking-personalization.service';
 
 // Login schema
 export const loginSchema = z.object({
   email: z.string().trim().email('Formato de correo inválido'),
-  password: z.string().min(1, 'La contraseña es requerida')
+  password: z.string().min(1, 'La contraseña es requerida').max(256)
 });
 
 // Self-service register schema
@@ -17,10 +19,10 @@ export const registerSchema = z.object({
   nombreBarberia: z.string().trim().min(2, 'Nombre de barbería requerido'),
   nombreDueno: z.string().trim().min(2, 'Nombre del dueño requerido'),
   email: z.string().trim().email('Correo electrónico inválido'),
-  password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
+  password: z.string().min(12, 'La contraseña debe tener al menos 12 caracteres').refine(v => Buffer.byteLength(v, 'utf8') <= 72, 'La contraseña supera los 72 bytes permitidos'),
   telefono: z.string().optional().nullable(),
   direccion: z.string().optional().nullable(),
-  plan: z.enum(['BASICO', 'PRO']).default('PRO')
+  plan: z.string().refine(isLicensePlan, 'Plan inválido').default('PRO')
 });
 
 // Public booking schema
@@ -38,25 +40,31 @@ export const publicBookingSchema = z.object({
 });
 
 // POS Fast Sale schema
+const saleMoney = z.coerce.number<string | number>().finite().min(0).max(1_000_000_000)
+  .refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 0.00001, 'Usa importes con hasta dos decimales');
 export const createSaleSchema = z.object({
   sucursalId: z.string().min(1, 'sucursalId requerido'),
   barberoId: z.string().min(1, 'barberoId requerido'),
   clienteId: z.string().optional().nullable(),
   citaId: z.string().optional().nullable(),
   metodoPago: z.enum(['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'MIXTO']),
-  detallesPago: z.any().optional().nullable(),
-  montoEfectivo: z.coerce.number().min(0).optional().nullable(),
-  montoTarjeta: z.coerce.number().min(0).optional().nullable(),
-  efectivoRecibido: z.coerce.number().min(0).optional().nullable(),
-  idempotencyKey: z.string().optional().nullable(),
-  descuento: z.coerce.number().min(0).default(0),
-  propina: z.coerce.number().min(0).default(0),
+  detallesPago: z.object({ montoEfectivo: saleMoney.optional().nullable(), montoTarjeta: saleMoney.optional().nullable(), efectivoRecibido: saleMoney.optional().nullable() }).optional().nullable(),
+  montoEfectivo: saleMoney.optional().nullable(),
+  montoTarjeta: saleMoney.optional().nullable(),
+  efectivoRecibido: saleMoney.optional().nullable(),
+  idempotencyKey: z.string().regex(/^[a-zA-Z0-9._:-]{1,128}$/, 'Clave de cobro inválida').optional().nullable(),
+  descuento: saleMoney.default(0),
+  motivoDescuento: z.string().trim().max(500).optional().nullable(),
+  aprobacionDescuentoId: z.string().optional().nullable(),
+  totalConfirmado: saleMoney.optional().nullable(),
+  propina: saleMoney.default(0),
   items: z.array(
     z.object({
       productoId: z.string().min(1, 'productoId requerido'),
       cantidad: z.coerce.number().int().min(1).max(99)
     })
-  ).min(1, 'Debe incluir al menos un producto o servicio')
+  ).min(1, 'Debe incluir al menos un producto o servicio').max(100)
+    .refine(items => new Set(items.map(i => i.productoId)).size === items.length, 'Agrupa la cantidad de cada producto en un solo renglón')
 });
 
 // Barber creation schema
@@ -65,7 +73,7 @@ export const createBarberoSchema = z.object({
   nombre: z.string().trim().min(2, 'Nombre del barbero requerido'),
   telefono: z.string().trim().optional().nullable(),
   email: z.string().trim().email().optional().nullable().or(z.literal('')),
-  avatarUrl: z.string().optional().nullable(),
+  avatarUrl: optionalSafeWebUrl,
   especialidad: z.string().optional().nullable(),
   descripcion: z.string().optional().nullable(),
   visibleEnWeb: z.boolean().optional().default(true),
@@ -83,7 +91,7 @@ export const updateBarberoSchema = z.object({
   nombre: z.string().trim().min(2).optional(),
   telefono: z.string().trim().optional().nullable(),
   email: z.string().trim().email().optional().nullable().or(z.literal('')),
-  avatarUrl: z.string().optional().nullable(),
+  avatarUrl: optionalSafeWebUrl,
   especialidad: z.string().optional().nullable(),
   descripcion: z.string().optional().nullable(),
   visibleEnWeb: z.boolean().optional(),
@@ -99,18 +107,25 @@ export const updateBarberoSchema = z.object({
 export const createProductSchema = z.object({
   sucursalId: z.string().optional().nullable(),
   nombre: z.string().trim().min(2, 'Nombre de producto requerido'),
+  imagen: z.string().max(70000).regex(/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]*={0,2}$/, 'La foto debe ser un JPG preparado por SYSTECH').optional().nullable(),
   tipo: z.enum(['PRODUCTO', 'SERVICIO']).default('PRODUCTO'),
   categoria: z.string().default('General'),
   duracionMinutos: z.coerce.number().min(5).max(480).default(30),
   sku: z.string().optional().nullable(),
-  precioVenta: z.coerce.number().min(0, 'El precio no puede ser negativo'),
+  precioVenta: saleMoney,
+  tasaImpuesto: z.coerce.number().finite().min(0).max(100).default(0),
   costo: z.coerce.number().min(0).default(0),
-  stockActual: z.coerce.number().int().min(0, 'El stock inicial no puede ser negativo').default(0),
-  stockMinimo: z.coerce.number().int().min(0, 'El stock mínimo no puede ser negativo').default(0)
+  stockActual: z.coerce.number().min(0, 'El stock inicial no puede ser negativo').default(0),
+  stockMinimo: z.coerce.number().min(0, 'El stock mínimo no puede ser negativo').default(0),
+  naturaleza: z.enum(['REVENTA', 'INSUMO']).default('REVENTA'),
+  unidad: z.enum(['PIEZA','ML','G']).default('PIEZA'),
+  presentacionNombre: z.string().max(100).optional().nullable(),
+  presentacionCantidad: z.coerce.number().positive().default(1)
 });
 
 // Cash drawer open/close schemas
 export const openCashShiftSchema = z.object({
+  idempotencyKey: z.string().optional(),
   sucursalId: z.string().min(1, 'sucursalId requerido'),
   fondoInicial: z.coerce.number().min(0).default(0),
   notas: z.string().optional().nullable()
@@ -118,8 +133,9 @@ export const openCashShiftSchema = z.object({
 
 export const closeCashShiftSchema = z.object({
   corteId: z.string().min(1, 'corteId requerido'),
-  conteoEfectivoReal: z.coerce.number().min(0, 'El conteo debe ser mayor o igual a 0'),
+  conteoEfectivoReal: z.union([z.number(), z.string().trim().min(1, 'Declara el conteo físico')]).pipe(saleMoney),
   notasCierre: z.string().optional().nullable(),
+  previsualizacionToken: z.string().max(4096).optional().nullable(),
   desglose: z.any().optional().nullable()
 });
 

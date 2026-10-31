@@ -42,7 +42,7 @@ clientesRouter.get('/', async (req: AuthenticatedRequest, res: Response) => {
       include: {
         membresias: { where: { activo: true } }
       },
-      orderBy: orderByMap[orden] || { totalVisitas: 'desc' },
+      orderBy: req.ctx!.rol === 'DUENO' ? orderByMap[orden] || { totalVisitas: 'desc' } : { nombre: 'asc' },
       take: 100
     });
 
@@ -77,7 +77,7 @@ clientesRouter.get('/reactivacion', async (req: AuthenticatedRequest, res: Respo
         ? Math.floor((Date.now() - new Date(c.fechaUltimaVisita).getTime()) / (1000 * 60 * 60 * 24))
         : dias;
 
-      const mensaje = `¡Hola ${c.nombre}! Hace más de ${diasSinVenir} días que no nos visitas en ${tenant.nombre}. Te regalamos 10% de descuento en tu próximo corte o arreglo de barba reservando esta semana.`;
+      const mensaje = `¡Hola ${c.nombre}! Te esperamos de nuevo en ${tenant.nombre}. ¿Te gustaría agendar tu próxima visita?`;
       const telLimpio = WhatsAppService.normalizarTelefono(c.telefono || '');
       const whatsappUrl = telLimpio.length >= 10
         ? `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
@@ -179,7 +179,7 @@ clientesRouter.get('/:id', async (req: AuthenticatedRequest, res: Response) => {
 
     const metricas = {
       gastoTotal: Number(cliente.gastoTotal),
-      totalCitas: cliente.citas.length || cliente.totalVisitas,
+      totalCitas: req.ctx!.rol === 'DUENO' ? cliente.citas.length || cliente.totalVisitas : cliente.citas.length,
       visitasTotales: cliente.totalVisitas,
       barberoFavorito: barberoFavorito || 'Sin preferencia',
       servicioFavorito: servicioFavorito,

@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import { prisma } from '@systech/database';
 import { requireAuth, requireRole, AuthenticatedRequest } from '../middleware/auth';
+import { licenseQuote, changeLocalLicense, isLicensePlan } from '../services/license-catalog.service';
 
 export const adminRouter = Router();
 
@@ -31,7 +32,7 @@ adminRouter.get('/metrics', async (req: AuthenticatedRequest, res) => {
 
     const mrr = tenants.reduce((sum, t) => {
       if (t.estado === 'ACTIVO' || t.estado === 'EN_RIESGO') {
-        const mensual = t.suscripcion?.montoMensual ? Number(t.suscripcion.montoMensual) : (t.plan === 'PRO' ? 999 : 499);
+        const mensual = t.suscripcion?.montoMensual ? Number(t.suscripcion.montoMensual) : licenseQuote(t.plan).totalMxn;
         return sum + mensual;
       }
       return sum;
@@ -57,7 +58,8 @@ adminRouter.get('/metrics', async (req: AuthenticatedRequest, res) => {
       canceledAccounts,
       plansBreakdown: {
         basico: basicoCount,
-        pro: proCount
+        pro: proCount,
+        cadena: tenants.filter(t => t.plan === 'CADENA').length
       },
       platformVolume: {
         totalBarberos,
@@ -115,7 +117,7 @@ adminRouter.put('/tenants/:id/status', async (req: AuthenticatedRequest, res) =>
       create: {
         tenantId: id,
         estadoPago: estado === 'ACTIVO' ? 'active' : 'suspended',
-        montoMensual: tenant.plan === 'PRO' ? 999 : 499
+        montoMensual: licenseQuote(tenant.plan).totalMxn
       }
     });
 
@@ -136,43 +138,17 @@ adminRouter.put('/tenants/:id/status', async (req: AuthenticatedRequest, res) =>
 });
 
 // Update tenant plan (Upgrade to PRO / Downgrade to BASICO)
-adminRouter.put('/tenants/:id/plan', async (req: AuthenticatedRequest, res) => {
+adminRouter.put('/tenants/:id/plan', async (req: AuthenticatedRequest, res, next) => {
   try {
     const { id } = req.params;
     const { plan } = req.body;
     const adminEmail = req.ctx?.email || 'admin@systech.com';
 
-    const limiteSucursales = plan === 'PRO' ? 999 : 1;
-    const limiteBarberos = plan === 'PRO' ? 999 : 3;
-    const montoMensual = plan === 'PRO' ? 999 : 499;
-
-    const dbPlan = await prisma.plan.findUnique({ where: { codigo: plan } });
-
-    const tenant = await prisma.tenant.update({
-      where: { id },
-      data: { plan, planId: dbPlan?.id || null, limiteSucursales, limiteBarberos }
-    });
-
-    await prisma.suscripcion.upsert({
-      where: { tenantId: id },
-      update: { montoMensual },
-      create: { tenantId: id, montoMensual, estadoPago: 'active' }
-    });
-
-    await prisma.auditoriaLog.create({
-      data: {
-        tenantId: id,
-        usuarioEmail: adminEmail,
-        accion: `CAMBIO_PLAN_${plan}`,
-        detalles: `Plan cambiado a ${plan}. Nuevos límites: ${limiteSucursales} sucursales, ${limiteBarberos} barberos.`
-      }
-    });
+    if (!isLicensePlan(plan)) return res.status(400).json({ code: 'INVALID_LICENSE_PLAN', error: 'Plan inválido.' });
+    const tenant = await changeLocalLicense(id, plan, adminEmail);
 
     res.json({ message: `Plan actualizado a ${plan}`, tenant });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Error al cambiar plan del tenant' });
-  }
+  } catch (error) { next(error); }
 });
 
 // Audit Logs list

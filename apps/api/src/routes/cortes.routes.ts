@@ -1,3 +1,4 @@
+import { requirePrintAuth } from '../middleware/printAuth';
 // ==========================================
 // SYSTECH STUDIO - CORTES DE CAJA (ARQUEO CIEGO) ROUTES
 // ==========================================
@@ -7,39 +8,21 @@ import { prisma } from '@systech/database';
 import jwt from 'jsonwebtoken';
 import { requireAuth, requireRole, AuthenticatedRequest, JWT_SECRET } from '../middleware/auth';
 import { openCashShiftSchema, closeCashShiftSchema, validateBody } from '../validators/schemas';
+import { branchLock, cashOperation, cashSummary, cents, digest, drawerBalance, financialTransaction, handoff, openShift, recordCash } from '../services/cash-ledger.service';
+import { SaleError } from '../services/pos-sale.service';
+import { moneyCents } from '../services/pricing.service';
 import { calculateCashShiftSummary } from '../services/cash.service';
 import { escapeHtml, generatePrintToken, verifyPrintToken } from '../utils/security';
+import { makeClosePreview, verifyClosePreview } from '../services/cash-close-preview.service';
 
 export const cortesRouter = Router();
 
 // Standalone Printable HTML Cash Drawer Shift Audit Receipt (Arqueo y Cierre de Caja)
 // P2.2 FIX: Accepts either Bearer token OR scoped ephemeral printToken (120s expiry, single-purpose)
-cortesRouter.get('/:id/comprobante-html', async (req: any, res: any) => {
+cortesRouter.get('/:id/comprobante-html', requirePrintAuth('CORTE'), async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    let tenantId: string | null = null;
-
-    // 1. Check Bearer Authorization header
-    const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const payload = jwt.verify(authHeader.substring(7).trim(), JWT_SECRET) as any;
-        tenantId = payload.tid;
-      } catch (e) {}
-    }
-
-    // 2. Check Scoped Ephemeral Print Token (P2.2 FIX)
-    const printToken = req.query.printToken as string | undefined;
-    if (!tenantId && printToken) {
-      const verified = verifyPrintToken(printToken, 'CORTE', id);
-      if (verified.valid) {
-        tenantId = verified.tenantId!;
-      }
-    }
-
-    if (!tenantId) {
-      return res.status(401).send('<h1>No autorizado: Se requiere token de impresión temporal o sesión activa.</h1>');
-    }
+    const tenantId = req.ctx!.tenantId;
 
     const corte = await prisma.corteCaja.findFirst({
       where: { id, tenantId },
@@ -53,6 +36,7 @@ cortesRouter.get('/:id/comprobante-html', async (req: any, res: any) => {
     if (!corte) {
       return res.status(404).send('<h1>Corte de caja no encontrado</h1>');
     }
+    if (corte.estado !== 'CERRADO') return res.status(409).send('Captura el conteo y cierra la caja antes de imprimir.');
 
     const fondo = Number(corte.fondoInicial || 0);
     const efVentas = Number(corte.totalEfectivo || 0);
@@ -63,12 +47,13 @@ cortesRouter.get('/:id/comprobante-html', async (req: any, res: any) => {
     const conteoReal = Number(corte.conteoEfectivoReal || 0);
     const descuadre = Number(corte.descuadre || 0);
 
-    const ingresos = corte.movimientos.filter(m => m.tipo === 'INGRESO').reduce((s, m) => s + Number(m.monto), 0);
-    const retiros = corte.movimientos.filter(m => m.tipo === 'RETIRO').reduce((s, m) => s + Number(m.monto), 0);
-    const gastos = corte.movimientos.filter(m => m.tipo === 'GASTO_MENOR').reduce((s, m) => s + Number(m.monto), 0);
-    const esperado = fondo + efVentas + ingresos - retiros - gastos;
+    const frozen = corte.resumenJson ? JSON.parse(corte.resumenJson) : null;
+    const ingresos = frozen?.totalIngresos ?? corte.movimientos.filter(m => m.tipo === 'INGRESO').reduce((s, m) => s + Number(m.monto), 0);
+    const retiros = frozen?.totalRetiros ?? corte.movimientos.filter(m => m.tipo === 'RETIRO').reduce((s, m) => s + Number(m.monto), 0);
+    const gastos = frozen?.totalGastosMenores ?? corte.movimientos.filter(m => m.tipo === 'GASTO_MENOR').reduce((s, m) => s + Number(m.monto), 0);
+    const esperado = frozen?.efectivoEsperado ?? fondo + efVentas + ingresos - retiros - gastos;
 
-    const estadoCuadre = Math.abs(descuadre) < 0.05
+    const estadoCuadre = descuadre === 0
       ? '<span style="color: #15803d; font-weight: 700;">● CAJA CUADRADA ($0.00)</span>'
       : (descuadre < 0
           ? `<span style="color: #b91c1c; font-weight: 700;">▲ FALTANTE DE -$${Math.abs(descuadre).toFixed(2)} MXN</span>`
@@ -99,24 +84,27 @@ cortesRouter.get('/:id/comprobante-html', async (req: any, res: any) => {
 </head>
 <body>
   <div class="print-btn no-print">
-    <button class="btn" onclick="window.print()">🖨️ Imprimir Acta de Arqueo de Caja</button>
+    <button class="btn" onclick="window.print()">🖨️ Imprimir cierre de caja</button>
   </div>
   <div class="sheet">
     <div class="header">
       <div class="title">${escapeHtml(corte.tenant?.nombre || 'Barbería')}</div>
-      <div class="sub">Acta Oficial de Arqueo y Cierre de Caja</div>
+      <div class="sub">Comprobante de cierre de caja</div>
       <div style="font-size: 11px; color: #78716c; margin-top: 4px;">
         Sucursal: ${escapeHtml(corte.sucursal?.nombre || 'Principal')} | ID Turno: ${escapeHtml(corte.id.slice(0, 8))}
       </div>
     </div>
 
     <div class="section-title">Horarios del Turno</div>
-    <div class="row"><span>Apertura:</span><span>${new Date(corte.fechaApertura).toLocaleString('es-MX')}</span></div>
-    <div class="row"><span>Cierre:</span><span>${corte.fechaCierre ? new Date(corte.fechaCierre).toLocaleString('es-MX') : 'Abierto'}</span></div>
+    <div class="row"><span>Apertura:</span><span>${new Date(corte.fechaApertura).toLocaleString('es-MX', { timeZone: corte.sucursal.zonaHoraria })}</span></div>
+    <div class="row"><span>Cierre:</span><span>${corte.fechaCierre ? new Date(corte.fechaCierre).toLocaleString('es-MX', { timeZone: corte.sucursal.zonaHoraria }) : 'Abierto'}</span></div>
+    <div class="sub">Hora local de la sucursal · ${escapeHtml(corte.sucursal.zonaHoraria)}</div>
 
     <div class="section-title">Flujo y Ventas del Turno</div>
     <div class="row"><span>Fondo Inicial de Caja:</span><span class="font-mono">$${fondo.toFixed(2)}</span></div>
-    <div class="row"><span>Ventas en Efectivo:</span><span class="font-mono">+$${efVentas.toFixed(2)}</span></div>
+    <div class="row"><span>Ventas netas por efectivo (incluye cobradores):</span><span class="font-mono">$${efVentas.toFixed(2)}</span></div>
+    <div class="row"><span>Efectivo de ventas/reversos en caja:</span><span class="font-mono">$${Number(frozen?.efectivoCobradoEnCaja ?? efVentas).toFixed(2)}</span></div>
+    <div class="row"><span>Entregas recibidas de cobradores:</span><span class="font-mono">$${Number(frozen?.totalEntregas || 0).toFixed(2)}</span></div>
     <div class="row"><span>Ingresos Extra de Caja:</span><span class="font-mono">+$${ingresos.toFixed(2)}</span></div>
     <div class="row"><span>Retiros de Efectivo:</span><span class="font-mono">-$${retiros.toFixed(2)}</span></div>
     <div class="row"><span>Gastos Menores:</span><span class="font-mono">-$${gastos.toFixed(2)}</span></div>
@@ -126,7 +114,7 @@ cortesRouter.get('/:id/comprobante-html', async (req: any, res: any) => {
     <div class="row"><span>Cobros con Tarjeta:</span><span class="font-mono">$${tjVentas.toFixed(2)}</span></div>
     <div class="row"><span>Cobros por Transferencia:</span><span class="font-mono">$${trVentas.toFixed(2)}</span></div>
     <div class="row"><span>Propinas Registradas:</span><span class="font-mono">$${propinas.toFixed(2)}</span></div>
-    <div class="row bold"><span>Total General Facturado:</span><span class="font-mono">$${totalVentas.toFixed(2)} MXN</span></div>
+    <div class="row bold"><span>Ventas netas del turno:</span><span class="font-mono">$${totalVentas.toFixed(2)} MXN</span></div>
 
     <div class="section-title">Resultado del Arqueo Físico</div>
     <div class="row highlight"><span>Efectivo Contado Físico:</span><span class="font-mono">$${conteoReal.toFixed(2)} MXN</span></div>
@@ -142,7 +130,7 @@ cortesRouter.get('/:id/comprobante-html', async (req: any, res: any) => {
     <div class="signatures">
       <div>
         <div style="height: 45px;"></div>
-        <div class="sign-line">Firma del Cajero / Operador</div>
+        <div class="sign-line">Firma de quien cierra</div>
       </div>
       <div>
         <div style="height: 45px;"></div>
@@ -154,6 +142,9 @@ cortesRouter.get('/:id/comprobante-html', async (req: any, res: any) => {
 </html>`;
 
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control','no-store');
+    res.setHeader('Referrer-Policy','no-referrer');
+    res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'");
     res.send(html);
   } catch (error) {
     console.error('Error al generar comprobante de arqueo:', error);
@@ -172,7 +163,8 @@ cortesRouter.post('/:id/print-token', async (req: AuthenticatedRequest, res) => 
     const corte = await prisma.corteCaja.findFirst({ where: { id, tenantId } });
     if (!corte) return res.status(404).json({ error: 'Corte de caja no encontrado' });
 
-    const printToken = generatePrintToken('CORTE', id, tenantId);
+    if (corte.estado !== 'CERRADO') return res.status(409).json({ code: 'BLIND_COUNT_REQUIRED', error: 'Captura el conteo y cierra la caja antes de imprimir.' });
+    const printToken = generatePrintToken('CORTE', id, tenantId, req.ctx!.userId, req.ctx!.sessionVersion);
     res.json({ success: true, printToken });
   } catch (error) {
     res.status(500).json({ error: 'Error al generar token de impresión' });
@@ -194,185 +186,82 @@ cortesRouter.get('/', async (req: AuthenticatedRequest, res) => {
       orderBy: { fechaApertura: 'desc' }
     });
 
-    res.json(cortes);
+    res.json(cortes.map(c => c.estado === 'ABIERTO' ? { id: c.id, tenantId: c.tenantId, sucursalId: c.sucursalId, sucursal: c.sucursal, usuarioId: c.usuarioId, fechaApertura: c.fechaApertura, fondoInicial: c.fondoInicial, notas: c.notas, estado: c.estado } : c));
   } catch (error) {
     res.status(500).json({ error: 'Error al obtener cortes de caja' });
   }
 });
 
-// Open Cash Register Shift (Authorized cashier or owner)
-cortesRouter.post('/abrir', requireRole('DUENO', 'GERENTE'), validateBody(openCashShiftSchema), async (req: AuthenticatedRequest, res) => {
+
+function cashError(res: any, error: any) {
+  return res.status(error instanceof SaleError ? error.statusCode : 503).json({ code: error instanceof SaleError ? error.code : 'FINANCIAL_RESULT_UNKNOWN', error: error instanceof SaleError ? error.message : 'Resultado no confirmado. Reintenta la misma operación.' });
+}
+cortesRouter.post('/abrir', requireRole('DUENO', 'GERENTE', 'CAJERO'), validateBody(openCashShiftSchema), async (req: AuthenticatedRequest, res) => {
   try {
-    const tenantId = req.ctx!.tenantId;
-    const { sucursalId, fondoInicial = 0, notas } = req.body;
-
-    const sucursal = await prisma.sucursal.findFirst({
-      where: { id: sucursalId, tenantId, eliminadoEn: null }
-    });
-    if (!sucursal) {
-      return res.status(400).json({ code: 'BAD_REQUEST', error: 'Sucursal no encontrada en su barbería' });
-    }
-
-    const existingOpen = await prisma.corteCaja.findFirst({
-      where: { tenantId, sucursalId, estado: 'ABIERTO' }
-    });
-
-    if (existingOpen) {
-      return res.status(400).json({
-        error: 'Ya existe una caja abierta para esta sucursal. Ciérrala antes de abrir una nueva.',
-        corteAbierto: existingOpen
-      });
-    }
-
-    const corte = await prisma.corteCaja.create({
-      data: {
-        tenantId,
-        sucursalId,
-        fondoInicial: Number(fondoInicial),
-        estado: 'ABIERTO',
-        notas
-      }
-    });
-
-    res.json(corte);
-  } catch (error) {
-    res.status(500).json({ error: 'Error al abrir caja' });
-  }
+    const result = await cashOperation(req.ctx as any, { ...req.body, operacion: 'APERTURA' }, async tx => {
+      const existing = await openShift(tx, req.ctx as any, req.body.sucursalId);
+      if (existing) throw new SaleError(409, 'CASH_ALREADY_OPEN', 'Ya hay una caja abierta en esta sucursal.');
+      return tx.corteCaja.create({ data: { tenantId: req.ctx!.tenantId, sucursalId: req.body.sucursalId, usuarioId: req.ctx!.userId, fondoInicial: cents(req.body.fondoInicial) / 100, notas: req.body.notas } });
+    }); res.json(result);
+  } catch (error) { cashError(res, error); }
 });
-
-// Close Cash Register Shift (Blind Cash Count Reconciliation)
-// C2 FIX: Require DUENO or GERENTE role to close cash shift
-cortesRouter.post('/cerrar', requireRole('DUENO', 'GERENTE'), validateBody(closeCashShiftSchema), async (req: AuthenticatedRequest, res) => {
+cortesRouter.post('/previsualizar',requireRole('DUENO','GERENTE','CAJERO'),validateBody(closeCashShiftSchema),async(req:AuthenticatedRequest,res)=>{
+ try{const count=cents(req.body.conteoEfectivoReal),initial=await prisma.corteCaja.findFirst({where:{id:req.body.corteId,tenantId:req.ctx!.tenantId}});if(!initial)throw new SaleError(404,'CASH_NOT_FOUND','Caja no disponible.');const result=await financialTransaction(async tx=>{await branchLock(tx,req.ctx as any,initial.sucursalId);const cut=await tx.corteCaja.findFirstOrThrow({where:{id:initial.id,tenantId:req.ctx!.tenantId}});return makeClosePreview(tx,req.ctx!,cut,count,req.body.notasCierre||'');});res.json(result);}catch(error){cashError(res,error);}
+});
+cortesRouter.post('/cerrar', requireRole('DUENO', 'GERENTE', 'CAJERO'), validateBody(closeCashShiftSchema), async (req: AuthenticatedRequest, res) => {
   try {
-    const tenantId = req.ctx!.tenantId;
-    const { corteId, conteoEfectivoReal, notasCierre } = req.body;
-
-    const corte = await prisma.corteCaja.findFirst({
-      where: { id: corteId, tenantId }
-    });
-
-    if (!corte || corte.estado === 'CERRADO') {
-      return res.status(400).json({ error: 'Caja no encontrada o ya cerrada' });
-    }
-
-    const fechaCierre = new Date();
-
-    // A5 & P0.5 FIX: Filter out CANCELADA sales and bound strictly between fechaApertura and fechaCierre
-    const ventas = await prisma.venta.findMany({
-      where: {
-        tenantId,
-        sucursalId: corte.sucursalId,
-        fecha: { gte: corte.fechaApertura, lte: fechaCierre },
-        estado: { not: 'CANCELADA' }
+    const count = cents(req.body.conteoEfectivoReal);
+    const initial = await prisma.corteCaja.findFirst({ where: { id: req.body.corteId, tenantId: req.ctx!.tenantId } });
+    if (!initial) throw new SaleError(404, 'CASH_NOT_FOUND', 'Caja no disponible.');
+    const hash = digest({ count, notes: req.body.notasCierre || '', actor: req.ctx!.userId });
+    const result = await financialTransaction(async tx => {
+      await branchLock(tx, req.ctx as any, initial.sucursalId);
+      const cut = await tx.corteCaja.findFirstOrThrow({ where: { id: initial.id, tenantId: req.ctx!.tenantId } });
+      if (cut.estado === 'CERRADO') {
+        if (cut.cierreHash !== hash) throw new SaleError(409, 'CASH_CLOSED', 'Este turno ya se cerró con otro conteo.');
+        return { success: true, corte: cut, resumen: JSON.parse(cut.resumenJson!), replayed: true };
       }
-    });
-
-    // P0.5 FIX: Fetch all movements associated with this cash drawer shift
-    const movimientos = await prisma.movimientoCaja.findMany({
-      where: {
-        tenantId,
-        sucursalId: corte.sucursalId,
-        corteCajaId: corte.id
-      }
-    });
-
-    // Pure reconciliation calculation with sales + movements
-    const summary = calculateCashShiftSummary(
-      Number(corte.fondoInicial),
-      ventas as any,
-      Number(conteoEfectivoReal),
-      movimientos as any
-    );
-
-    const corteCerrado = await prisma.corteCaja.update({
-      where: { id: corteId },
-      data: {
-        estado: 'CERRADO',
-        fechaCierre,
-        totalEfectivo: summary.totalEfectivo,
-        totalTarjeta: summary.totalTarjeta,
-        totalTransferencia: summary.totalTransferencia,
-        totalPropinas: summary.totalPropinas,
-        totalVentas: summary.totalVentas,
-        conteoEfectivoReal: summary.conteoReal,
-        descuadre: summary.descuadre,
-        notas: [corte.notas, notasCierre].filter(Boolean).join(' | ')
-      }
-    });
-
-    res.json({
-      success: true,
-      corte: corteCerrado,
-      resumen: summary
-    });
-  } catch (error) {
-    console.error('Error al cerrar caja:', error);
-    res.status(500).json({ error: 'Error al cerrar caja' });
-  }
+      // Legacy clients still close directly; current guided UI supplies a
+      // signed comparison bound to the declared count and every ledger event.
+      if(req.body.previsualizacionToken!==undefined&&req.body.previsualizacionToken!==null)await verifyClosePreview(tx,req.ctx!,cut,count,req.body.notasCierre||'',req.body.previsualizacionToken);
+      const summary = await cashSummary(tx, req.ctx as any, cut, count);
+      const closed = await tx.corteCaja.update({ where: { id: cut.id }, data: { estado: 'CERRADO', fechaCierre: new Date(), totalEfectivo: summary.totalEfectivo,
+        totalTarjeta: summary.totalTarjeta, totalTransferencia: summary.totalTransferencia, totalVentas: summary.totalVentas, totalPropinas: summary.totalPropinas,
+        conteoEfectivoReal: summary.conteoReal, descuadre: summary.descuadre, resumenJson: JSON.stringify(summary), cierreHash: hash, notas: [cut.notas, req.body.notasCierre].filter(Boolean).join(' | ') } });
+      await tx.auditoriaLog.create({ data: { tenantId: req.ctx!.tenantId, usuarioEmail: req.ctx!.email, accion: 'CORTE_CAJA', detalles: JSON.stringify({ corteId: cut.id, sucursalId: cut.sucursalId, usuarioId: req.ctx!.userId, motivo: req.body.notasCierre || null, ...summary }) } });
+      return { success: true, corte: closed, resumen: summary, replayed: false };
+    }); res.json(result);
+  } catch (error) { cashError(res, error); }
 });
-
-// Cash drawer movement (gastos menores, retiros, entradas de efectivo)
-cortesRouter.post('/movimiento', requireRole('DUENO', 'GERENTE'), async (req: AuthenticatedRequest, res) => {
+cortesRouter.post('/movimiento', requireRole('DUENO', 'GERENTE', 'CAJERO'), async (req: AuthenticatedRequest, res) => {
   try {
-    const tenantId = req.ctx!.tenantId;
-    const userEmail = req.ctx!.email;
-    const { sucursalId, tipo, monto, concepto, corteCajaId } = req.body;
-
-    if (!sucursalId || !tipo || monto === undefined || !concepto) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios para registrar movimiento de caja' });
-    }
-
-    const sucursal = await prisma.sucursal.findFirst({
-      where: { id: sucursalId, tenantId, eliminadoEn: null }
-    });
-    if (!sucursal) {
-      return res.status(400).json({ error: 'Sucursal no encontrada en su barbería' });
-    }
-
-    const montoNum = Number(monto);
-    if (isNaN(montoNum) || montoNum <= 0) {
-      return res.status(400).json({ error: 'El monto debe ser un número positivo mayor a 0' });
-    }
-
-    const normTipo = tipo === 'INGRESO_EXTRA' ? 'INGRESO' : tipo;
-    if (!['INGRESO', 'RETIRO', 'GASTO_MENOR'].includes(normTipo)) {
-      return res.status(400).json({ error: 'Tipo de movimiento inválido (INGRESO, RETIRO, GASTO_MENOR)' });
-    }
-
-    // Verify open cash shift exists for this branch
-    const openCorte = corteCajaId
-      ? await prisma.corteCaja.findFirst({ where: { id: corteCajaId, tenantId, sucursalId, estado: 'ABIERTO' } })
-      : await prisma.corteCaja.findFirst({ where: { tenantId, sucursalId, estado: 'ABIERTO' } });
-
-    if (!openCorte) {
-      return res.status(400).json({ error: 'No existe un corte de caja abierto para esta sucursal. Debe abrir caja antes de registrar movimientos.' });
-    }
-
-    const mov = await prisma.movimientoCaja.create({
-      data: {
-        tenantId,
-        sucursalId,
-        corteCajaId: openCorte.id,
-        tipo: normTipo,
-        monto: montoNum,
-        concepto: String(concepto).trim(),
-        usuarioEmail: userEmail
-      }
-    });
-
-    await prisma.auditoriaLog.create({
-      data: {
-        tenantId,
-        usuarioEmail: userEmail,
-        accion: `MOVIMIENTO_CAJA_${normTipo}`,
-        detalles: `${normTipo}: $${montoNum.toFixed(2)} MXN - ${concepto}`
-      }
-    });
-
-    res.json({ success: true, movimiento: mov });
-  } catch (error) {
-    res.status(500).json({ error: 'Error al registrar movimiento de caja' });
-  }
+    const amount = cents(req.body.monto, true), type = req.body.tipo === 'INGRESO_EXTRA' ? 'INGRESO' : req.body.tipo;
+    if (!['INGRESO', 'RETIRO', 'GASTO_MENOR'].includes(type) || typeof req.body.concepto !== 'string' || !req.body.concepto.trim() || req.body.concepto.length > 500) throw new SaleError(400, 'INVALID_MOVEMENT', 'Indica un tipo válido y el concepto del movimiento.');
+    const result = await cashOperation(req.ctx as any, { ...req.body, operacion: 'MOVIMIENTO' }, async tx => {
+      const cut = await openShift(tx, req.ctx as any, req.body.sucursalId, true);
+      if (req.body.corteCajaId && req.body.corteCajaId !== cut.id) throw new SaleError(409, 'CASH_CHANGED', 'El turno de caja cambió. Revisa antes de registrar.');
+      if (type !== 'INGRESO' && amount > await drawerBalance(tx, req.ctx as any, cut)) throw new SaleError(400, 'INSUFFICIENT_DRAWER', 'El movimiento excede el efectivo registrado en caja.');
+      const movement = await tx.movimientoCaja.create({ data: { tenantId: req.ctx!.tenantId, sucursalId: cut.sucursalId, corteCajaId: cut.id, tipo: type, monto: amount / 100, concepto: req.body.concepto.trim(), usuarioEmail: req.ctx!.email } });
+      await recordCash(tx, req.ctx as any, { sucursalId: cut.sucursalId, corteCajaId: cut.id, tipo: type, metodoPago: 'EFECTIVO', monto: (type === 'INGRESO' ? amount : -amount) / 100, concepto: movement.concepto });
+      await tx.auditoriaLog.create({ data: { tenantId: req.ctx!.tenantId, usuarioEmail: req.ctx!.email, accion: 'MOVIMIENTO_CAJA_' + type, detalles: JSON.stringify({ movimientoId: movement.id, usuarioId: req.ctx!.userId, monto: amount / 100 }) } });
+      return { success: true, movimiento: movement };
+    }); res.json(result);
+  } catch (error) { cashError(res, error); }
 });
-
-
+cortesRouter.get('/custodia', async (req: AuthenticatedRequest, res) => {
+  try {
+    const rows = await prisma.registroCaja.findMany({ where: { tenantId: req.ctx!.tenantId, ...(req.query.sucursalId ? { sucursalId: String(req.query.sucursalId) } : {}), metodoPago: 'EFECTIVO', custodiaUsuarioId: { not: null } }, orderBy: { fecha: 'desc' } });
+    const holders = await prisma.usuario.findMany({ where: { tenantId: req.ctx!.tenantId, id: { in: [...new Set(rows.map(row => row.custodiaUsuarioId).filter((id): id is string => Boolean(id)))] } }, select: { id: true, nombre: true } });
+    const names = new Map(holders.map(person => [person.id, person.nombre.trim()]));
+    const groups = new Map<string, any>();
+    for (const row of rows) {
+      const key = row.sucursalId + ':' + row.custodiaUsuarioId;
+      if (!groups.has(key)) groups.set(key, { usuarioId: row.custodiaUsuarioId, sucursalId: row.sucursalId, nombre: names.get(row.custodiaUsuarioId!) || rows.find(r => r.custodiaUsuarioId === row.custodiaUsuarioId && r.tipo === 'VENTA')?.usuarioNombre || 'Cobrador', saldoCentavos: 0 });
+      groups.get(key).saldoCentavos += moneyCents(row.monto);
+    }
+    res.json({ saldos: [...groups.values()].map(g => ({ ...g, saldo: g.saldoCentavos / 100 })), movimientos: rows.slice(0, 50) });
+  } catch (error) { cashError(res, error); }
+});
+cortesRouter.post('/entrega', requireRole('DUENO', 'GERENTE', 'CAJERO'), async (req: AuthenticatedRequest, res) => {
+  try { res.json(await handoff(req.ctx as any, req.body)); } catch (error) { cashError(res, error); }
+});
