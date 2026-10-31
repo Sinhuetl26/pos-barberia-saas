@@ -1,0 +1,62 @@
+{
+  "fecha": "2026-10-04",
+  "moneda": "MXN",
+  "objetivo_clientes_90_dias": 10,
+  "dominio_y_hosting_contratados": false,
+  "naturaleza": "Presupuesto de planeación; no cotización ni pronóstico de ventas. Sin compras ni cambios de precios en Stripe.",
+  "supuestos": {
+    "mxn_por_usd_presupuestado": 20,
+    "iva_modelado": 0.16,
+    "iva_sobre_comisiones_modelado": 0.16,
+    "stripe_payments_porcentaje": 0.036,
+    "stripe_billing_porcentaje": 0.007,
+    "stripe_fijo_por_cobro_mxn": 3,
+    "cobros_por_cliente_mes": 1,
+    "reserva_riesgo_porcentaje_ingresos_netos": 0.02,
+    "soporte_minutos_por_cliente_mes": 20,
+    "soporte_costo_hora_mxn": 300,
+    "mantenimiento_costo_hora_mxn": 600,
+    "mezcla": [
+      { "plan": "Esencial", "proporcion": 0.6, "precio_neto_mxn": 499 },
+      { "plan": "Pro", "proporcion": 0.4, "precio_neto_mxn": 999 }
+    ],
+    "advertencias": [
+      "La mezcla 60/40 no es venta observada. Cadenas y add-ons excluidos del escenario base.",
+      "El tipo de cambio de 20 es un colchón presupuestario, no una cotización actual.",
+      "IVA de 16% y tratamiento de comisiones son hipótesis a validar con el contador. No se modela acreditamiento de IVA ni ISR.",
+      "El costo incluye desembolso de IVA sobre comisiones por prudencia; el IVA acreditable podría cambiar el resultado contable.",
+      "La reserva del 2% no sustituye la exposición real a contracargos ni garantiza cobranza.",
+      "Se supone cobranza completa mensual con tarjetas nacionales, sin FX ni tarjetas internacionales.",
+      "La capacidad de servidores por número de clientes debe validarse con carga real.",
+      "No incluye desarrollo inicial, sueldo del fundador, adquisición de clientes, contabilidad, asesoría legal, hardware ni nuevas funciones.",
+      "Consumos de WhatsApp y CFDI se presupuestan aparte. No se incluyen ingresos de add-ons para no anticipar ganancias."
+    ]
+  },
+  "infraestructura_referencia": {
+    "render_api_usd_mes": 25,
+    "render_worker_usd_mes": 7,
+    "render_postgres_usd_mes": 19,
+    "render_redis_usd_mes": 10,
+    "render_workspace_pro_usd_mes": 25,
+    "staging_reserva_usd_mes": 13,
+    "resend_pro_usd_mes": 20,
+    "almacenamiento_monitoreo_dominio_reserva_usd_mes": 20,
+    "facturapi_api_multi_organizacion_mxn_mes": 299,
+    "colchon_porcentaje": 0.15,
+    "nota": "Staging y reserva de almacenamiento/monitoreo/dominio son asignaciones estimadas, no tarifas de un paquete. La cuota Facturapi se paga al activar ese servicio. El colchón es general, no un cálculo de impuestos por proveedor."
+  },
+  "escenarios": [
+    { "clientes": 10, "infraestructura_mxn_mes": 3500, "mantenimiento_horas_mes": 12 },
+    { "clientes": 30, "infraestructura_mxn_mes": 3500, "mantenimiento_horas_mes": 12 },
+    { "clientes": 100, "infraestructura_mxn_mes": 5500, "mantenimiento_horas_mes": 20 }
+  ],
+  "fuentes": [
+    { "proveedor": "Stripe México", "url": "https://stripe.com/mx/pricing", "dato": "Tarjeta nacional 3.6% + MXN3; Billing 0.7%; tarifas excluyen IVA." },
+    { "proveedor": "Render", "url": "https://render.com/pricing", "dato": "UI pública consultada: API 1c-2g USD25; worker pequeño USD7; PostgreSQL 0.5c-1g USD19; Key Value 256MB USD10; workspace Pro USD25. Compute adicional al workspace." },
+    { "proveedor": "Resend", "url": "https://resend.com/pricing?volume=50000", "dato": "Pro USD20/mes, 50,000 correos; exceso USD0.90/1,000." },
+    { "proveedor": "Facturapi", "url": "https://www.facturapi.io/pricing", "dato": "API CFDI multi-organización MXN299/mes + MXN0.60/timbre; IVA incluido. Diferente de Facturapi para Stripe por organización." },
+    { "proveedor": "WhatsApp Business", "url": "https://whatsappbusiness.com/es-la/products/platform-pricing/", "dato": "Variable por mercado y categoría. Sin tarifa unitaria fijada en este modelo; verificar rate card y condiciones al contratar." },
+    { "proveedor": "Booksy México", "url": "https://booksy.com/biz/es-mx/precios", "dato": "Base MXN429/mes + MXN100 por empleado adicional, con las condiciones publicadas. No se supone equivalencia fiscal/funcional." },
+    { "proveedor": "Fresha México", "url": "https://www.fresha.com/es-MX/pricing", "dato": "Independiente USD19.95/mes; equipo USD14.95 por miembro reservable/mes. No se supone equivalencia funcional." }
+  ]
+}

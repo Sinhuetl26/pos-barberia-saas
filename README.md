@@ -1,170 +1,105 @@
-# 💈 SYSTECH STUDIO — SUITE INTEGRAL PARA BARBERÍAS (SaaS MULTI-TENANT)
+# SYSTECH Studio · POS y operación de barberías
 
-SYSTECH STUDIO es una plataforma SaaS de alto rendimiento diseñada específicamente para la operación comercial, punto de venta (POS), agenda pública y administración de barberías en México y Latinoamérica.
+[Inicio de documentación y Obsidian](INICIO.md) · [Mapa de carpetas](docs/obsidian/ESTRUCTURA.md)
 
----
+Monorepo SaaS para México con agenda, reservas públicas, ventas, caja, clientes, inventario, comisiones y administración de licencias. Mercado: barberías independientes y cadenas.
 
-## 🌟 Características Principales
+**Estado: en desarrollo y validación comercial.** Las pruebas locales no certifican preparación para producción. La conexión por barbería de WhatsApp y CFDI, la sincronización completa de licencias, PostgreSQL, hardware y operación de soporte requieren validación antes de venta general.
 
-- **Punto de Venta (POS) Ultra Rápido**: Cobro en menos de 30 segundos, pagos divididos (efectivo, tarjeta, transferencia SPEI), propinas por barbero, cálculo exacto de cambio e impresión térmica en 58mm y 80mm con apertura automática de gaveta.
-- **Agenda Multicanal & Portal Público `/b/:slug`**: URLs limpias sin hashes, selección de múltiples servicios simultáneos, tiempos de buffer entre turnos, lista de espera automática y cancelación por token criptográfico de 64 caracteres.
-- **WhatsApp Cloud API & Fallback Directo**: Recordatorios automáticos a las 24h y 2h antes, confirmación de cita, enlace de cancelación segura, horario de silencio nocturno y opt-out (`BAJA`) conforme a la LFPDPPP.
-- **Facturación SaaS con Stripe Billing**: Suscripción mensual y anual con periodo de prueba de 14 días sin tarjeta obligatoria, webhooks idempotentes, dunning automatizado de 3 días y cupones de lanzamiento (`FUNDADOR`).
-- **Control Financiero & Arqueo Ciego**: Cortes de caja por turno con bitácora de descuadres, registro de gastos menores/retiros con evidencia y exportación de reportes a CSV/Excel para contabilidad.
-- **Nómina & Comisiones Flexibles**: Porcentajes diferenciados por barbero para servicios y retail de productos, liquidación periódica con recibo imprimible.
-- **Aislamiento Multi-Tenant Estricto**: Inyección forzosa de `tenantId` en capa de datos, tokens firmados con JWT (HS256) y validación de esquemas con Zod.
-- **Cumplimiento Legal (México)**: Aviso de Privacidad y Términos y Condiciones conformes con la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP).
+## Plan de lanzamiento vigente
 
----
+Objetivo comercial: primeros diez negocios de pago en México, independientes y cadenas. El plan vigente define sprints, criterios de aceptación, puertas de lanzamiento y responsabilidades. El catálogo propuesto ya se usa en el producto de desarrollo; los precios remotos de Stripe y la aprobación fiscal/comercial siguen pendientes.
 
-## 🏗️ Arquitectura del Monorepo
+- [Plan ágil y licencias recomendadas](docs/PLAN_AGIL_LANZAMIENTO.md)
+- [Backlog de 40 historias verificables](docs/BACKLOG_LANZAMIENTO.json)
+- [Presupuesto, mantenimiento y rentabilidad](docs/COSTOS_Y_PRECIOS.md)
+- [Supuestos editables del modelo](docs/MODELO_ECONOMICO.json)
+- [Tablero Scrum y control de sesiones](docs/scrum/TABLERO.md)
+- [Primer sprint y subtareas](docs/scrum/SPRINT_01.md)
+- [ST-01: catálogo implementado, pruebas y pendientes](docs/scrum/ST01_EVIDENCIA.md)
+- [ST-02: permisos implementados, matriz y evidencia](docs/scrum/ST02_EVIDENCIA.md)
+- [Revisión actual de ST-01 a ST-04: conexiones, reintentos y comprobación previa](docs/scrum/ST01_04_REINTEGRACION.md)
 
-```text
-POS Barberia/
-├── apps/
-│   ├── api/                      # Backend REST API modular (Node.js + Express + TypeScript)
-│   │   ├── src/
-│   │   │   ├── controllers/      # Controladores HTTP desacoplados
-│   │   │   ├── middleware/       # requireAuth (JWT), requireRole, zodValidator, rateLimit
-│   │   │   ├── routes/           # Enrutamiento modular por dominio (auth, pos, citas, crm...)
-│   │   │   ├── services/         # Servicios puros y testeables (cálculo de ventas, caja, stripe, whatsapp...)
-│   │   │   └── index.ts          # Servidor Express con Helmet, CORS seguro y healthcheck
-│   │   └── package.json
-│   │
-│   └── web/                      # Frontend SPA React 18 + Vite + TailwindCSS + Lucide Icons
-│       ├── src/
-│       │   ├── components/       # Componentes visuales (Navbar, POS, Modales)
-│       │   ├── views/            # Vistas SPA (Landing, Agenda, Pos, CRM, Barberos, Legal, Portal `/b/:slug`)
-│       │   ├── utils/            # Formateadores monetarios MXN y fechas es-MX
-│       │   └── api.ts            # Cliente API tipado con autenticación Bearer
-│       └── package.json
-│
-├── packages/
-│   └── database/                 # Prisma ORM 5 (Modelado relacional, Decimales exactos y migraciones)
-│       └── prisma/
-│           └── schema.prisma
-│
-├── scripts/                      # Batería de pruebas automatizadas y utilerías operativas
-│   ├── test_phase0_security.js   # 22 tests de seguridad, bcrypt, RBAC y aislamiento tenant
-│   ├── test_phase1_financial_and_concurrency.js # 15 tests de comisiones, arqueo y concurrencia
-│   ├── test_phase2_integrations.js # 24 tests de Stripe, WhatsApp y tickets térmicos
-│   ├── test_phase3_product_suite.js # 18 tests de multi-servicio, no-show, folios y CRM
-│   ├── run_all_tests.js          # Ejecutor unificado (79/79 tests)
-│   ├── backup_restore.ps1        # Respaldo y restauración en Windows
-│   └── backup_restore.sh         # Respaldo y restauración en Linux/macOS
-│
-├── Dockerfile                    # Multi-stage build Node 20 Alpine para producción
-├── docker-compose.yml            # Stack orquestado (PostgreSQL 16 + Redis 7 + API)
-├── .env.example                  # Plantilla documentada de variables de entorno
-└── package.json                  # Scripts globales de compilación, prueba y desarrollo
-```
+Regenerar los escenarios con `node scripts/modelo_economico.js`. El cálculo no accede a cuentas, claves ni bases. Los roadmaps anteriores son antecedentes; usar este plan ante contradicciones.
 
----
+Regenerar las vistas del respaldo local con `node scripts/tablero_scrum.js`. [Notion](https://app.notion.com/p/3f02035ac0d0815499d2f73304873c63?pvs=204) es el tablero principal, ya conectado y configurado; actualizar el respaldo del backlog al cierre de cada sesión. Bitácora y decisiones documentan resultados; los IDs externos se conservan en `docs/scrum/NOTION_VINCULOS.json`. No hay sincronización automática bidireccional configurada.
 
-## 🚀 Inicio Rápido en Desarrollo Local
+## Experiencia Studio
 
-### Requisitos Previos
-- **Node.js** v18 o v20 LTS
-- **npm** v9 o superior
+- Navegación por rol, selector de sucursal y menú móvil.
+- Inicio con ventas sin propinas, citas del día, equipo, caja y señales de seguimiento.
+- Fechas del resumen según la zona horaria de cada sucursal.
+- Centro de conexiones que muestra configuración y desarrollo pendiente, sin exponer secretos.
+- Licencia con checkout externo de Stripe, sin pedir tarjeta en la aplicación ni inventar recibos.
 
-### 1. Clonar e Instalar Dependencias
-```bash
-npm install
-```
+## Arquitectura
 
-### 2. Configurar Variables de Entorno
-Copia el archivo de ejemplo para configurar tus variables locales:
-```bash
-cp .env.example .env
-```
-*(Por defecto, el entorno local utiliza una base de datos SQLite lista para usar en `packages/database/prisma/dev.db`)*.
+- `apps/web`: React, TypeScript, Vite y Tailwind.
+- `apps/api`: Express y TypeScript con JWT, roles, validación, servicios y rutas.
+- `packages/database`: Prisma; SQLite local y esquema PostgreSQL para despliegue.
+- `scripts`: desarrollo, demostración aislada y pruebas.
 
-### 3. Generar el Cliente de Base de Datos
-```bash
+## Desarrollo
+
+Instalar dependencias con `npm install`. Copiar `.env.example` a `.env` y configurar valores reales solo cuando se conecten servicios. No subir claves ni bases de datos a Git.
+
+```sh
 npm run db:generate
+npm run dev
 ```
 
-### 4. Iniciar los Servidores de Desarrollo
-En una terminal:
-```bash
-npm run dev:api     # Backend en http://localhost:3001
-```
-En otra terminal:
-```bash
-npm run dev:web     # Frontend en http://localhost:5173
-```
+La API usa 3001 y la web 5173 por defecto. El archivo `apps/web/.env.example` describe la URL de la API. Para producción definir una URL real; no conservar localhost en el frontend publicado.
 
----
+En Windows, detener los procesos que carguen el cliente Prisma antes de regenerarlo: el sistema puede bloquear la sustitución del motor mientras está en uso.
 
-## 🧪 Pruebas Automatizadas (CI / Calidad)
+## Pruebas aisladas
 
-El proyecto cuenta con **79 pruebas automatizadas** de extremo a extremo que cubren todas las áreas críticas de seguridad, transacciones financieras y concurrencia.
-
-Para ejecutar toda la batería de pruebas:
-```bash
+```sh
 npm test
-# o: node scripts/run_all_tests.js
+npm run test:commercial
 ```
 
-Para ejecutar suites individuales:
-```bash
-npm run test:phase0   # Seguridad, JWT, bcrypt y aislamiento multi-tenant (22 tests)
-npm run test:phase1   # Finanzas, comisiones, arqueo ciego y carreras de concurrencia (15 tests)
-npm run test:phase2   # Stripe webhooks, WhatsApp Cloud API y tickets térmicos (24 tests)
-npm run test:phase3   # Multi-servicio, tokens criptográficos, CRM y nómina (18 tests)
+El ejecutor recompila la API, crea bases desechables y usa su propio servidor. No reutiliza la API de desarrollo ni modifica su base. Los proveedores externos permanecen desconectados.
+
+Verificación de ST-04: **8/8 suites aprobadas tanto en SQLite aislado como en PostgreSQL real**, además de diez comprobaciones de migración, conservación y recuperación. La evidencia está en `docs/scrum/ST04_EVIDENCIA.md`. La validación de cuentas externas y hardware continúa en sus respectivas historias.
+
+Verificación actual de ST-05 (7 de octubre): **9/9 suites en cada motor**, incluidos 17 escenarios de integridad con dos procesos API. Cobro pendiente y recuperación tras perder la respuesta y recargar comprobados en demo móvil. Evidencia: `docs/scrum/ST05_EVIDENCIA.md`. Migración aditiva probada en copias aisladas; pendiente de aplicar a la base operativa con respaldo y conciliación. Los resultados actuales PostgreSQL se guardan en `POSTGRES_RESULTADOS_ACTUALES.json`, conservando el histórico ST-04. No acredita liquidación bancaria, fiscalidad ni despliegue comercial.
+
+La fuente de planes es `packages/licensing/catalog.json`. Los límites de personal son por sucursal y se comprueban en el servidor en transacciones; una reducción incompatible conserva datos y devuelve conflicto. Se usan precios `STRIPE_PRICE_<CODIGO>_TEST` o `_LIVE` según ambiente. `LICENSE_TAX_POLICY=PENDIENTE` bloquea nuevos cobros live; la revisión fiscal y el ciclo completo de Stripe se completan antes de vender.
+
+También se pueden ejecutar `npm run test:phase0`, `test:phase1`, `test:phase2` y `test:phase3`. Los scripts internos de esas fases requieren `SYSTECH_ISOLATED_TESTS=true`; utilizar los comandos de npm para que preparen un entorno seguro.
+
+## Demostración sin datos reales
+
+```sh
+npm run demo:api
 ```
 
----
+Crea negocios ficticios en una base separada y sirve la API en 3101. Iniciar la web con `VITE_API_URL=http://localhost:3101/api` y:
 
-## 🐳 Despliegue con Docker y Docker Compose
-
-Para levantar el entorno completo con **PostgreSQL 16**, **Redis 7** y la **API de SYSTECH**:
-
-```bash
-docker compose up -d --build
+```sh
+npm run dev --workspace=@systech/web -- --host 127.0.0.1 --port 5178 --strictPort
 ```
 
-El servidor backend responderá de inmediato en `http://localhost:3001/api/health`.
+Cuenta ficticia: `dueno@elbigote.com` / `Dueno123!`. No desplegar las cuentas de demostración en producción.
 
-Para detener el stack:
-```bash
-docker compose down
-```
+## Compilación y despliegue
 
----
-
-## 📦 Construcción para Producción
-
-Para compilar todos los paquetes con TypeScript y Vite:
-```bash
+```sh
 npm run build
 ```
-- El frontend compilado y optimizado se genera en `apps/web/dist/` (listo para servir en Cloudflare Pages, Vercel o CDN).
-- El backend compilado se genera en `apps/api/dist/` (listo para ejecutar con `node apps/api/dist/index.js`).
 
----
+Docker cambia al esquema PostgreSQL y aplica migraciones versionadas. Si una migración falla, el arranque se detiene; no acepta pérdida de datos como fallback. El contexto de construcción excluye secretos y bases locales.
 
-## 💾 Respaldos de Base de Datos
+ST-04 validó PostgreSQL real: instalación limpia, copia anonimizada, precisión/restricciones, migración fallida recuperada y restauración a otra base. Las ocho suites aprobaron contra PostgreSQL; ver `docs/scrum/ST04_EVIDENCIA.md` y `docs/POSTGRES_MIGRACIONES_Y_RECUPERACION.md`. Repetir con `npm run test:postgres`; requiere Python y PostgreSQL local aislado, o `SYSTECH_TEST_PG_URL` para CI. El workflow remoto está preparado, sin ejecución GitHub todavía. El contenedor Docker y el alojamiento definitivo siguen pendientes en ST-13. Redis aparece en Compose pero todavía no funciona como cola de tareas; Sentry tampoco está instrumentado.
 
-### En Windows (PowerShell):
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/backup_restore.ps1 -Action backup
-```
+## Conexiones
 
-### En Linux / Servidores de Producción:
-```bash
-chmod +x scripts/backup_restore.sh
-./scripts/backup_restore.sh
-```
+Stripe cobra la licencia de SYSTECH. Ya se verificó un pago de sandbox desde Checkout hasta la activación automática, incluyendo firmas incorrectas, duplicados y factura antes de checkout. Para repetirlo: `npm run stripe:listen`, luego `npm run demo:stripe`; ver guía de conexiones. El receptor de producción y el ciclo completo de facturación todavía requieren validación.
 
----
+Los cobros de los clientes de cada barbería requieren una integración de comercio independiente. WhatsApp manual genera enlaces; configurar un token global no conecta números por barbería. El servicio preliminar de CFDI necesita organización por RFC e idempotencia antes de ofrecerse.
 
-## ⚖️ Cumplimiento Legal y Privacidad (LFPDPPP)
+- [Dirección de producto, cambios y bloqueantes](docs/REINVENTAR_SYSTECH.md)
+- [Guía de configuración asistida](docs/GUIA_CONEXIONES_ASISTIDAS.md)
 
-- **Aviso de Privacidad**: Disponible públicamente en `/privacidad` con detalles de finalidades primarias y secundarias, medidas de seguridad de datos y correo para ejercicio de derechos ARCO (`privacidad@systech.mx`).
-- **Términos y Condiciones**: Disponibles públicamente en `/terminos` detallando el acuerdo de software SaaS, disponibilidad del 99.5% y propiedad inalienable de los datos de cada barbería.
-- **Consentimiento del Cliente Final**: Casilla explícita y obligatoria antes de confirmar reservaciones en el portal público `/b/:slug`.
-
----
-
-© 2026 SYSTECH STUDIO. Todos los derechos reservados.
+La documentación legal, contacto de soporte, SLA y ofertas existentes necesitan datos reales y revisión profesional antes de publicarse como compromisos comerciales.

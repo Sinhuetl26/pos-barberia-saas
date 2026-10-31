@@ -1,0 +1,171 @@
+{
+  "fecha": "2026-10-08",
+  "ambiente": "SQLite desechable; cuentas y ventas ficticias",
+  "dispositivos": "Emulación de navegador, no dispositivos físicos",
+  "viewports": [
+    {
+      "ancho": 390,
+      "alto": 844
+    },
+    {
+      "ancho": 768,
+      "alto": 1024
+    },
+    {
+      "ancho": 1440,
+      "alto": 900
+    }
+  ],
+  "hardwareFisico": false,
+  "pagosBancariosReales": false,
+  "escenarios": [
+    "Venta: respuesta perdida tras confirmar, recuperación después de recarga sin duplicado",
+    "Dos barberos con cuentas propias; avisos al dueño sin recargar y entrega de efectivo",
+    "Otro negocio con venta y entrega propias; permisos cubiertos además por regresión API",
+    "Reserva pública y venta vinculada únicas al repetir clic",
+    "Dos cortes cuadrados; cierre con respuesta perdida recuperado sin alertas nativas",
+    "Sin conexión bloquea nuevo cobro; contingencia requiere recuperar la operación pendiente",
+    "Popup bloqueado, HTTP 503 y pérdida de conexión al reimprimir con error visible",
+    "Reimpresión 58/80 mm desde historial; comprobante sin abandonar caja",
+    "Sin desbordamiento horizontal en recorridos públicos/POS/corte emulados"
+  ],
+  "negocios": [
+    {
+      "negocio": "el-bigote",
+      "ventas": [
+        {
+          "folio": "A-000004",
+          "total": "280",
+          "metodoPago": "EFECTIVO",
+          "cobradoPorNombre": "mateo@counter.invalid",
+          "barbero": {
+            "nombre": "Mateo Silva"
+          },
+          "vinculadaACita": false
+        },
+        {
+          "folio": "A-000005",
+          "total": "280",
+          "metodoPago": "TARJETA",
+          "cobradoPorNombre": "dueno@elbigote.com",
+          "barbero": {
+            "nombre": "Carlos \"Charly\" Mendoza"
+          },
+          "vinculadaACita": true
+        },
+        {
+          "folio": "A-000003",
+          "total": "280",
+          "metodoPago": "EFECTIVO",
+          "cobradoPorNombre": "barbero@elbigote.com",
+          "barbero": {
+            "nombre": "Carlos \"Charly\" Mendoza"
+          },
+          "vinculadaACita": false
+        },
+        {
+          "folio": "A-000002",
+          "total": "280",
+          "metodoPago": "EFECTIVO",
+          "cobradoPorNombre": "dueno@elbigote.com",
+          "barbero": {
+            "nombre": "Carlos \"Charly\" Mendoza"
+          },
+          "vinculadaACita": false
+        }
+      ],
+      "cortes": [
+        {
+          "estado": "CERRADO",
+          "fondoInicial": "1000",
+          "totalEfectivo": "840",
+          "totalTarjeta": "0",
+          "conteoEfectivoReal": "1840",
+          "descuadre": "0"
+        },
+        {
+          "estado": "CERRADO",
+          "fondoInicial": "0",
+          "totalEfectivo": "0",
+          "totalTarjeta": "280",
+          "conteoEfectivoReal": "0",
+          "descuadre": "0"
+        }
+      ],
+      "custodia": [
+        {
+          "_count": {
+            "_all": 4
+          },
+          "_sum": {
+            "monto": "0"
+          },
+          "tipo": "ENTREGA"
+        },
+        {
+          "_count": {
+            "_all": 4
+          },
+          "_sum": {
+            "monto": "1120"
+          },
+          "tipo": "VENTA"
+        }
+      ]
+    },
+    {
+      "negocio": "la-clasica",
+      "ventas": [
+        {
+          "folio": "A-000001",
+          "total": "190",
+          "metodoPago": "EFECTIVO",
+          "cobradoPorNombre": "barbero@other-counter.invalid",
+          "barbero": {
+            "nombre": "Fernando Ruiz"
+          },
+          "vinculadaACita": false
+        }
+      ],
+      "cortes": [
+        {
+          "estado": "ABIERTO",
+          "fondoInicial": "0",
+          "totalEfectivo": "0",
+          "totalTarjeta": "0",
+          "conteoEfectivoReal": null,
+          "descuadre": null
+        }
+      ],
+      "custodia": [
+        {
+          "_count": {
+            "_all": 2
+          },
+          "_sum": {
+            "monto": "0"
+          },
+          "tipo": "ENTREGA"
+        },
+        {
+          "_count": {
+            "_all": 1
+          },
+          "_sum": {
+            "monto": "190"
+          },
+          "tipo": "VENTA"
+        }
+      ]
+    }
+  ],
+  "clienteReserva": {
+    "totalVisitas": 1,
+    "gastoTotal": "280",
+    "citas": [
+      {
+        "estado": "COMPLETADA"
+      }
+    ]
+  }
+}

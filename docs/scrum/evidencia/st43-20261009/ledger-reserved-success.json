@@ -1,0 +1,95 @@
+{
+  "recordedAt": "2026-10-10T02:02:54.168Z",
+  "stage": "reserved-success",
+  "engine": "sqlite-disposable",
+  "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+  "expected": {
+    "service": 200,
+    "commissionPercent": 40,
+    "commission": 80,
+    "openingCash": 500,
+    "cashReceived": 300,
+    "change": 100,
+    "barberCustodyBeforeHandoff": 200,
+    "handedOffCash": 200,
+    "barberCustodyAfterHandoff": 0,
+    "cashCount": 700,
+    "difference": 0,
+    "sales": 1,
+    "appointments": 1,
+    "commissions": 1
+  },
+  "counts": {
+    "appointments": 1,
+    "sales": 0,
+    "commissions": 0,
+    "turns": 1,
+    "cash": 0,
+    "customers": 1,
+    "kardex": 0
+  },
+  "appointments": [
+    {
+      "id": "e937e2ab-6d73-4f1e-a385-03b021d0bad3",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "barberoId": "161c11d0-ccd9-426a-9b82-d74170344ece",
+      "clienteId": "ec8c205a-5ff2-4162-82d2-f82c1f6d6ce2",
+      "servicioId": "dae7e51c-66e6-4c6e-99a4-067e49698529",
+      "nombreServicio": "Corte de demostración",
+      "fechaHora": "2026-10-10T03:00:00.000Z",
+      "duracionMinutos": 30,
+      "estado": "PENDIENTE",
+      "precioEstimado": "200",
+      "codigoReserva": "RES-FE132B1ACC4802F2"
+    }
+  ],
+  "sales": [],
+  "commissions": [],
+  "turns": [
+    {
+      "id": "e02cb481-8151-4cd9-9f8a-d24c6caabb97",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "usuarioId": "f6fd760f-fc81-484e-bdf1-6a7f6628e82a",
+      "fechaApertura": "2026-10-10T01:58:12.180Z",
+      "fechaCierre": null,
+      "fondoInicial": "500",
+      "totalEfectivo": "0",
+      "totalTarjeta": "0",
+      "totalTransferencia": "0",
+      "totalPropinas": "0",
+      "totalVentas": "0",
+      "conteoEfectivoReal": null,
+      "descuadre": null,
+      "notas": "QA ST43 · fondo contado ficticio 500",
+      "resumenJson": null,
+      "cierreHash": null,
+      "estado": "ABIERTO"
+    }
+  ],
+  "cash": [],
+  "customers": [
+    {
+      "id": "ec8c205a-5ff2-4162-82d2-f82c1f6d6ce2",
+      "nombre": "Cliente QA ST43 ficticio",
+      "totalVisitas": 0,
+      "gastoTotal": "0",
+      "fechaUltimaVisita": null
+    }
+  ],
+  "service": {
+    "id": "dae7e51c-66e6-4c6e-99a4-067e49698529",
+    "precioVenta": "200",
+    "stockActual": 0,
+    "tipo": "SERVICIO"
+  },
+  "notices": [
+    {
+      "id": "e5671c74-3e4c-4ccb-bb8c-16d506f68fdb",
+      "tipo": "CONFIRMACION_CITA",
+      "canal": "INTERNO",
+      "estado": "REGISTRADO",
+      "fecha": "2026-10-10T02:02:06.736Z"
+    }
+  ]
+}

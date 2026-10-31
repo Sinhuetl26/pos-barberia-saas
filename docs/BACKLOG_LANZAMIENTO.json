@@ -1,0 +1,1130 @@
+{
+  "producto": "SYSTECH Studio",
+  "fecha": "2026-10-11",
+  "objetivo": "Validar 1–3 pilotos independientes y su primera renovación; después llegar a diez negocios pagando y habilitar cadenas por separado",
+  "reglas": {
+    "metodo": "Sprints semanales con tablero Kanban; prioridad por integridad, salida comercial y aprendizaje",
+    "estado_inicial": "pendiente",
+    "estados": [
+      "pendiente",
+      "lista",
+      "en_curso",
+      "revision",
+      "validada",
+      "bloqueada"
+    ],
+    "limite_en_curso": 2,
+    "limite_revision": 2,
+    "tallas": "S: acotada; M: varias piezas; L: dividir después de investigación. No son días ni horas.",
+    "sprint": "Secuencia reorganizada 9/oct: Sprint 3 demo/demanda; 4 operación; 5 piloto/renovación; 6 diferenciación y salida independiente; 7 cadenas; 8 conectores; 9 expansión. Bloques sin fecha garantizada.",
+    "prioridades": "P0 impide vender el alcance afectado; P1 condiciona una capacidad anunciada; P2 diferenciación posterior",
+    "validada": "Solo con criterios de aceptación cumplidos, evidencia y Definition of Done del plan",
+    "limite_por_implementador": 1,
+    "coordinacion": "Hasta dos historias con implementadores distintos y archivos separados; una por implementador. Generación y compilación compartida esperan al dueño del entorno de pruebas."
+  },
+  "historias": [
+    {
+      "id": "ST-01",
+      "sprint": 1,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "bloqueada",
+      "titulo": "Catálogo único de planes y límites por sucursal",
+      "depende_de": [],
+      "aceptacion": [
+        "Esencial, Pro y Cadena definen precio, tratamiento fiscal, sucursales y barberos en una sola fuente; front, API y Stripe usan identificadores compatibles",
+        "Crear, reactivar o importar capacidad por encima del plan se rechaza en servidor; downgrade no borra datos y exige resolver exceso",
+        "Prueba con acceso directo a API, no solo ocultamiento visual; precios de producción separados de sandbox"
+      ],
+      "evidencia": "Catálogo único y límites probados; auditoría técnica ST01–07 del 9/oct. Importador, ciclo Stripe y comprobantes mantienen sus historias. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Documentar la decisión más IVA y su revisión fiscal; configurar catálogo y verificar total. No requiere repetir manualmente permisos/capacidad ni cerrar Stripe completo.",
+      "bloqueo": "Tratamiento fiscal definitivo pendiente de revisión contable (DEC-04); política actual PENDIENTE bloquea checkout live.",
+      "sprint_original": 1
+    },
+    {
+      "id": "ST-02",
+      "sprint": 1,
+      "prioridad": "P0",
+      "talla": "L",
+      "estado": "validada",
+      "titulo": "Aislamiento de negocios y permisos completos",
+      "depende_de": [],
+      "aceptacion": [
+        "Inventario de rutas con tenant, sucursal, dueño, gerente, cajero y barbero; acceso a IDs ajenos no devuelve datos ni permite cambios",
+        "Probar lectura, escritura, exportaciones, archivos y rutas públicas con dos negocios y dos sucursales",
+        "Barbero no ve caja ni ingresos ajenos; gerente solo ve sucursales asignadas; excepciones auditadas"
+      ],
+      "evidencia": "147 rutas actuales; 19 escenarios de autorización y 6 pruebas dirigidas de compras/inventario/CSV aprobados por motor. Dos negocios, cuatro sucursales, cinco roles; denegados sin cambios. Acta y reporte QA del 9 de octubre en Reporte del equipo. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Alcance técnico aceptado por el equipo. Conservar regresión; requisitos externos y producción permanecen en sus historias.",
+      "bloqueo": "",
+      "fecha_validacion": "2026-10-09",
+      "sprint_original": 1
+    },
+    {
+      "id": "ST-03",
+      "sprint": 1,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "validada",
+      "titulo": "Recuperar acceso y proteger sesiones",
+      "depende_de": [],
+      "aceptacion": [
+        "Correo verificado y recuperación con token de un solo uso, caducidad y limitación de intentos sin enumerar cuentas",
+        "Cambiar contraseña revoca sesiones según política; invitación de empleado no comparte contraseña del dueño",
+        "Secretos fuera de logs, repositorio y respuestas; revisión de dependencias con hallazgos críticos resueltos o mitigados con evidencia"
+      ],
+      "evidencia": "19 escenarios de cuentas/sesiones por motor. Auditoría npm renovada 9/oct: 0 producción, 0 críticos; 9 avisos de desarrollo documentados. Poda Docker simulada; imagen operativa pendiente ST-13. Acta y reporte QA del 9 de octubre en Reporte del equipo. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Alcance técnico aceptado por el equipo. Conservar regresión; requisitos externos y producción permanecen en sus historias.",
+      "bloqueo": "",
+      "fecha_validacion": "2026-10-09",
+      "sprint_original": 1
+    },
+    {
+      "id": "ST-04",
+      "sprint": 1,
+      "prioridad": "P0",
+      "talla": "L",
+      "estado": "validada",
+      "titulo": "PostgreSQL y migraciones seguras",
+      "depende_de": [],
+      "aceptacion": [
+        "Crear base PostgreSQL limpia y actualizar una copia anonimizada mediante migraciones versionadas sin db push destructivo",
+        "Ejecutar regresión contra PostgreSQL; consistencia de tipos, decimales, fechas, índices y restricciones",
+        "Procedimiento de recuperación de migración fallida probado sin tocar la base de trabajo"
+      ],
+      "evidencia": "9/oct: PostgreSQL aislado, 13 comprobaciones de migración/recuperación/restore y 13/13 suites (274 checks). Base operativa conservada por hash. Acta y reporte QA del 9 de octubre en Reporte del equipo. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Alcance ST-04 completado por el equipo. Despliegue/CI remoto en ST-13 y respaldo operativo/RPO/RTO en ST-14.",
+      "bloqueo": "",
+      "fecha_validacion": "2026-10-09",
+      "sprint_original": 1
+    },
+    {
+      "id": "ST-05",
+      "sprint": 2,
+      "prioridad": "P0",
+      "talla": "L",
+      "estado": "validada",
+      "titulo": "Venta, stock y folio consistentes bajo concurrencia",
+      "depende_de": [
+        "ST-04",
+        "ST-02"
+      ],
+      "aceptacion": [
+        "Dos envíos simultáneos de la misma intención crean una venta y un movimiento de stock; clave idempotente aislada por negocio",
+        "Dos cajeros no venden la última unidad dos veces ni generan folios duplicados",
+        "Cálculos de descuentos, impuestos configurados, propinas y pagos mixtos cuadran en centavos; rollback conserva caja y stock"
+      ],
+      "evidencia": "17 escenarios de venta/stock/folio por motor, dos procesos API; 6 comprobaciones adicionales de recepción concurrente y rollback por motor. Recuperación de respuesta perdida documentada y revisión visual vigente. Acta y reporte QA del 9 de octubre en Reporte del equipo. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Alcance técnico aceptado por el equipo. Conservar regresión; requisitos externos y producción permanecen en sus historias.",
+      "bloqueo": "",
+      "fecha_validacion": "2026-10-09",
+      "sprint_original": 2
+    },
+    {
+      "id": "ST-06",
+      "sprint": 2,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "validada",
+      "titulo": "Caja, devoluciones y comisiones trazables",
+      "depende_de": [
+        "ST-05"
+      ],
+      "aceptacion": [
+        "Apertura, entradas, retiros y corte ciego cuadran con efectivo separado de tarjetas y transferencias",
+        "Cancelación o devolución exige permiso y motivo; no elimina historial y revierte stock/comisión correctamente",
+        "Reglas de comisión y redondeo se documentan; venta histórica conserva las reglas aplicadas",
+        "Barbero registra y cobra sus servicios desde su celular con cuenta propia; cada venta conserva sucursal, barbero que prestó el servicio y usuario que registró/cobró",
+        "Confirmar una venta genera aviso persistente dentro del panel del dueño, sin recargar la pantalla; incluye barbero, servicio, importe, medio de pago y quién cobró, sin duplicarse al reintentar ni mezclarse entre negocios",
+        "El dinero recibido por un barbero y su entrega a caja quedan conciliados: entregar efectivo cambia su custodia, sin volver a sumar venta ni alterar la comisión"
+      ],
+      "evidencia": "21 escenarios de caja/devoluciones/custodia por motor; CSV corregido (14 columnas, devolución10.01/neto20.02) con 6 pruebas dirigidas por motor. Recorrido móvil/dueño y ajustes de entrega/aviso revisados visualmente. Acta y reporte QA del 9 de octubre en Reporte del equipo. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "requisito_actualizado": "2026-10-05",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Alcance técnico aceptado por el equipo. Conservar regresión; requisitos externos y producción permanecen en sus historias.",
+      "bloqueo": "",
+      "fecha_validacion": "2026-10-09",
+      "sprint_original": 2
+    },
+    {
+      "id": "ST-07",
+      "sprint": 2,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "validada",
+      "titulo": "Agenda y reservas sin doble asignación",
+      "depende_de": [
+        "ST-04",
+        "ST-02"
+      ],
+      "aceptacion": [
+        "Dos reservas simultáneas para el mismo barbero/horario no se confirman ambas; duración, descansos y zona horaria correctos",
+        "Reserva pública limita abuso y exposición de clientes; reprogramar/cancelar usa enlace autorizado con caducidad",
+        "Cita atendida enlaza venta una sola vez; ausencia se distingue de cancelación"
+      ],
+      "evidencia": "20 escenarios de agenda/reservas por motor; concurrencia, horario, enlaces privados y cita→venta única. Recorrido observado 9/oct: reprogramación y cancelación reflejadas en agenda sin recarga. Acta y reporte QA del 9 de octubre en Reporte del equipo. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Alcance técnico aceptado por el equipo. Conservar regresión; requisitos externos y producción permanecen en sus historias.",
+      "bloqueo": "",
+      "fecha_validacion": "2026-10-09",
+      "sprint_original": 2
+    },
+    {
+      "id": "ST-08",
+      "sprint": 2,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "bloqueada",
+      "titulo": "Correo transaccional real y onboarding inicial",
+      "depende_de": [
+        "ST-03"
+      ],
+      "aceptacion": [
+        "Dominio propio y remitente verificados; SPF/DKIM y política DMARC revisadas; prueba de entrega, rebote y supresión",
+        "Dueño configura catálogo, equipo, comisiones, horario y primera caja sin datos ficticios",
+        "Error de proveedor se muestra como pendiente/fallido; nunca como correo entregado por tener una clave"
+      ],
+      "evidencia": "Implementación local y 17 escenarios de correo/onboarding SQLite aprobados el 9/oct; proveedor controlado no demuestra entrega real. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Cuando esté disponible dominio/proveedor, el equipo configura DNS y ejecuta pruebas autorizadas; registrar recibos y estados reales.",
+      "bloqueo": "Falta dominio/remitente verificados y prueba externa de entrega, rebote y supresión.",
+      "sprint_original": 2
+    },
+    {
+      "id": "ST-09",
+      "sprint": 2,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "bloqueada",
+      "titulo": "Usabilidad de mostrador y tickets reales",
+      "depende_de": [
+        "ST-06",
+        "ST-07"
+      ],
+      "aceptacion": [
+        "Recorrido reserva/venta/corte probado en móvil, tablet y computadora con errores recuperables y sin doble cobro al repetir clic",
+        "Ticket legible probado en al menos un modelo físico 58 mm y uno 80 mm; publicar matriz compatible",
+        "Caída de red informa venta sin confirmar; datos móviles como contingencia documentada; no anunciar venta offline ni apertura de gaveta sin prueba",
+        "Probar barbero cobrando desde celular y dueño supervisando desde laptop/PC: aviso sin recargar, venta única, identificación de prestador/cobrador y conciliación de entrega de efectivo; repetir con dos barberos y cuentas de negocios distintos"
+      ],
+      "requisito_actualizado": "2026-10-05",
+      "ultima_sesion": "2026-10-09",
+      "evidencia": "Compilación API/web y build Vite final aprobados; flujo emulado, tickets y caja con revisión visual final 9/oct. Hardware sin certificar. Acta: docs/scrum/CIERRE_REVISION_ST01_09_2026-10-09.md; QA: docs/scrum/QA_VALIDACION_ST01_09_2026-10-09.md.",
+      "siguiente_paso": "Probar equipo prestado o de piloto y documentar matriz compatible; no es obligatorio comprar impresora hoy ni pedir revisión manual general.",
+      "bloqueo": "Faltan pruebas en dispositivos reales e impresoras físicas 58 mm y 80 mm; no hay equipo disponible.",
+      "sprint_original": 2
+    },
+    {
+      "id": "ST-10",
+      "sprint": 4,
+      "prioridad": "P0",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Ciclo Stripe completo y portal de licencia",
+      "depende_de": [
+        "ST-01",
+        "ST-04"
+      ],
+      "aceptacion": [
+        "Alta, renovación, impago, recuperación, cancelación al final de periodo, cambio de plan y prorrateo sincronizan licencia con Stripe",
+        "Eventos created/updated/deleted e invoice manejan duplicados y desorden sin retroceder estado vigente; política de gracia explícita",
+        "Portal solo para dueño; cambios y límites aplican tras confirmación remota; no habilitar pago por URL de retorno"
+      ],
+      "evidencia": "Matriz de eventos sandbox y conciliación con API Stripe",
+      "sprint_original": 3,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-11",
+      "sprint": 4,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Intentos de checkout, promociones y conciliación",
+      "depende_de": [
+        "ST-10"
+      ],
+      "aceptacion": [
+        "Intento persistente e idempotente evita suscripciones paralelas; conciliar antes de abrir nueva sesión",
+        "Promoción temporal tiene vigencia y límite atómico; confirmar impuestos y totales sin descuento permanente accidental",
+        "Reconciliador detecta suscripción divergente y alerta/repara con auditoría; disputa/reembolso de licencia tiene procedimiento"
+      ],
+      "evidencia": "Dos checkouts simultáneos, promoción expirada y simulación de divergencia",
+      "sprint_original": 3,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-12",
+      "sprint": 3,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "validada",
+      "titulo": "Cola durable y scheduler atómico",
+      "depende_de": [
+        "ST-04"
+      ],
+      "aceptacion": [
+        "Worker separado con reintentos, deduplicación, límites y tareas fallidas visibles; reiniciar HTTP no pierde tarea confirmada",
+        "Dos réplicas no ejecutan el mismo recordatorio como dos entregas nuevas; exclusión distribuida atómica",
+        "Reejecutar tarea y pausar proveedor requiere permisos; logs sin teléfono completo, token ni certificados"
+      ],
+      "evidencia": "14/14 escenarios de cola por motor; cuentas19, correo17, autorización19 e integraciones25 por motor. ST12_INDICE_EVIDENCIAS_2026-10-10 y ST12_QA_VISIBLE: reintento único, cancelación, pausas persistidas, separación de negocios/roles y recuperación de consulta; proveedor controlado, sin entrega real. Demo compatible y restore aislado verificados; build API/web aprobado.",
+      "sprint_original": 3,
+      "siguiente_paso": "Alcance técnico aceptado por coordinación. ST13 integra API y worker supervisados y capacidad/costo medidos; ST08/ST21 conservan entrega real por proveedor. Completar conversaciones reales ST44 y delimitar ST10 sandbox sin habilitar cobros live.",
+      "ultima_sesion": "2026-10-10",
+      "fecha_validacion": "2026-10-10",
+      "bloqueo": ""
+    },
+    {
+      "id": "ST-13",
+      "sprint": 4,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Despliegue reproducible con pruebas y observabilidad",
+      "depende_de": [
+        "ST-04",
+        "ST-12"
+      ],
+      "aceptacion": [
+        "Staging y producción separados; HTTPS, secretos, CORS, cookies y URLs correctos; ninguna cuenta demo en producción",
+        "CI ejecuta regresión, compilación y migraciones; smoke test y rollback probado; health/readiness distinguen dependencias",
+        "Alertas accionables de API, pagos, cola y base, con destinatario real; errores de servidor no exponen secretos"
+      ],
+      "evidencia": "Pipeline, despliegue staging, rollback y alerta recibida",
+      "sprint_original": 3,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-14",
+      "sprint": 4,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Respaldo, restauración y exportación",
+      "depende_de": [
+        "ST-13"
+      ],
+      "aceptacion": [
+        "Respaldos cifrados y copia independiente; restaurar en entorno aislado y conciliar ventas/caja/clientes",
+        "Demostrar RPO interno máximo 24 h y RTO máximo 4 h; si no se logra, revisar arquitectura antes de vender ese compromiso",
+        "Dueño exporta sus datos; prueba de restauración no mezcla negocios ni expone certificados; política de retención y eliminación aprobada"
+      ],
+      "evidencia": "Acta de restauración cronometrada y exportación conciliada",
+      "sprint_original": 3,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-15",
+      "sprint": 4,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Identidad comercial, privacidad y soporte operable",
+      "depende_de": [],
+      "aceptacion": [
+        "Razón social, dominio y contactos reales; términos, privacidad y tratamiento de datos revisados por profesional",
+        "Página y demo solo prometen funciones verificadas; eliminar descuento vitalicio y SLA sin respaldo; tratamiento fiscal/renovación/cancelación claros",
+        "Canal, responsable y horario de soporte cubiertos; procedimiento de incidentes y avisos al cliente preparado"
+      ],
+      "evidencia": "Textos revisados, prueba de canal y matriz de promesas",
+      "sprint_original": 3,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-16",
+      "sprint": 4,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Cobranza de producción y comprobantes del SaaS",
+      "depende_de": [
+        "ST-10",
+        "ST-11",
+        "ST-13",
+        "ST-15"
+      ],
+      "aceptacion": [
+        "Identidad bancaria/fiscal y cuenta Stripe live habilitadas por el titular; llaves live solo en gestor de secretos",
+        "Webhook público HTTPS, catálogo live y portal validado; pago controlado autorizado concilia banco/Stripe/licencia",
+        "Comprobante de licencia distingue recibo Stripe de CFDI; circuito fiscal del propio SaaS validado con contador"
+      ],
+      "evidencia": "Registro de prueba autorizada y revisión de comprobante, sin secretos",
+      "sprint_original": 3,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-17",
+      "sprint": 5,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Piloto acompañado de independientes",
+      "depende_de": [
+        "ST-05",
+        "ST-06",
+        "ST-07",
+        "ST-08",
+        "ST-09",
+        "ST-14",
+        "ST-15",
+        "ST-16"
+      ],
+      "aceptacion": [
+        "Dos negocios con datos separados completan cinco días operativos consecutivos de agenda, venta, comisión, corte y exportación",
+        "100% de ventas y caja del piloto conciliadas; cero defectos críticos abiertos; incidentes corregidos y revalidados",
+        "Medir alta, tiempo por venta, errores, tickets y disposición real a pagar; autorización de uso de datos/testimonios"
+      ],
+      "evidencia": "Acta de piloto con líneas base y evaluación del dueño",
+      "sprint_original": 4,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-18",
+      "sprint": 7,
+      "prioridad": "P0",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Cadena: permisos, catálogo y comparación de sucursales",
+      "depende_de": [
+        "ST-01",
+        "ST-02",
+        "ST-06"
+      ],
+      "aceptacion": [
+        "Cadena con tres sucursales, gerente restringido y dueño central; cambio de sucursal no conserva datos ajenos",
+        "Catálogo compartido y excepciones locales explícitas; ingresos netos, propinas, comisiones y caja comparan periodos equivalentes",
+        "Alta/baja de sucursal respeta licencia y conserva historial; una sucursal no altera caja de otra"
+      ],
+      "evidencia": "Recorrido multisucrusal y reporte conciliado",
+      "sprint_original": 4,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-19",
+      "sprint": 7,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Piloto de cadena y carga concurrente",
+      "depende_de": [
+        "ST-17",
+        "ST-18"
+      ],
+      "aceptacion": [
+        "Una cadena con al menos dos sucursales completa cinco días operativos; caja y permisos revisados por gerente y dueño",
+        "Carga inicial objetivo 50 sesiones activas y 10 escrituras concurrentes durante 15 minutos, p95 API menor a 1 s sin doble venta/reserva ni errores de integridad",
+        "Registrar dataset, hardware y límites de prueba; reestimar capacidad a partir de resultados"
+      ],
+      "evidencia": "Acta de cadena y reporte de carga reproducible",
+      "sprint_original": 4,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-20",
+      "sprint": 5,
+      "prioridad": "P0",
+      "talla": "S",
+      "estado": "pendiente",
+      "titulo": "Puerta de piloto pagado independiente y oferta inicial",
+      "depende_de": [
+        "ST-17",
+        "ST-45",
+        "ST-16",
+        "ST-15",
+        "ST-01"
+      ],
+      "aceptacion": [
+        "P0 del núcleo, fiscalidad, correo, dispositivos, licencia live, respaldo/restauración y actas de ST-17/ST-45 aprobados; cero defectos críticos o de alto impacto en venta/cierre abiertos",
+        "Oferta para una sucursal dentro de capacidad medida; límites, total fiscal, renovación, cancelación y soporte explícitos. Cadena no se autoriza con esta acta",
+        "Ofertar solo núcleo y funciones habilitadas, sin cobrar add-ons no disponibles; alta y cancelación verificadas",
+        "Tablero comercial con diez candidatos reales y responsables; no contar pruebas gratis como MRR"
+      ],
+      "evidencia": "Checklist go/no-go y primeras ofertas con alcance",
+      "sprint_original": 4,
+      "ultima_repriorizacion": "2026-10-09",
+      "siguiente_paso": "Preparar acta para independientes tras ST-17 y carga ST-45; la autorización de Cadena se conserva en ST-46."
+    },
+    {
+      "id": "ST-21",
+      "sprint": 8,
+      "prioridad": "P1",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "WhatsApp conectado por barbería",
+      "depende_de": [
+        "ST-02",
+        "ST-12",
+        "ST-15"
+      ],
+      "aceptacion": [
+        "Alta por negocio con Meta, número e identidad correspondientes; credenciales cifradas, revocables y aisladas",
+        "Estado conectado requiere comprobación real; webhook firmado mapea negocio y deduplica eventos",
+        "Plantillas y permisos aprobados por Meta; desconectar no afecta otras barberías; no usar token global como conexión multi-tenant"
+      ],
+      "evidencia": "Dos números/negocios de prueba, alta y revocación",
+      "sprint_original": 5,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-22",
+      "sprint": 8,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Recordatorios con consentimiento y consumo",
+      "depende_de": [
+        "ST-07",
+        "ST-21"
+      ],
+      "aceptacion": [
+        "Consentimiento registrable, baja simple y categorías de plantilla correctas; reprogramación cancela recordatorio anterior",
+        "Entrega, rechazo, reintento y cuota visibles; balance de consumo con alerta y límite, sin envíos ilimitados",
+        "Probar mensajes en números autorizados y conciliar costo del proveedor; no afirmar entrega sin webhook"
+      ],
+      "evidencia": "Entrega real, rechazo y conciliación de consumo",
+      "sprint_original": 5,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-23",
+      "sprint": 8,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Cuotas y cobro transparente de add-ons",
+      "depende_de": [
+        "ST-01",
+        "ST-11",
+        "ST-22"
+      ],
+      "aceptacion": [
+        "Catálogo de créditos/consumos indica precio total, vigencia y excedentes; autorización antes de cobro adicional",
+        "Consumo idempotente por negocio y balance no negativo; factura distingue licencia y adicionales",
+        "Avisos de 80% y 100% de cuota; pausar opcionales no bloquea caja del negocio"
+      ],
+      "evidencia": "Cuota agotada, reintento duplicado y cobro conciliado",
+      "sprint_original": 5,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-24",
+      "sprint": 8,
+      "prioridad": "P1",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "CFDI por emisor y certificados protegidos",
+      "depende_de": [
+        "ST-02",
+        "ST-12",
+        "ST-15"
+      ],
+      "aceptacion": [
+        "Organización Facturapi por RFC del negocio, con sandbox/live separados, CSD cifrado y acceso mínimo",
+        "Datos fiscales y vigencia de certificados validados; factura emitida por el emisor correcto; no filtrar CSD en exportaciones/logs",
+        "Titular y contador revisan flujo fiscal antes de activar producción"
+      ],
+      "evidencia": "Dos emisores de prueba y matriz de protección de CSD",
+      "sprint_original": 6,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-25",
+      "sprint": 8,
+      "prioridad": "P1",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Timbrado, descarga, cancelación y conciliación",
+      "depende_de": [
+        "ST-06",
+        "ST-24"
+      ],
+      "aceptacion": [
+        "Venta se timbra una vez incluso tras timeout; UUID, estado y XML/PDF persistidos con acceso del negocio",
+        "Cancelación, sustitución y reintentos concilian estado del PAC sin perder evidencia; alcance de factura global documentado con contador",
+        "Cuota y costo por timbre conciliados; factura rechazada no marca venta como facturada"
+      ],
+      "evidencia": "Timeout/reintento, cancelación y descarga con revisión fiscal",
+      "sprint_original": 6,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-26",
+      "sprint": 5,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Altas de los primeros pilotos y mesa de ayuda",
+      "depende_de": [
+        "ST-20"
+      ],
+      "aceptacion": [
+        "Guía de configuración/importación con validación y reversión; capacitación y primera caja supervisadas",
+        "Ticket con severidad, responsable, tiempos, resolución y base de conocimiento; exportación al cancelar",
+        "Medir minutos de soporte por cliente y costo real, no solo número de cuentas",
+        "Aplicar onboarding a los primeros 1–3 comercios autorizados, registrar primera caja y tiempo real. Llegar a diez clientes de pago se conserva como ST-48, no como requisito para instrumentar soporte."
+      ],
+      "evidencia": "Checklist de onboarding y tablero de tickets",
+      "sprint_original": 6,
+      "ultima_repriorizacion": "2026-10-09",
+      "siguiente_paso": "Preparar guía y canal antes del piloto; aceptación con altas reales después de ST-20."
+    },
+    {
+      "id": "ST-27",
+      "sprint": 5,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Landing y demo que venden resultados comprobables",
+      "depende_de": [
+        "ST-20",
+        "ST-15",
+        "ST-44"
+      ],
+      "aceptacion": [
+        "Esencial y Pro de una sucursal muestran límites, impuestos, cuotas, cancelación y funciones comprobadas; Cadena figura pendiente o fuera de contratación hasta ST-46. Cada add-on requiere su validación propia",
+        "Demo de 10 minutos verifica reserva, venta, comisión y corte; ejemplos no se presentan como testimonios",
+        "Promociones con término definido; contacto real; registrar origen de lead y conversión sin datos personales innecesarios"
+      ],
+      "evidencia": "Matriz landing/producto y demo grabada",
+      "sprint_original": 6,
+      "ultima_repriorizacion": "2026-10-09",
+      "siguiente_paso": "Guion/entrevistas se adelantan en ST-44; publicación comercial mantiene ST-20/ST-15 y alcance autorizado."
+    },
+    {
+      "id": "ST-28",
+      "sprint": 5,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Métricas reales de SaaS y costo",
+      "depende_de": [
+        "ST-11",
+        "ST-26"
+      ],
+      "aceptacion": [
+        "MRR excluye IVA, trials, consumos únicos y cuentas manualmente activadas sin pago; define churn, mora y clientes activos",
+        "Tablero de ingresos, margen, soporte, activación y retención por cohorte con datos conciliados",
+        "Revisar precios al completar diez clientes o 60 días; comparar costos observados con modelo económico"
+      ],
+      "evidencia": "Definiciones versionadas y reporte conciliado",
+      "sprint_original": 6,
+      "ultima_repriorizacion": "2026-10-09",
+      "siguiente_paso": "Preparar definiciones/instrumentación antes de abrir piloto; validar conciliación con datos reales desde el primer cliente, sin exigir diez cuentas."
+    },
+    {
+      "id": "ST-29",
+      "sprint": 6,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Reagendar al cobrar y ficha de preferencias",
+      "depende_de": [
+        "ST-07",
+        "ST-17"
+      ],
+      "aceptacion": [
+        "Proponer próxima visita basada en historial con confirmación del cliente, sin reservar silenciosamente",
+        "Ficha de preferencias con permisos; fotos solo con consentimiento, límites, retención y eliminación",
+        "Medir proporción de clientes que aceptan próxima cita contra línea base; no afirmar aumento de ingresos sin evidencia"
+      ],
+      "evidencia": "Avance acotado: tipo de corte y referencia privada por cita, opcionales en público/interno/walk-in. Backend17/17 referencias y19/19 autorización por motor; frontend11/11, retención11/11, recovery8/8. Recorrido Chrome guardado/agenda/recarga y móvil390 observado. Informe docs/scrum/REFERENCIA_CORTE_2026-10-11.md. Ficha histórica/reagendar/retención completa no aceptados.",
+      "sprint_original": 7,
+      "ultima_repriorizacion": "2026-10-09",
+      "ultima_sesion": "2026-10-11",
+      "siguiente_paso": "Completar ficha histórica, propuesta de próxima visita, controles de retención/eliminación posterior de fotos, revisión legal y experimento de recurrencia; conservar referencia privada de esta cita. Estado pendiente de aceptación integral."
+    },
+    {
+      "id": "ST-30",
+      "sprint": 6,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Resumen del dueño y excepciones accionables",
+      "depende_de": [
+        "ST-02",
+        "ST-06",
+        "ST-08",
+        "ST-41",
+        "ST-42"
+      ],
+      "aceptacion": [
+        "Resumen por sucursal con ventas netas, comisiones, stock y descuadres enlazados a evidencia",
+        "Alertas configurables con permisos, deduplicación y horario; sin enviar datos financieros a empleados no autorizados",
+        "Conciliar tablero con corte/exportación y probar cruce de medianoche por zona horaria",
+        "Productos más vendidos y existencias sin movimiento por sucursal/periodo con devoluciones y descuentos conciliados; costo actual solo como estimación, datos insuficientes explícitos y evidencia enlazada.",
+        "Diferencias de insumos solo después de ST-42 y conteo válido; no acusar robo. Margen histórico requiere costos aplicados y cobertura, no costo actual mutable."
+      ],
+      "evidencia": "Resumen real reconciliado y controles de destinatario",
+      "ultima_sesion": "2026-10-08",
+      "siguiente_paso": "Resumen independiente sin esperar cadenas: análisis conciliado y señales de stock/insumos tras ST-41/42. Comparación central de ubicaciones mantiene ST-18/46.",
+      "sprint_original": 7,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-31",
+      "sprint": 6,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Pulido premium y accesibilidad del producto",
+      "depende_de": [
+        "ST-43",
+        "ST-26"
+      ],
+      "aceptacion": [
+        "Flujos frecuentes usan lenguaje de barbería, acciones claras, estados vacíos útiles y guardado verificable",
+        "Contraste, teclado, foco, tamaños táctiles y formularios con errores probados; sin datos inventados ni botones inertes",
+        "Carga de pantallas observada en móvil real; dividir bundle y corregir bloqueos según medición"
+      ],
+      "evidencia": "Avance acotado configuración/reservas: UX_CONFIGURACION_2026-10-10.md y 20 capturas. Personalización15/15SQLite y15/15PostgreSQL, autorización19/19SQLite, reservas20/20SQLite; API/web compilan. Aceptación integral en dispositivos y medición de rendimiento todavía pendientes. Avance11/oct: referencia de corte y foto privada, 7 capturas adicionales y reporte REFERENCIA_CORTE_2026-10-11.md; API/web compilan. JS695.02kB/gzip189.13kB.",
+      "sprint_original": 7,
+      "ultima_repriorizacion": "2026-10-09",
+      "siguiente_paso": "Configuración/reservas mejoradas y verificadas en escritorio/390px; completar guardado demorado/cambio de sucursal, portapapeles denegado, tablas móviles restantes, lector de pantalla, fotos reales y dispositivo físico. Medir y dividir bundle (695.02kB, gzip189.13kB). Incorporar feedback de piloto antes de aceptar pulido integral.",
+      "ultima_sesion": "2026-10-11"
+    },
+    {
+      "id": "ST-32",
+      "sprint": 6,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Regresión e incidente para salida independiente",
+      "depende_de": [
+        "ST-45",
+        "ST-26",
+        "ST-28",
+        "ST-31"
+      ],
+      "aceptacion": [
+        "Regresión completa PostgreSQL con núcleo y add-ons habilitados; defectos críticos/caja/seguridad en cero",
+        "Ejercicio de proveedor caído, impago, duplicado y restauración cumple procedimientos; responsable responde a alertas",
+        "Ningún requisito comercial anunciado sin evidencia; revisión de dependencia vulnerable pendiente tiene mitigación comprobada",
+        "Informe explícito del alcance independiente; capacidades de cadena se revisan en ST-19/ST-46 y no se certifican mediante este cierre"
+      ],
+      "evidencia": "Informe QA, ensayo de incidente y matriz de promesas",
+      "sprint_original": 8,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-33",
+      "sprint": 6,
+      "prioridad": "P0",
+      "talla": "S",
+      "estado": "pendiente",
+      "titulo": "Decisión de venta general independiente y versión comercial",
+      "depende_de": [
+        "ST-32",
+        "ST-27",
+        "ST-14",
+        "ST-15",
+        "ST-16",
+        "ST-20",
+        "ST-47"
+      ],
+      "aceptacion": [
+        "Acta go/no-go contiene gates, alcance de planes, pendientes opcionales, capacidad y evidencia; usuario revisa entregable concreto",
+        "Add-on sin aprobación externa queda deshabilitado y fuera de oferta; Cadena requiere ST-19 y autorización ST-46. Esta acta habilita exclusivamente oferta independiente dentro de capacidad probada",
+        "Publicar versión etiquetada y plan de reversión; soporte y revisión mensual con responsable y canal reales"
+      ],
+      "evidencia": "Acta de lanzamiento y versión recuperable",
+      "sprint_original": 8,
+      "ultima_repriorizacion": "2026-10-09",
+      "siguiente_paso": "Cerrar go/no-go independiente con evidencia de operación, recuperación y primera renovación; no esperar integraciones opcionales ni certificar Cadena."
+    },
+    {
+      "id": "ST-34",
+      "sprint": 9,
+      "prioridad": "P2",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Lista de espera que rellena cancelaciones",
+      "depende_de": [
+        "ST-22",
+        "ST-29"
+      ],
+      "aceptacion": [
+        "Invitación consentida reserva turno con caducidad; dos interesados no confirman el mismo espacio",
+        "Baja y frecuencia controladas; métrica de citas recuperadas usa invitación y asistencia observadas"
+      ],
+      "evidencia": "Experimento controlado y concurrencia",
+      "sprint_original": 9
+    },
+    {
+      "id": "ST-35",
+      "sprint": 9,
+      "prioridad": "P2",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Anticipos y pagos de clientes de barbería",
+      "depende_de": [
+        "ST-10",
+        "ST-07",
+        "ST-15"
+      ],
+      "aceptacion": [
+        "Proveedor y modelo de comercio confirmados para México; cada barbería recibe en su cuenta conforme a contrato",
+        "Depósito, reembolso, disputa, ausencia y conciliación con venta operan con webhook firmado e idempotencia",
+        "Comisión comercial, riesgos y obligaciones definidos antes de anunciarlo"
+      ],
+      "evidencia": "Cuenta de comercio de prueba y conciliación de anticipo",
+      "sprint_original": 9
+    },
+    {
+      "id": "ST-36",
+      "sprint": 9,
+      "prioridad": "P2",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Membresías de clientes de la barbería",
+      "depende_de": [
+        "ST-35"
+      ],
+      "aceptacion": [
+        "Beneficios, vigencia, consumos, suspensión y cancelación definidos por comercio",
+        "Cobro recurrente y derechos del cliente separados de la licencia SYSTECH; no duplicar beneficios tras reintento"
+      ],
+      "evidencia": "Ciclo de membresía y cancelación",
+      "sprint_original": 9
+    },
+    {
+      "id": "ST-37",
+      "sprint": 9,
+      "prioridad": "P2",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Google Calendar por usuario",
+      "depende_de": [
+        "ST-07",
+        "ST-12"
+      ],
+      "aceptacion": [
+        "OAuth con permisos mínimos y revocación; cada usuario/sucursal aislados",
+        "Sincronización evita bucles y define quién resuelve conflicto; API externa caída no detiene agenda local"
+      ],
+      "evidencia": "Dos usuarios, conflicto y revocación",
+      "sprint_original": 9
+    },
+    {
+      "id": "ST-38",
+      "sprint": 9,
+      "prioridad": "P2",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "POS offline y sincronización segura",
+      "depende_de": [
+        "ST-05",
+        "ST-06",
+        "ST-19"
+      ],
+      "aceptacion": [
+        "Definir dispositivos, datos locales protegidos, stock offline, permisos y cierre de caja antes de construir",
+        "Sincronizar ventas sin duplicados y resolver conflictos tras cortes/reinicios; no perder venta confirmada localmente",
+        "Prueba física prolongada sin red y recuperación antes de ofrecer modo offline"
+      ],
+      "evidencia": "Diseño aprobado y ensayo de desconexión",
+      "sprint_original": 9
+    },
+    {
+      "id": "ST-39",
+      "sprint": 9,
+      "prioridad": "P2",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Reseñas y referidos medibles",
+      "depende_de": [
+        "ST-22",
+        "ST-28"
+      ],
+      "aceptacion": [
+        "Invitación consentida tras visita atendida con frecuencia limitada y baja",
+        "Beneficio de referido tiene condiciones, vigencia y costo medido; prevenir auto-referidos y abuso"
+      ],
+      "evidencia": "Métricas de invitación/respuesta y costo por adquisición",
+      "sprint_original": 9
+    },
+    {
+      "id": "ST-40",
+      "sprint": 9,
+      "prioridad": "P2",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "IA con valor económico y control de costos",
+      "depende_de": [
+        "ST-28",
+        "ST-15"
+      ],
+      "aceptacion": [
+        "Seleccionar una tarea comprobable como resumir operación; comparar costo/beneficio contra reglas simples",
+        "Minimizar datos personales, definir proveedor/retención y presupuesto; no enviar CSD ni secretos",
+        "No alterar caja, fiscalidad o cobrar sin confirmación explícita; validar resultados antes de anunciar asistente"
+      ],
+      "evidencia": "Experimento y evaluación con presupuesto por negocio",
+      "sprint_original": 9
+    },
+    {
+      "id": "ST-41",
+      "sprint": 6,
+      "prioridad": "P1",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Inventario operativo y conteos confiables",
+      "depende_de": [
+        "ST-02",
+        "ST-04",
+        "ST-05",
+        "ST-06"
+      ],
+      "aceptacion": [
+        "Capturar inventario inicial y recibir compras por producto/sucursal con proveedor opcional, cantidad, costo, referencia, fecha y responsable; guardar stock y Kardex en una transacción.",
+        "Reintentar entradas, mermas, uso interno y ajustes no duplica movimientos; rechazar cantidades inválidas, stock negativo y movimientos de servicios; definir SKU único por negocio y alcance de catálogo.",
+        "Crear conteo físico con saldo y fecha de referencia, registrar cantidades contadas y mostrar diferencias; unidades no contadas no se convierten en cero.",
+        "Conciliar ventas/entradas concurrentes durante el conteo; confirmar ajuste exige permiso y motivo, preserva historia y aplica la diferencia una sola vez.",
+        "Separar edición de catálogo de movimiento de stock; mostrar entradas, salidas, merma, uso interno y ajustes con usuario, motivo y saldos anteriores/nuevos.",
+        "Dueño y gerente operan solo sucursales autorizadas; negocio/sucursal ajenos no pueden leerse o alterarse; barbero no modifica existencias.",
+        "Probar conteo parcial, inventario inicial, compras, devoluciones físicas aptas/no aptas, pérdida de respuesta, dos usuarios y fallos con rollback en SQLite y PostgreSQL; conciliar stock con Kardex."
+      ],
+      "evidencia": "Requerida: dataset conciliado, regresión de movimientos/conteos por motor y recorrido desde celular/PC. Definición docs/scrum/ST41_INVENTARIO_OPERATIVO.md; aún no implementada.",
+      "ultima_sesion": "2026-10-08",
+      "siguiente_paso": "Inventario diferenciador tras piloto inicial: refinar entradas/trazabilidad y conteos concurrentes; el núcleo actual no se anuncia como conteo certificado.",
+      "sprint_original": 4,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-42",
+      "sprint": 6,
+      "prioridad": "P2",
+      "talla": "L",
+      "estado": "pendiente",
+      "titulo": "Consumo de insumos por servicio y diferencias explicables",
+      "depende_de": [
+        "ST-41",
+        "ST-05",
+        "ST-06",
+        "ST-07"
+      ],
+      "aceptacion": [
+        "Separar productos de reventa e insumos de operación; definir presentaciones y unidades compatibles (pieza/ml/g), precisión y tolerancias; migración no trunca stock existente.",
+        "Configurar recetas versionadas por servicio y guardar consumo aplicado al servicio completado; un evento único evita descontar dos veces por cita y venta o reintento.",
+        "Conteo inicial más entradas/devoluciones aptas/transferencias menos ventas/consumo/mermas/salidas produce saldo esperado; comparar con conteo físico y mostrar faltante/exceso y evidencia por sucursal.",
+        "Frascos abiertos y mediciones aproximadas tienen método/tolerancia documentados; datos incompletos se muestran como insuficientes, no como fuga confirmada.",
+        "Servicio cancelado antes de realizarse no consume; devolución monetaria de servicio realizado no repone insumos; correcciones requieren permiso, motivo y movimientos compensatorios.",
+        "No atribuir robo o culpa a un empleado por diferencia compartida; edición de receta no reescribe consumo histórico; permisos y aislamiento probados.",
+        "Probar conversiones/precisión, cambios de receta, doble registro, reintentos, devoluciones, conteos concurrentes y conciliación en SQLite/PostgreSQL; ensayo de conteo de insumos en barbería piloto."
+      ],
+      "evidencia": "Requerida: receta y saldos reproducibles, pruebas por motor y conteo piloto real. Definición docs/scrum/ST42_CONSUMO_INSUMOS.md; aún no implementada.",
+      "ultima_sesion": "2026-10-08",
+      "siguiente_paso": "Refinar unidades/recetas/consumo y diferencias con conteos válidos; medir con comercios piloto. No atribuir una diferencia automáticamente a robo.",
+      "sprint_original": 7,
+      "ultima_repriorizacion": "2026-10-09"
+    },
+    {
+      "id": "ST-43",
+      "sprint": 3,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "validada",
+      "titulo": "Pulido previo de inicio, cobro móvil, caja y reservas",
+      "depende_de": [
+        "ST-02",
+        "ST-06",
+        "ST-07"
+      ],
+      "aceptacion": [
+        "Definir dirección visual consistente, jerarquía y componentes compartidos para cuatro flujos; usar cifras reales del entorno, estados vacíos y errores accionables",
+        "Verificar escritorio y móvil emulado, teclado/foco, contraste y tamaños táctiles; reservar certificación de dispositivos físicos para ST-09/ST-31",
+        "Repetir reserva → cobro → entrega → comisión → corte con datos ficticios y conciliación persistente; cero regresiones de dinero o permisos",
+        "Capturas antes/después y demo recuperable, sin presentar esta entrega como aceptación del pulido completo ST-31"
+      ],
+      "evidencia": "Diseño ST43_DISENO, revisión ST43_QA, capturas 01–27 y ledger-final.json: 24/24 comprobaciones. Reserva/venta200, recibido300/cambio100, entrega200, comisión80 pendiente, fondo500+entrega200=contado700, diferencia0. Build web/TypeScript aprobados. Simulación local y móvil emulado; alcance temprano de cuatro flujos, sin cerrar ST31 ni hardware.",
+      "responsable": "Codex",
+      "creada": "2026-10-09",
+      "ultima_sesion": "2026-10-10",
+      "siguiente_paso": "Alcance temprano aceptado por coordinación. Conservar regresión; demo para ST44. Accesibilidad integral, rendimiento y dispositivos físicos permanecen en ST31.",
+      "fecha_validacion": "2026-10-10",
+      "bloqueo": ""
+    },
+    {
+      "id": "ST-44",
+      "sprint": 3,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Demo de diez minutos y validación de compradores",
+      "depende_de": [
+        "ST-06",
+        "ST-07"
+      ],
+      "aceptacion": [
+        "Guion y ficha de alcance basados en funciones comprobadas; mostrar problema, cobro/custodia/comisión y cierre sin prometer integraciones, SLA o ahorro no medido",
+        "Registro de candidatos, diez conversaciones y cinco demostraciones como objetivos de aprendizaje; documentar actividad alcanzada, objeciones y razones de rechazo sin inventar entrevistas",
+        "Registrar al menos tres conversaciones reales y decidir si continuar, ajustar o detener oferta; no asumir disposición a pagar por una felicitación. Identificar candidatos compatibles y próximo paso",
+        "Contacto realizado por Sinhue o con instrucción explícita; minimizar datos personales y distinguir preparación local de evidencia de mercado"
+      ],
+      "evidencia": "Guion, ficha de alcance y registro real de entrevistas/demos con conclusión",
+      "responsable": "Compartido",
+      "creada": "2026-10-09",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Documentar al menos tres conversaciones reales y decidir continuar/ajustar/detener; objetivos20candidatos10conversaciones5demos son metas. No habilita cobros ni pilotos.",
+      "preparacion_entregada": [
+        "docs/comercial/ST44_DEMO_Y_ENTREVISTAS.md",
+        "docs/comercial/ST44_SEGUIMIENTO.csv"
+      ]
+    },
+    {
+      "id": "ST-45",
+      "sprint": 4,
+      "prioridad": "P0",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Capacidad y concurrencia para piloto independiente",
+      "depende_de": [
+        "ST-05",
+        "ST-06",
+        "ST-07",
+        "ST-13",
+        "ST-14"
+      ],
+      "aceptacion": [
+        "Ensayo reproducible con tres negocios, hasta ocho barberos por sucursal y dataset publicado; objetivo inicial doce sesiones y seis escrituras concurrentes durante quince minutos, p95 API menor a un segundo",
+        "Cero doble venta/reserva, stock inconsistente o fuga entre negocios; comprobar reinicios, conexiones y memoria con tamaño candidato para piloto",
+        "Registrar latencia, errores, hardware y costo; si falla, corregir y repetir o reducir capacidad explícita antes de ofrecer. No extrapolar a cadenas/cien clientes"
+      ],
+      "evidencia": "Reporte de carga, integridad y costo/capacidad acotados",
+      "responsable": "Codex",
+      "creada": "2026-10-09",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Refinar tarea y método de evidencia antes de iniciar; no declarada implementada."
+    },
+    {
+      "id": "ST-46",
+      "sprint": 7,
+      "prioridad": "P0",
+      "talla": "S",
+      "estado": "pendiente",
+      "titulo": "Puerta comercial de cadenas y alcance por sucursal",
+      "depende_de": [
+        "ST-18",
+        "ST-19",
+        "ST-20",
+        "ST-32",
+        "ST-33"
+      ],
+      "aceptacion": [
+        "Acta de Cadena con piloto multisucursal, permisos, catálogo, comparación, concurrencia y conciliación aprobados; cero defectos críticos o de alto impacto en su alcance",
+        "Oferta y límites por sucursal coinciden con catálogo, fiscalidad, infraestructura medida, soporte y proceso de expansión/downgrade",
+        "Habilitar publicidad/contratación de Cadena solo tras acta; un cierre independiente no autoriza este plan. Add-ons mantienen controles propios"
+      ],
+      "evidencia": "Acta go/no-go de Cadena y matriz de promesas",
+      "responsable": "Compartido",
+      "creada": "2026-10-09",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Refinar tarea y método de evidencia antes de iniciar; no declarada implementada."
+    },
+    {
+      "id": "ST-47",
+      "sprint": 5,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Primera renovación y uso sostenido de pilotos",
+      "depende_de": [
+        "ST-26",
+        "ST-11",
+        "ST-28"
+      ],
+      "aceptacion": [
+        "Registrar días abiertos frente a días con actividad, cierres, incidentes, minutos de soporte y motivos de abandono durante el primer periodo",
+        "Conciliar al menos una renovación mensual real de un piloto con Stripe/licencia; separar IVA, trials, descuentos y devoluciones. Registrar muestra y observación, sin proyectar retención anual",
+        "Si nadie renueva, conservar historia pendiente con evidencia y revisar oferta/onboarding/costo antes de ampliar; obtener testimonios solo con autorización"
+      ],
+      "evidencia": "Informe de primer periodo, renovación conciliada y decisión de continuidad",
+      "responsable": "Compartido",
+      "creada": "2026-10-09",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Refinar tarea y método de evidencia antes de iniciar; no declarada implementada."
+    },
+    {
+      "id": "ST-48",
+      "sprint": 6,
+      "prioridad": "P1",
+      "talla": "M",
+      "estado": "pendiente",
+      "titulo": "Crecimiento hacia diez negocios de pago",
+      "depende_de": [
+        "ST-20",
+        "ST-26",
+        "ST-47"
+      ],
+      "aceptacion": [
+        "Diez negocios con licencia pagada verificable y onboarding registrado; excluir trials y activaciones manuales de clientes de pago",
+        "Medir ingreso sin IVA, mora, soporte y costo observado; ajustar capacidad y oferta antes de exceder límites medidos",
+        "Documentar origen, rechazo y bajas; no usar publicidad pagada ni descuentos indefinidos sin presupuesto y alcance concretos"
+      ],
+      "evidencia": "Diez altas conciliadas y reporte económico real",
+      "responsable": "Compartido",
+      "creada": "2026-10-09",
+      "ultima_sesion": "2026-10-09",
+      "siguiente_paso": "Refinar tarea y método de evidencia antes de iniciar; no declarada implementada."
+    }
+  ],
+  "reorganizacion": {
+    "fecha": "2026-10-09",
+    "motivo": "Autorización de Sinhue: priorizar primeros compradores y gasto esencial",
+    "historia_original_maxima": 42,
+    "conservar_estados": true,
+    "alcance": "Oferta independiente y cadena con autorizaciones separadas; ninguna contratación o cobro habilitado por reorganizar"
+  },
+  "sprints": [
+    {
+      "numero": 1,
+      "titulo": "Seguridad y modelo comercial",
+      "objetivo": "Conservar evidencia; resolver pendiente fiscal ST-01 antes de live"
+    },
+    {
+      "numero": 2,
+      "titulo": "Operación de mostrador",
+      "objetivo": "Conservar cierres y resolver correo/hardware ST-08/09 antes del piloto real"
+    },
+    {
+      "numero": 3,
+      "titulo": "Demo profesional y validación de demanda",
+      "objetivo": "Pulido previo, entrevistas, demo y cola durable; sin contratar servicios"
+    },
+    {
+      "numero": 4,
+      "titulo": "Operación segura y cobranza lista",
+      "objetivo": "Licencia, despliegue, restauración, privacidad, pago live y capacidad independiente"
+    },
+    {
+      "numero": 5,
+      "titulo": "Pilotos independientes y primera renovación",
+      "objetivo": "Actas, oferta acotada, onboarding, soporte y métricas con negocios reales"
+    },
+    {
+      "numero": 6,
+      "titulo": "Valor agregado y salida independiente",
+      "objetivo": "Inventario/insumos, resumen, pulido completo, regresión y expansión hacia diez clientes"
+    },
+    {
+      "numero": 7,
+      "titulo": "Cadenas con autorización propia",
+      "objetivo": "Permisos por ubicación, piloto concurrente y go/no-go de Cadena"
+    },
+    {
+      "numero": 8,
+      "titulo": "Conectores opcionales sostenibles",
+      "objetivo": "WhatsApp y CFDI por barbería con costo, consentimiento y pruebas reales"
+    },
+    {
+      "numero": 9,
+      "titulo": "Expansión posterior según evidencia",
+      "objetivo": "Priorizar anticipos, membresías, offline, Calendar, referidos e IA por demanda y costo"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "fecha": "2026-10-08",
+  "datos": "Ficticios, base desechable; verificación de cuenta mediante consumeAction local sin entrega de correo",
+  "inicio": {
+    "servicios": 0,
+    "barberos": 0,
+    "ventas": 0
+  },
+  "sucursal": {
+    "nombre": "Local ST08",
+    "apertura": "10:00",
+    "cierre": "19:00",
+    "dias": "Martes a Sábado",
+    "configurada": true
+  },
+  "services": [
+    {
+      "nombre": "Corte capturado ST08",
+      "tipo": "SERVICIO",
+      "stockActual": 0,
+      "precioVenta": "280",
+      "duracionMinutos": 30
+    }
+  ],
+  "barbers": [
+    {
+      "nombre": "Barbero capturado ST08",
+      "comisionServiciosPct": "0",
+      "comisionProductosPct": "0"
+    }
+  ],
+  "registers": [
+    {
+      "estado": "ABIERTO",
+      "fondoInicial": "500"
+    }
+  ],
+  "ventas": 0,
+  "checklistOcultaAlCompletar": true,
+  "conexionMovilSinDesbordamiento": true,
+  "correoRealProbado": false
+}

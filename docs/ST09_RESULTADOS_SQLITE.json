@@ -1,0 +1,26 @@
+{
+  "fecha": "2026-10-14",
+  "startedAt": "2026-10-14T07:03:22.679Z",
+  "executionId": "b83b2a71-285d-4102-9de3-6fb914085185",
+  "codeVersion": {
+    "commit": "b5848d0b40b373d00a6342535d9561ddb47e098a",
+    "dirty": true,
+    "exactCommit": false,
+    "description": "Working tree with uncommitted changes; commit is a reference only"
+  },
+  "finishedAt": "2026-10-14T07:03:24.792Z",
+  "motor": "SQLITE",
+  "count": 7,
+  "checks": [
+    "Both receipt widths keep long descriptions bounded and expose print action without broken width navigation",
+    "Receipt escapes stored text and distinguishes service professional from collector",
+    "Stored received cash and change are printed without claiming a CFDI or a scannable fake barcode",
+    "Receipt route uses private non-cached policy and permits its own inline print action",
+    "Anonymous and foreign business cannot read the thermal receipt",
+    "Ticket time is expressed in the branch time zone",
+    "Working database is unchanged"
+  ],
+  "pass": true,
+  "hardwareFisico": false,
+  "baseOperativaIntacta": true
+}

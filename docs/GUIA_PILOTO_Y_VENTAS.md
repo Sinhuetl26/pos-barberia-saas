@@ -1,3 +1,7 @@
+# Documento histórico de piloto y ventas
+
+**Reemplazado por [el plan ágil vigente](PLAN_AGIL_LANZAMIENTO.md).** El texto de abajo es un antecedente, no la oferta autorizada: contiene dominios de ejemplo, automatizaciones aún pendientes, cifras de conversión sin validar y congelación vitalicia de precio. No usar esas afirmaciones en demos ni contratos. La oferta actual se define con capacidades verificadas, consumo acotado, tratamiento fiscal revisado y términos de duración explícitos.
+
 # 💈 GUÍA DE GO-TO-MARKET, PILOTO DE CAMPO Y VENTAS PRESENCIALES
 ## SYSTECH STUDIO — Programa de Barberías Fundadoras
 

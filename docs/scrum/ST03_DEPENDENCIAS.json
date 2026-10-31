@@ -1,0 +1,189 @@
+{
+  "fecha": "2026-10-09",
+  "zonaHoraria": "America/Mexico_City",
+  "produccionConsultadaEn": "2026-10-09T18:23:40.428Z",
+  "auditoriaTotalConsultadaFecha": "2026-10-09",
+  "historico": {
+    "fecha": "2026-10-05",
+    "antes": {
+      "info": 0,
+      "low": 0,
+      "moderate": 3,
+      "high": 7,
+      "critical": 0,
+      "total": 10
+    },
+    "despues": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 6,
+      "critical": 0,
+      "total": 6
+    },
+    "produccion": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    }
+  },
+  "antes": {
+    "info": 0,
+    "low": 0,
+    "moderate": 3,
+    "high": 7,
+    "critical": 0,
+    "total": 10
+  },
+  "despues": {
+    "info": 0,
+    "low": 0,
+    "moderate": 2,
+    "high": 7,
+    "critical": 0,
+    "total": 9
+  },
+  "produccion": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "comandos": {
+    "total": "npm audit --json",
+    "produccion": "npm audit --omit=dev --json",
+    "simulacionPoda": "npm prune --omit=dev --ignore-scripts --offline --no-audit --no-fund --dry-run --json"
+  },
+  "resultados": {
+    "auditTotalExitCode": 1,
+    "auditProduccionExitCode": 0,
+    "podaDryRunExitCode": 0,
+    "paquetesRetiradosDryRun": 180,
+    "nuevePaquetesConAvisoRetirados": true,
+    "prismaConservado": true,
+    "prismaVersion": "5.22.0",
+    "clienteGeneradoPresente": true,
+    "dockerEjecutado": false,
+    "dockerLimite": "permission denied al acceder al motor Docker Desktop; no se construyo ni arranco imagen"
+  },
+  "actualizaciones": {
+    "vite": "6.4.3",
+    "reactRouterDom": "7.18.4"
+  },
+  "versionesNoModificadas": true,
+  "pendientes": [
+    {
+      "nombre": "braces",
+      "version": "3.0.3",
+      "severidad": "high",
+      "desarrollo": true,
+      "via": [
+        {
+          "titulo": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+          "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+          "rango": "<=3.0.3"
+        }
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "chokidar",
+      "version": "3.6.0",
+      "severidad": "high",
+      "desarrollo": true,
+      "via": [
+        "braces"
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "fast-glob",
+      "version": "3.3.3",
+      "severidad": "high",
+      "desarrollo": true,
+      "via": [
+        "micromatch"
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "micromatch",
+      "version": "4.0.8",
+      "severidad": "high",
+      "desarrollo": true,
+      "via": [
+        "braces"
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "postcss-nested",
+      "version": "6.2.0",
+      "severidad": "moderate",
+      "desarrollo": true,
+      "via": [
+        "postcss-selector-parser"
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "postcss-selector-parser",
+      "version": "6.1.4",
+      "severidad": "moderate",
+      "desarrollo": true,
+      "via": [
+        {
+          "titulo": "PostCSS: Quadratic complexity in flat selector parsing allows CPU exhaustion",
+          "url": "https://github.com/advisories/GHSA-rj75-hqrm-r3gf",
+          "rango": "<7.1.6"
+        }
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "source-map-js",
+      "version": "1.2.1",
+      "severidad": "high",
+      "desarrollo": true,
+      "via": [
+        {
+          "titulo": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+          "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+          "rango": ">=1.0.0 <1.2.2"
+        }
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "tailwindcss",
+      "version": "3.4.19",
+      "severidad": "high",
+      "desarrollo": true,
+      "via": [
+        "chokidar",
+        "fast-glob",
+        "micromatch",
+        "postcss-nested",
+        "postcss-selector-parser"
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    },
+    {
+      "nombre": "ts-node-dev",
+      "version": "2.0.0",
+      "severidad": "high",
+      "desarrollo": true,
+      "via": [
+        "chokidar"
+      ],
+      "mitigacion": "Herramientas de compilacion/observacion de desarrollo. Vite y preview vinculados a 127.0.0.1; usar solo fuentes/patrones/mapas del repositorio, sin entrada de clientes. Dockerfile ahora poda devDependencies despues de compilar y comprueba ausencia de herramientas/paquetes afectados, conservando Prisma CLI y cliente generado. Dry-run aprobado; imagen Docker real pendiente. No se declara el aviso corregido ni se actualizan versiones."
+    }
+  ],
+  "alcance": "Auditoria npm de grafo de dependencias; no cubre vulnerabilidades del SO/imagen base, historial Git, todos los secretos locales ni entrega real de correo.",
+  "informe": "docs/scrum/ST03_SEGURIDAD_CIERRE_2026-10-09.md"
+}

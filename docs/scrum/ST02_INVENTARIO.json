@@ -1,0 +1,1676 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/jobs/status",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/jobs",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/jobs/:id/retry",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/jobs/providers/:provider",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/mail/webhook/resend",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Firma del proveedor / challenge; revisión separada"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/security",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tenant/security",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/onboarding/security",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/security/password",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/security/password",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/security/password",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/security/logout-all",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/security/logout-all",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/security/logout-all",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/login",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/login",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/login",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/register",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/register",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/register",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/me",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tenant/me",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/onboarding/me",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/auth/tenant/settings",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/tenant/tenant/settings",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/onboarding/tenant/settings",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/auth/onboarding/templates",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/tenant/onboarding/templates",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/onboarding/onboarding/templates",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/onboarding/setup",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/onboarding/setup",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/onboarding/setup",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/metrics",
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "note": "Excepción de plataforma auditada"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/tenants",
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "note": "Excepción de plataforma auditada"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tenants/:id/status",
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "note": "Excepción de plataforma auditada"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/admin/tenants/:id/plan",
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "note": "Excepción de plataforma auditada"
+  },
+  {
+    "method": "GET",
+    "path": "/api/admin/auditorias",
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "note": "Excepción de plataforma auditada"
+  },
+  {
+    "method": "GET",
+    "path": "/api/citas/fila",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/citas/fila",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/citas",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/citas/:id/referencia",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/citas",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/citas/:id/status",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/citas/walk-in",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/citas/lista-espera",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/citas/:id/reprogramar",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/public/barberia/:slug",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/public/disponibilidad",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/public/reservar",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/public/reserva-intencion",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/public/cita/:codigo",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/public/cita/:codigo/imprimir-carta",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/public/cita/token/:token/cancelar",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/public/cita/token/:token/reprogramar",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/public/cita/:codigo/cancelar",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "POST",
+    "path": "/api/public/lista-espera",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ventas/aprobaciones",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ventas/aprobaciones",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ventas/aprobaciones/:id/aprobar",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ventas/intenciones/:clave",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Resultado de un cobro pendiente, restringido a la venta autorizada"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ventas",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ventas/:id/cancelar",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ventas/:id/devolver",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ventas",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ventas/:id/ticket",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ventas/:id/print-token",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ventas/:id/ticket-html",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Bearer vivo o capacidad de impresión de 120 segundos"
+  },
+  {
+    "method": "GET",
+    "path": "/api/barberos",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/barberos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/barberos/:id",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/barberos/:id/restaurar",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/comisiones",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/comisiones/pagar",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/comisiones/liquidar-nomina",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/comisiones/nominas",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bloqueos/impacto",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bloqueos/ausencias",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bloqueos/horarios",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bloqueos/horarios",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/bloqueos",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/bloqueos",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/bloqueos/:id",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cortes-caja/:id/comprobante-html",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Bearer vivo o capacidad de impresión de 120 segundos"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cortes-caja/:id/print-token",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cortes-caja",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cortes-caja/abrir",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cortes-caja/previsualizar",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cortes-caja/cerrar",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cortes-caja/movimiento",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/cortes-caja/custodia",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/cortes-caja/entrega",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/productos/precios",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventario/tarifas",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventario/tarifas",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventario/politica-descuentos",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventario/politica-descuentos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventario/conteos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventario/conteos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/inventario/conteos/:id",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventario/conteos/:id/confirmar",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventario/recetas/:servicioId",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventario/recetas/:servicioId",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventario/insumos/conciliacion",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventario/consumos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventario/consumos/:id/corregir",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/productos",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Catálogo común de lectura; editarlo requiere dueño"
+  },
+  {
+    "method": "POST",
+    "path": "/api/productos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/productos/:id",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/inventario/movimiento",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/inventario/kardex",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notificaciones/meta-webhook",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Firma del proveedor / challenge; revisión separada"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notificaciones/webhook",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Firma del proveedor / challenge; revisión separada"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notificaciones/meta-webhook",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Firma del proveedor / challenge; revisión separada"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notificaciones/webhook",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Firma del proveedor / challenge; revisión separada"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notificaciones/ventas",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/notificaciones",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notificaciones/enviar",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notificaciones/simular-envio",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notificaciones/opt-out",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/notificaciones/procesar-recordatorios",
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "note": "Trabajo global auditado"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reportes/inteligencia",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reportes/gastos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reportes/gastos/salidas",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/reportes/gastos",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/reportes/gastos/:id/corregir",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reportes/dashboard",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/reportes/resumen-semanal",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/reportes/exportar/ventas-csv",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/suscripcion/webhook",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Firma del proveedor / challenge; revisión separada"
+  },
+  {
+    "method": "GET",
+    "path": "/api/suscripcion/catalogo",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Datos mínimos / capacidades públicas; relaciones validadas"
+  },
+  {
+    "method": "GET",
+    "path": "/api/suscripcion",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/suscripcion/validar-cupon",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/suscripcion/crear-checkout-session",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/suscripcion/portal-cliente",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/suscripcion/cambiar-plan",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/suscripcion/ejecutar-dunning",
+    "roles": [
+      "SUPER_ADMIN"
+    ],
+    "note": "Trabajo global auditado"
+  },
+  {
+    "method": "POST",
+    "path": "/api/suscripcion/simular-pago",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/sucursales",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sucursales",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/sucursales/:id/restaurar",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/sucursales/:id",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/clientes",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/clientes/reactivacion",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/clientes/:id",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/clientes",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/clientes/:id",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/clientes/:id/membresia",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/clientes/:id",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/integraciones",
+    "roles": [
+      "DUENO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/integraciones/correo",
+    "roles": [
+      "DUENO",
+      "SUPER_ADMIN"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/operacion/auditoria",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/operacion/buscar",
+    "roles": [
+      "DUENO",
+      "GERENTE",
+      "CAJERO",
+      "BARBERO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/operacion/resumen",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/operacion/preparacion",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/operacion/preparacion",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/usuarios",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/usuarios",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/usuarios/:id/acceso",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/usuarios/:id/invitacion",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/usuarios/:id/invitacion",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/proveedores",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Directorio común de lectura"
+  },
+  {
+    "method": "POST",
+    "path": "/api/proveedores",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "PUT",
+    "path": "/api/proveedores/:id",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/proveedores/:id",
+    "roles": [
+      "DUENO"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/ordenes-compra",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ordenes-compra",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ordenes-compra/:id/recibir",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "POST",
+    "path": "/api/ordenes-compra/:id/cancelar",
+    "roles": [
+      "DUENO",
+      "GERENTE"
+    ],
+    "note": "Tenant y sucursales del usuario; barbero solo su perfil"
+  },
+  {
+    "method": "GET",
+    "path": "/api/health",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "Estado del servicio sin registros privados"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/recovery/request",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/verification/request",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/recovery/complete",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/verification/complete",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/auth/invitation/accept",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/recovery/request",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/verification/request",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/recovery/complete",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/verification/complete",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/tenant/invitation/accept",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/recovery/request",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/verification/request",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/recovery/complete",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/verification/complete",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  },
+  {
+    "method": "POST",
+    "path": "/api/onboarding/invitation/accept",
+    "roles": [
+      "PÚBLICO"
+    ],
+    "note": "ST-03: límite persistente; token de propósito único, caducidad y consumo atómico"
+  }
+]

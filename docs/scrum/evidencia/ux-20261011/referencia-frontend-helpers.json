@@ -1,0 +1,24 @@
+{
+  "checkedAt": "2026-10-11T09:13:19.181Z",
+  "result": "passed",
+  "checks": 11,
+  "cases": [
+    "Strip APP1/APP2/COM preserves exact JPEG image bytes",
+    "JPEG dimensions survive metadata removal",
+    "SVG cannot render as a reference",
+    "External URL cannot render as a reference",
+    "Clean bounded JPEG can render",
+    "PNG header dimensions are read before decode",
+    "WebP VP8X header dimensions are read",
+    "Oversized PNG rejects before decoding",
+    "Oversized PNG never calls decoder",
+    "Cancellation settles an unfinished decode",
+    "A late bitmap closes after cancellation"
+  ],
+  "jpegBytes": 23461,
+  "dimensions": {
+    "width": 900,
+    "height": 1000
+  },
+  "scope": "Local unit checks with decoder mock; actual PNG upload, browser rendering and mobile flow are separately verified by root."
+}

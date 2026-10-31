@@ -1,0 +1,36 @@
+{
+  "observedAt": "2026-10-09T18:22:46.914Z",
+  "result": "PASS",
+  "scope": "Segunda operación de caja ficticia para revisión visual final; no nueva venta",
+  "sales": 1,
+  "total": 200,
+  "commissions": 1,
+  "commissionAmount": 80,
+  "shifts": [
+    {
+      "estado": "CERRADO",
+      "fondoInicial": "300",
+      "conteoEfectivoReal": "440",
+      "descuadre": "-10",
+      "totalVentas": "200"
+    },
+    {
+      "estado": "CERRADO",
+      "fondoInicial": "0",
+      "conteoEfectivoReal": "19",
+      "descuadre": "-1",
+      "totalVentas": "0"
+    }
+  ],
+  "ui": {
+    "amountBefore": 50,
+    "delivered": 20,
+    "amountAfter": 30,
+    "notice": "Caja cerrada con diferencia: $-1 MXN",
+    "class": "bg-amber-50 text-amber-900"
+  },
+  "screenshots": [
+    "15-entrega-final.png",
+    "16-diferencia-final.png"
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "viewport": 390,
+  "pageWidth": 390,
+  "buttons": [
+    {
+      "name": "Actualizar tareas",
+      "height": 44
+    },
+    {
+      "name": "Reanudar Correo de acceso",
+      "height": 44
+    },
+    {
+      "name": "Reanudar Recordatorios de WhatsApp",
+      "height": 44
+    },
+    {
+      "name": "Revisar reintento de Revisión de correos pendientes",
+      "height": 44
+    }
+  ],
+  "license": [
+    {
+      "text": "Revisión de licenciaAdministrada por SYSTECHLa revisión de licencia la administra SYSTECH.",
+      "buttons": 0
+    }
+  ]
+}

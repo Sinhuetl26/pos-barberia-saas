@@ -1,0 +1,12 @@
+{
+  "checkedAt": "2026-10-11T09:07:10.050Z",
+  "encoder": "Chrome canvas actual app image preparation",
+  "rawRejectedCode": "REFERENCE_IMAGE_METADATA",
+  "metadataRemoved": [
+    "e2"
+  ],
+  "accepted": true,
+  "decodedBytesBefore": 23935,
+  "decodedBytesAfter": 23461,
+  "databaseWrites": false
+}

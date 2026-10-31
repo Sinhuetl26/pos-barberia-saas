@@ -1,0 +1,27 @@
+{
+  "checkedAt": "2026-10-11T03:56:12.244Z",
+  "finishedAt": "2026-10-11T03:54:23.953Z",
+  "originalTables": 38,
+  "existingBusinessSnapshotUnchanged": true,
+  "operationalDatabaseUnchanged": true,
+  "demoManifestUnchanged": true,
+  "additiveTables": [
+    "DurableJob",
+    "JobProviderControl",
+    "JobWorkerPulse"
+  ],
+  "verifiedBackupSha256": "970ea980f99ee09cf0414faa1aa083f43151efd486848763f7e92a30d53b0d09",
+  "checkedExistingTables": 38,
+  "originalRowsPreserved": true,
+  "changesAfterUpgrade": [
+    {
+      "table": "AuditoriaLog",
+      "added": 1,
+      "removed": 0,
+      "actions": [
+        "INICIO_SESION"
+      ]
+    }
+  ],
+  "note": "Upgrade snapshot was identical for every original table. Subsequent normal demo login adds INICIO_SESION audit records; no pre-existing rows, money or operations changed."
+}

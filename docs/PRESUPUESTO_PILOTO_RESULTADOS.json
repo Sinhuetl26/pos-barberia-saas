@@ -1,0 +1,87 @@
+{
+  "fecha": "2026-10-07",
+  "estado": "Propuesta, sin contratación; capacidad y fiscalidad pendientes",
+  "supuestos": {
+    "mxnPorUsd": 20,
+    "colchon": 0.15,
+    "ivaHipotetico": 0.16,
+    "payments": 0.036,
+    "billing": 0.007,
+    "fijoMxn": 3,
+    "reservaIngresos": 0.02,
+    "dominioReservaAnualMxn": 300,
+    "respaldoMonitoreoReservaMxn": 100,
+    "postgresAlmacenamientoReservaUsd": 1.5
+  },
+  "mensual": {
+    "pequenoCalculado": 448.5,
+    "pequenoPresupuesto": 450,
+    "ampliadoCalculado": 1161.5,
+    "ampliadoPresupuesto": 1170
+  },
+  "primerMesTecnologicoPequenoMxn": 750,
+  "primerMesTecnologicoAmpliadoMxn": 1470,
+  "casos": [
+    {
+      "clientes": 1,
+      "plan": "Esencial",
+      "precioPublicado": 499,
+      "supuestoFiscal": "Más IVA",
+      "ingresoSinIva": 499,
+      "comisiones": 32.35,
+      "reserva": 9.98,
+      "infraestructura": 450,
+      "saldoAntesDeTrabajoEIsr": 6.67
+    },
+    {
+      "clientes": 2,
+      "plan": "Esencial",
+      "precioPublicado": 499,
+      "supuestoFiscal": "Más IVA",
+      "ingresoSinIva": 998,
+      "comisiones": 64.71,
+      "reserva": 19.96,
+      "infraestructura": 450,
+      "saldoAntesDeTrabajoEIsr": 463.33
+    },
+    {
+      "clientes": 2,
+      "plan": "Esencial",
+      "precioPublicado": 499,
+      "supuestoFiscal": "Más IVA",
+      "ingresoSinIva": 998,
+      "comisiones": 64.71,
+      "reserva": 19.96,
+      "infraestructura": 1170,
+      "saldoAntesDeTrabajoEIsr": -256.67
+    },
+    {
+      "clientes": 2,
+      "plan": "Esencial",
+      "precioPublicado": 499,
+      "supuestoFiscal": "IVA incluido",
+      "ingresoSinIva": 860.34,
+      "comisiones": 56.74,
+      "reserva": 17.21,
+      "infraestructura": 450,
+      "saldoAntesDeTrabajoEIsr": 336.4
+    }
+  ],
+  "exclusiones": [
+    "Suscripción del fundador",
+    "Trabajo del fundador y sueldo",
+    "ISR y resultado contable",
+    "Asesoría legal/contable y emisión de comprobantes propios por cotizar",
+    "Equipos no disponibles para certificar",
+    "Consumo que exceda reservas",
+    "Disputas, devoluciones y ventas no cobradas"
+  ],
+  "fuentes": [
+    "https://render.com/pricing",
+    "https://render.com/docs/postgresql-backups",
+    "https://resend.com/docs/knowledge-base/account-quotas-and-limits",
+    "https://developers.cloudflare.com/pages/platform/limits/",
+    "https://porkbun.com/products/domains",
+    "https://stripe.com/mx/pricing"
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-07",
+  "stories": ["ST-01", "ST-02", "ST-03", "ST-04"],
+  "sqlite_regression_suites_passed": 9,
+  "postgres_regression_suites_passed": 9,
+  "license_checks_each_engine": 30,
+  "account_security_scenarios_each_engine": 19,
+  "authorization_scenarios_each_engine": 19,
+  "mounted_routes": 137,
+  "postgres_migration_checks_passed": 13,
+  "typescript_api_passed": true,
+  "typescript_web_passed": true,
+  "web_build_passed": true,
+  "browser_mobile": {"width": 390, "height": 844, "payment_buttons_disabled": 3, "connection_reasons_visible": true, "connector_dialog_close_visible": true, "horizontal_overflow": false},
+  "browser_session_503": {"session_preserved": true, "route_preserved": true, "retry_recovered": true, "fault_removed": true},
+  "working_database_unchanged": true,
+  "external_charge_or_message": false,
+  "docker_executed": false,
+  "github_ci_executed": false,
+  "deployed": false
+}

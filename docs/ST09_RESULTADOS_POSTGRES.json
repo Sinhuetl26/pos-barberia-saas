@@ -1,0 +1,26 @@
+{
+  "fecha": "2026-10-09",
+  "startedAt": "2026-10-09T18:21:17.094Z",
+  "executionId": "36fd63f9-d2ca-48da-ba26-a8d341b52c68",
+  "codeVersion": {
+    "commit": "b5848d0b40b373d00a6342535d9561ddb47e098a",
+    "dirty": true,
+    "exactCommit": false,
+    "description": "Working tree with uncommitted changes; commit is a reference only"
+  },
+  "finishedAt": "2026-10-09T18:21:20.870Z",
+  "motor": "POSTGRES",
+  "count": 7,
+  "checks": [
+    "Both receipt widths keep long descriptions bounded and expose print action without broken width navigation",
+    "Receipt escapes stored text and distinguishes service professional from collector",
+    "Stored received cash and change are printed without claiming a CFDI or a scannable fake barcode",
+    "Receipt route uses private non-cached policy and permits its own inline print action",
+    "Anonymous and foreign business cannot read the thermal receipt",
+    "Ticket time is expressed in the branch time zone",
+    "Working database is unchanged"
+  ],
+  "pass": true,
+  "hardwareFisico": false,
+  "baseOperativaIntacta": true
+}

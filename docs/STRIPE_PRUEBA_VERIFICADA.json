@@ -1,0 +1,12 @@
+{
+  "verifiedAt": "2026-10-05T02:28:01.754Z",
+  "mode": "sandbox",
+  "plan": "BASICO",
+  "monthlyMXN": "499",
+  "automaticActivation": true,
+  "missingSignatureRejected": true,
+  "invalidSignatureRejected": true,
+  "duplicateIgnored": true,
+  "invoiceBeforeCheckoutVerified": true,
+  "nextPeriodFromStripe": true
+}

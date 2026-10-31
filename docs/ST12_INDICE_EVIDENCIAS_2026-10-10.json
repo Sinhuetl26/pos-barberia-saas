@@ -1,0 +1,167 @@
+{
+  "recordedAt": "2026-10-11T03:54:29.419Z",
+  "localDate": "2026-10-10",
+  "codeVersion": "Uncommitted working tree; staged test qualifications retained, not a certified committed release",
+  "sourcesAtFreeze": [
+    {
+      "file": "apps/api/src/services/durable-jobs.service.ts",
+      "sha256": "1e001186975681ef30e39c8e080e7cb3d6da4e13aa5243c05103017a00ca7946"
+    },
+    {
+      "file": "apps/api/src/services/durable-worker.service.ts",
+      "sha256": "8422a0a9d032decb5c3e501703d8d56069498d93201d5e7dc0bedd786e0ee61c"
+    },
+    {
+      "file": "apps/api/src/services/job-scheduler.service.ts",
+      "sha256": "95190739a0ca7c5313a1a6e805169779e5358f338d8a8bcfa4fb15ea799711ab"
+    },
+    {
+      "file": "apps/api/src/services/job-handlers.service.ts",
+      "sha256": "8abe2f4dff139fe5f6823baac02235b84baffc28b994dd1956694edebf985aee"
+    },
+    {
+      "file": "apps/api/src/worker.ts",
+      "sha256": "3632cd2ba11bdeb9c76c90bd37aa3bd29265874fdba504d22de32546c1bda1e5"
+    },
+    {
+      "file": "apps/api/src/routes/jobs.routes.ts",
+      "sha256": "2982d6f1794e3308e2cbc333313f34d0150936fce49fbe1a295856c9024b4413"
+    }
+  ],
+  "results": [
+    {
+      "suite": "ST12 durable jobs",
+      "engine": "SQLite disposable",
+      "passed": 14,
+      "executionId": "a593deda-1bd0-4619-ab86-417a958f3d70",
+      "startedAt": "2026-10-11T03:50:37.717Z",
+      "finishedAt": "2026-10-11T03:51:52.671Z",
+      "localDate": "2026-10-10",
+      "resultPath": "docs/ST12_RESULTADOS_SQLITE.json",
+      "evidenceType": "test-generated JSON",
+      "exactCommit": false
+    },
+    {
+      "suite": "ST12 durable jobs",
+      "engine": "PostgreSQL isolated",
+      "passed": 14,
+      "executionId": "14634061-3a6e-487d-941b-5791459eb557",
+      "startedAt": "2026-10-11T03:46:30.793Z",
+      "finishedAt": "2026-10-11T03:46:55.242Z",
+      "localDate": "2026-10-10",
+      "resultPath": "docs/ST12_RESULTADOS_POSTGRES.json",
+      "evidenceType": "test-generated JSON",
+      "exactCommit": false
+    },
+    {
+      "suite": "Worker resource observation",
+      "engine": "PostgreSQL isolated",
+      "executionId": "dc73f2fc-2790-48aa-9694-e3507fad7691",
+      "observedAt": "2026-10-11T03:49:57.714Z",
+      "configuredPoolLimit": 1,
+      "observedWorkerConnections": 1,
+      "resultPath": "docs/ST12_RECURSOS_LOCALES.json",
+      "evidenceType": "test-generated JSON",
+      "productionCapacityCertified": false
+    },
+    {
+      "suite": "Account security",
+      "engine": "SQLite disposable",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:1358",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Account service unchanged afterward; queue INSERT UTC helper refined later and tested in final SQLite14.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    },
+    {
+      "suite": "Account security",
+      "engine": "PostgreSQL isolated",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:74109",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Executed after PostgreSQL UTC fix.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    },
+    {
+      "suite": "Mail/onboarding",
+      "engine": "SQLite disposable",
+      "passed": 17,
+      "failed": 0,
+      "executionId": "exec-output:63e901",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Provider intercepted; no actual DNS or delivery proof. Queue UTC helper refined later, validated by final SQLite14.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    },
+    {
+      "suite": "Mail/onboarding",
+      "engine": "PostgreSQL isolated",
+      "passed": 17,
+      "failed": 0,
+      "executionId": "exec-output:92d7c2",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Provider intercepted; executed after PostgreSQL UTC fix.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    },
+    {
+      "suite": "Authorization",
+      "engine": "SQLite disposable",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:86972",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Route grants tested; inventory mapping later added four jobs routes.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    },
+    {
+      "suite": "Authorization",
+      "engine": "PostgreSQL isolated",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:10964",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Inventory contains151 routes including all four jobs handlers.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    },
+    {
+      "suite": "Phase2 integrations/dunning",
+      "engine": "SQLite disposable",
+      "passed": 25,
+      "failed": 0,
+      "executionId": "session:47084",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Disposable seeded database; controlled webhooks and no external charges/messages.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    },
+    {
+      "suite": "Phase2 integrations/dunning",
+      "engine": "PostgreSQL isolated",
+      "passed": 25,
+      "failed": 0,
+      "executionId": "session:59712",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Disposable seeded schema; controlled webhooks and no external charges/messages.",
+      "resultPath": "docs/ST12_REGRESIONES_SESION_2026-10-10.json",
+      "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs"
+    }
+  ],
+  "operationalDatabaseMigratedByBackendAgent": false,
+  "defaultPrismaClientGenerated": false,
+  "hostingCostConfirmed": false
+}

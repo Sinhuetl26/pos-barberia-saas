@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-07",
+  "engine": "postgres",
+  "api_processes": 2,
+  "passed": 17,
+  "checks": [
+    "16 concurrent duplicate submissions across two API processes commit one complete sale",
+    "Exact keys do not match substrings, and altered input with the same key is rejected",
+    "The same key in another tenant registers an independent sale and cannot expose another result",
+    "Result lookup survives catalog deactivation and preserves branch, barber and financial permissions",
+    "Two cashiers cannot sell the last unit twice",
+    "Concurrent different sales reconcile stock, Kardex chain and unique consecutive folios",
+    "Shared stock across branches is locked consistently even with reversed cart order",
+    "Legacy folio gaps initialize from the highest visible number rather than row count",
+    "Inventory entry concurrent with a sale preserves both movements and the stock chain",
+    "Mixed payments reject even one missing or extra cent, without any financial effect",
+    "Discount allocation, included configured tax, tip and zero commission reconcile in cents",
+    "Insufficient later item rolls back earlier stock, Kardex, folio and intention",
+    "A late database failure rolls back every effect; retrying the same intention succeeds once",
+    "Different keys for the same appointment cannot duplicate sale, visit or commission",
+    "Invalid amounts, duplicate lines and inconsistent headers are rejected",
+    "Pending browser intentions survive reload and uncertain errors, isolated by tenant/user",
+    "Working database is unchanged"
+  ],
+  "working_database_unchanged": true,
+  "external_providers_contacted": false
+}

@@ -1,0 +1,50 @@
+{
+  "fecha": "2026-10-11",
+  "startedAt": "2026-10-11T03:50:37.717Z",
+  "executionId": "a593deda-1bd0-4619-ab86-417a958f3d70",
+  "codeVersion": {
+    "commit": "b5848d0b40b373d00a6342535d9561ddb47e098a",
+    "dirty": true,
+    "exactCommit": false,
+    "description": "Working tree with uncommitted changes; commit is a reference only"
+  },
+  "finishedAt": "2026-10-11T03:51:52.671Z",
+  "pass": true,
+  "passed": 14,
+  "checks": [
+    "Two worker processes claim a reminder once, same key deduplicates, and tenant keys remain independent",
+    "Provider acceptance with lost response replays the same immutable key without a second delivery",
+    "Crash after claim is recovered by another process, and an expired lease cannot renew or finish",
+    "Timeout without replay guarantee becomes UNCERTAIN and cannot be reexecuted as a fresh delivery",
+    "Provider errors exhaust bounded attempts, expiry prevents calls, and unavailable coordination sends nothing",
+    "Pausing one tenant does not starve another; controls and retries require owner, tenant and audit",
+    "Idle schedulers create no periodic MAIL rows; retention keeps failures and audit records",
+    "A tenant owner cannot pause platform license enforcement; legacy license pauses are ignored",
+    "License handler stays inside one tenant and a slow expired owner cannot repeat grace or audit transitions",
+    "Outage longer than the license horizon creates a fresh review without repeating transition or audit",
+    "Cold scheduler clears the last expired encrypted action without sending or another active action",
+    "Immutable mail recipient suppression survives an account email change before retry",
+    "Concurrent scheduler cursor pages reach due account actions beyond the first 200 without duplication",
+    "Confirmed account task survives HTTP restart; separate actual worker exposes readiness and honest mail state"
+  ],
+  "engine": "SQLite disposable",
+  "workerProcesses": true,
+  "peakWorkerRssBytes": 81850368,
+  "workerRssSamplesBytes": [
+    77000704,
+    81526784,
+    81207296,
+    81584128,
+    81027072,
+    81305600,
+    81850368,
+    77303808,
+    81633280,
+    81522688,
+    77524992,
+    81551360,
+    81399808,
+    79007744
+  ],
+  "externalIntegrations": false
+}

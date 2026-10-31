@@ -1,0 +1,61 @@
+{
+  "recordedAt": "2026-10-11T04:03:26.081Z",
+  "pass": true,
+  "passed": 13,
+  "total": 13,
+  "checks": [
+    {
+      "name": "Six original task IDs persist through every observation",
+      "pass": true
+    },
+    {
+      "name": "Cancel preserves jobs and JOB audits exactly",
+      "pass": true
+    },
+    {
+      "name": "One confirmed retry reuses FAILED ID and becomes QUEUED with attempts0",
+      "pass": true
+    },
+    {
+      "name": "Exactly one retry audit persists",
+      "pass": true
+    },
+    {
+      "name": "MAIL resume persists false and pause persists true",
+      "pass": true
+    },
+    {
+      "name": "WHATSAPP pause and platform LICENSE control stay unchanged",
+      "pass": true
+    },
+    {
+      "name": "Only two MAIL reviews complete as OUTBOX_SCANNED, each one attempt",
+      "pass": true
+    },
+    {
+      "name": "UNCERTAIN, EXPIRED, NOT_CONFIGURED and synthetic ACCEPTED remain unchanged",
+      "pass": true
+    },
+    {
+      "name": "All tasks belong to A; B has no tasks or controls",
+      "pass": true
+    },
+    {
+      "name": "No sales in every fixture observation",
+      "pass": true
+    },
+    {
+      "name": "No account email action to deliver in final fixture",
+      "pass": true
+    },
+    {
+      "name": "Operational database and demo manifest hashes remain unchanged",
+      "pass": true
+    },
+    {
+      "name": "Demo upgrade separately preserves all original rows and38tables",
+      "pass": true
+    }
+  ],
+  "qualification": "The original demo file hash changes after the documented additive schema upgrade; it is not counted as immutable. Synthetic ACCEPTED proves only UI wording, not provider acceptance."
+}

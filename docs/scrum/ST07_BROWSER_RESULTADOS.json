@@ -1,0 +1,41 @@
+{
+  "fecha": "2026-10-07",
+  "datos": "Demostración desechable ficticia",
+  "reserva": {
+    "folio": "RES-4C28A8706D8416E2",
+    "cantidad": 1,
+    "estado": "COMPLETADA",
+    "fechaHora": "2026-10-13T19:00:00.000Z",
+    "servicio": "Corte Clásico Caballero"
+  },
+  "venta": {
+    "folio": "A-000002",
+    "total": 280,
+    "vinculada": true
+  },
+  "cliente": {
+    "visitas": 1,
+    "gasto": 280
+  },
+  "consultaPublica": {
+    "nombre": "Cliente",
+    "gestionDisponible": false,
+    "exponeToken": false
+  },
+  "recuperacion": {
+    "mismaReserva": true,
+    "intencionPendiente": false
+  },
+  "pantallas": {
+    "movil": "390x844",
+    "escritorio": "1440x1000",
+    "desbordeHorizontal": false
+  },
+  "cancelacion": {
+    "otraCitaCancelada": true,
+    "sinFormularioAlCancelar": true
+  },
+  "agenda": {
+    "bloqueosSoloDelDia": true
+  }
+}

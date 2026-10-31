@@ -1,0 +1,37 @@
+{
+  "viewport": 390,
+  "pageWidth": 390,
+  "active": "Paso 4 de 5: Horario",
+  "buttons": [
+    {
+      "text": "Barbería QA ST43 · ficticiaSucursal QA ST43",
+      "height": 44,
+      "width": 214.625
+    },
+    {
+      "text": "Mi Folio",
+      "height": 44,
+      "width": 68
+    },
+    {
+      "text": "Ver la barbería",
+      "height": 44,
+      "width": 110.0625
+    },
+    {
+      "text": "Cambiar barbero",
+      "height": 44,
+      "width": 93.359375
+    },
+    {
+      "text": "22:30",
+      "height": 44,
+      "width": 114
+    },
+    {
+      "text": "23:00",
+      "height": 44,
+      "width": 114
+    }
+  ]
+}

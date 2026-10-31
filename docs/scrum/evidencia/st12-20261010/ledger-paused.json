@@ -1,0 +1,177 @@
+{
+  "recordedAt": "2026-10-11T03:53:41.600Z",
+  "stage": "paused",
+  "jobs": [
+    {
+      "id": "dae7f87d-d120-4a01-8906-37f89fca24f8",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "key": "ui-fixture/FAILED",
+      "kind": "MAIL_OUTBOX",
+      "provider": "MAIL",
+      "state": "SUCCEEDED",
+      "attempts": 1,
+      "maxAttempts": 4,
+      "availableAt": "2026-10-11T03:52:52.006Z",
+      "expiresAt": "2026-10-12T03:46:46.963Z",
+      "lastCode": "OUTBOX_SCANNED",
+      "completedAt": "2026-10-11T03:52:50.006Z"
+    },
+    {
+      "id": "1c2d7cc1-95af-447c-8d1e-614acb0cb341",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "key": "ui-fixture/UNCERTAIN",
+      "kind": "MAIL_OUTBOX",
+      "provider": "MAIL",
+      "state": "UNCERTAIN",
+      "attempts": 0,
+      "maxAttempts": 4,
+      "availableAt": "2026-10-11T03:46:47.007Z",
+      "expiresAt": "2026-10-12T03:46:46.963Z",
+      "lastCode": "UNCERTAIN",
+      "completedAt": null
+    },
+    {
+      "id": "6f7ee5cd-0b90-490b-8127-be36bb1f21d4",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "key": "ui-fixture/EXPIRED",
+      "kind": "MAIL_OUTBOX",
+      "provider": "MAIL",
+      "state": "EXPIRED",
+      "attempts": 0,
+      "maxAttempts": 4,
+      "availableAt": "2026-10-11T03:46:47.034Z",
+      "expiresAt": "1970-01-01T00:00:00.000Z",
+      "lastCode": "EXPIRED",
+      "completedAt": null
+    },
+    {
+      "id": "b6fdad4a-eb53-42d5-94ef-f58d326a5e5e",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "key": "ui-fixture/NOT_CONFIGURED",
+      "kind": "MAIL_OUTBOX",
+      "provider": "MAIL",
+      "state": "NOT_CONFIGURED",
+      "attempts": 0,
+      "maxAttempts": 4,
+      "availableAt": "2026-10-11T03:46:47.059Z",
+      "expiresAt": "2026-10-12T03:46:46.963Z",
+      "lastCode": "NOT_CONFIGURED",
+      "completedAt": null
+    },
+    {
+      "id": "16dd0636-c545-4174-8c4d-00157ee9fee3",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "key": "ui-fixture/QUEUED",
+      "kind": "MAIL_OUTBOX",
+      "provider": "MAIL",
+      "state": "SUCCEEDED",
+      "attempts": 1,
+      "maxAttempts": 4,
+      "availableAt": "2026-10-11T03:52:50.187Z",
+      "expiresAt": "2026-10-12T03:46:46.963Z",
+      "lastCode": "OUTBOX_SCANNED",
+      "completedAt": "2026-10-11T03:52:48.187Z"
+    },
+    {
+      "id": "1c85a3c5-c599-4dd6-90df-05156fcb6106",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "key": "ui-fixture/ACCEPTED",
+      "kind": "REMINDER_2H",
+      "provider": "WHATSAPP",
+      "state": "ACCEPTED",
+      "attempts": 0,
+      "maxAttempts": 4,
+      "availableAt": "2026-10-11T03:46:47.112Z",
+      "expiresAt": "2026-10-12T03:46:46.963Z",
+      "lastCode": "ACCEPTED",
+      "completedAt": null
+    }
+  ],
+  "providers": [
+    {
+      "id": "5998416e11b7787e041489ed824264c8e5b46fa837637613693756b0dc934897",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "provider": "WHATSAPP",
+      "paused": true,
+      "updatedAt": "2026-10-11T03:46:47.192Z"
+    },
+    {
+      "id": "a1ba6b3d03e034d82624e28403cdd610db4aa557dfa1acb4d4c0b501c2a67ff8",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "provider": "LICENSE",
+      "paused": false,
+      "updatedAt": "2026-10-11T03:49:42.941Z"
+    },
+    {
+      "id": "e24faabb366e4ce9af8423a3fefc1ad72b2544a5d3d0424a0b9e0f1b466fdf7f",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "provider": "MAIL",
+      "paused": true,
+      "updatedAt": "2026-10-11T03:53:32.193Z"
+    }
+  ],
+  "audits": [
+    {
+      "id": "4b0f2428-06df-42fb-9358-c38281d6bb8f",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "usuarioEmail": "dueno.st12.a@qa.invalid",
+      "accion": "JOB_PROVIDER_PAUSED",
+      "detalles": "{\"provider\":\"MAIL\"}",
+      "fecha": "2026-10-11T03:46:47.177Z"
+    },
+    {
+      "id": "912f5b84-e7b3-48ae-a3e5-5d2221137cab",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "usuarioEmail": "dueno.st12.a@qa.invalid",
+      "accion": "JOB_PROVIDER_PAUSED",
+      "detalles": "{\"provider\":\"WHATSAPP\"}",
+      "fecha": "2026-10-11T03:46:47.196Z"
+    },
+    {
+      "id": "d8961241-56ef-4391-84bf-067341827019",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "usuarioEmail": "dueno.st12.a@qa.invalid",
+      "accion": "JOB_RETRY",
+      "detalles": "{\"jobId\":\"dae7f87d-d120-4a01-8906-37f89fca24f8\",\"kind\":\"MAIL_OUTBOX\"}",
+      "fecha": "2026-10-11T03:51:59.103Z"
+    },
+    {
+      "id": "228b438c-1f7a-4dc0-a276-bfc265cadcaf",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "usuarioEmail": "dueno.st12.a@qa.invalid",
+      "accion": "JOB_PROVIDER_RESUMED",
+      "detalles": "{\"provider\":\"MAIL\"}",
+      "fecha": "2026-10-11T03:52:45.932Z"
+    },
+    {
+      "id": "ac9fb141-10f5-4046-9666-f8cc33cbdda7",
+      "tenantId": "f76ebcb6-862e-427f-a6cc-dc22c796dc48",
+      "usuarioEmail": "dueno.st12.a@qa.invalid",
+      "accion": "JOB_PROVIDER_PAUSED",
+      "detalles": "{\"provider\":\"MAIL\"}",
+      "fecha": "2026-10-11T03:53:32.229Z"
+    }
+  ],
+  "pulses": [
+    {
+      "id": "036aefde-5e98-4be3-a9c6-40c7ad3b6a2d",
+      "lastSeen": "2026-10-11T03:53:31.682Z",
+      "rssBytes": 56303616
+    }
+  ],
+  "sales": 0,
+  "originals": [
+    {
+      "file": "packages\\database\\prisma\\dev.db",
+      "unchanged": true
+    },
+    {
+      "file": ".tools\\dv-preview.json",
+      "unchanged": true
+    },
+    {
+      "file": ".test-db-TrhWfE\\test.db",
+      "unchanged": true
+    }
+  ]
+}

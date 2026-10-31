@@ -1,0 +1,151 @@
+{
+  "updated": "2026-10-30",
+  "scope": "Rediseño UI/UX,20 bloques; no preparación para producción",
+  "points": 2000,
+  "totalPoints": 2000,
+  "percent": 100,
+  "verifiedBlocks": 20,
+  "activeBlock": null,
+  "blocks": [
+    {
+      "id": "UI-01",
+      "name": "Inventario de pantallas",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "docs/scrum/MAPA_PANTALLAS_UI01_2026-10-29.md"
+    },
+    {
+      "id": "UI-02",
+      "name": "Referencia visual de los tres flujos",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/day-workspace-20261027/REVISION.md"
+    },
+    {
+      "id": "UI-03",
+      "name": "Componentes y estilos",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-70-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-04",
+      "name": "Navegación y permisos",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/day-workspace-20261027/REVISION.md"
+    },
+    {
+      "id": "UI-05",
+      "name": "Hoy y Mi día",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/day-workspace-20261027/REVISION.md"
+    },
+    {
+      "id": "UI-06",
+      "name": "Agenda, disponibilidad y fila",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-50-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-07",
+      "name": "Cobro completo",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-70-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-08",
+      "name": "Caja, turnos y comprobantes",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-70-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-09",
+      "name": "Clientes e historial",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-50-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-10",
+      "name": "Equipo y comisiones",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-50-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-11",
+      "name": "Catálogo e inventario",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-100-20261030/REVISION.md"
+    },
+    {
+      "id": "UI-12",
+      "name": "Reportes e inteligencia",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-90-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-13",
+      "name": "Mensajes y avisos",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-70-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-14",
+      "name": "Mi negocio y editor público",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-90-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-15",
+      "name": "Reservas y gestión privada",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-90-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-16",
+      "name": "Accesos, cuenta y licencia",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-90-20261029/REVISION.md"
+    },
+    {
+      "id": "UI-17",
+      "name": "Login, alta y ayuda",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-100-20261030/REVISION.md"
+    },
+    {
+      "id": "UI-18",
+      "name": "Importación y plataforma",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-100-20261030/REVISION.md"
+    },
+    {
+      "id": "UI-19",
+      "name": "Accesibilidad, móvil y rendimiento",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-100-20261030/REVISION.md"
+    },
+    {
+      "id": "UI-20",
+      "name": "Regresión y demo final",
+      "stage": "Verificado completo",
+      "points": 100,
+      "evidence": "output/ui-100-20261030/REVISION.md"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+63. [GET] http://127.0.0.1:3101/api/public/disponibilidad?sucursalId=8bde8702-91e4-446e-a330-3121a6777cef&barberoId=161c11d0-ccd9-426a-9b82-d74170344ece&fecha=2026-10-10&duracion=30 => [200] OK
+64. [GET] http://127.0.0.1:3101/api/public/disponibilidad?sucursalId=8bde8702-91e4-446e-a330-3121a6777cef&barberoId=161c11d0-ccd9-426a-9b82-d74170344ece&fecha=2026-10-10&duracion=30 => [200] OK
+65. [GET] http://127.0.0.1:3101/api/public/disponibilidad?sucursalId=8bde8702-91e4-446e-a330-3121a6777cef&barberoId=161c11d0-ccd9-426a-9b82-d74170344ece&fecha=2026-10-10&duracion=30 => [200] OK
+
+Note: 60 static requests not shown, run with "static" option to see them.

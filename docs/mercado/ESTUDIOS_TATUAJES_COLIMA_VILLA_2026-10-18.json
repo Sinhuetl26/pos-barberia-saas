@@ -1,0 +1,1271 @@
+{
+  "date": "2026-10-18",
+  "timezone": "America/Mexico_City",
+  "scope": "Municipios de Colima y Villa de Álvarez; muestra de descubrimiento, no censo",
+  "method": "Firecrawl search + proveedor firecrawl-maps + scrape de páginas accesibles. Redes bloqueadas por herramienta; extractos indexados etiquetados.",
+  "counts": {
+    "fichas": 28,
+    "colima": 18,
+    "villa": 10,
+    "website_own_found": 1,
+    "phone": 22,
+    "social_identified": 14
+  },
+  "records": [
+    {
+      "address": "Avenida Venustiano Carranza 1226-Planta Alta, Sta Bárbara, 28017 Colima, Col., Mexico",
+      "address_lines": [
+        "Avenida Venustiano Carranza 1226-Planta Alta",
+        "Sta Bárbara",
+        "28017 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop",
+        "Artist",
+        "Health and beauty shop",
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255bbdd769ff3f:0x8bb2de95d0b00a51",
+      "latitude": 19.2663815,
+      "longitude": -103.7174941,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255bbdd769ff3f%3A0x8bb2de95d0b00a51",
+      "name": "Reinarojacolima (Yosoyluanmx)",
+      "phone": "+52 312 156 2312",
+      "phone_e164": "+523121562312",
+      "place_id": "ChIJP_9p171bJYQRUQqw0JXesos",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 148,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://www.facebook.com/yosoyluanmx/",
+          "source": "https://www.facebook.com/yosoyluanmx/"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Av. de los Maestros 99, Centro, 28030 Colima, Col., Mexico",
+      "address_lines": [
+        "Av. de los Maestros 99",
+        "Centro",
+        "28030 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop",
+        "Airbrushing supply store",
+        "Fashion accessories store",
+        "Jewelry engraver",
+        "Men's clothing store",
+        "Tobacco shop",
+        "Women's clothing store"
+      ],
+      "editorial_summary": "Hip British-born retailer for apparel, shoes, handbags & accessories.",
+      "feature_id": "0x84255ab179eb4d4b:0xd628380aa040df98",
+      "latitude": 19.2520006,
+      "longitude": -103.7226046,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255ab179eb4d4b%3A0xd628380aa040df98",
+      "name": "Stop tattoo, piercing & smoke shop",
+      "phone": "+52 312 330 2434",
+      "phone_e164": "+523123302434",
+      "place_id": "ChIJS03rebFaJYQRmN9AoAo4KNY",
+      "price_level": null,
+      "rating": 4.3,
+      "review_count": 139,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [
+        "Posible misma marca que sucursal Norte; confirmar administración conjunta. No se usan categorías ni resumen editorial genérico del proveedor como evidencia de servicios."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "Medellín 88, Centro, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "Medellín 88",
+        "Centro",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop",
+        "Ear piercing service",
+        "Store",
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84254546bb491e3d:0x99540f8ff20cceef",
+      "latitude": 19.2419146,
+      "longitude": -103.7281733,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84254546bb491e3d%3A0x99540f8ff20cceef",
+      "name": "Línea Fina Colima",
+      "phone": "+52 312 312 2004",
+      "phone_e164": "+523123122004",
+      "place_id": "ChIJPR5Ju0ZFJYQR784M8o8PVJk",
+      "price_level": null,
+      "rating": 4.8,
+      "review_count": 50,
+      "timezone": "America/Mexico_City",
+      "website": "https://www.facebook.com/Lineafinacolima",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://www.facebook.com/Lineafinacolima",
+          "source": "https://maps.firecrawl.dev/place/0x84254546bb491e3d%3A0x99540f8ff20cceef"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Corregidora #275-Int. 40, Jardines de la Corregidora, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "Corregidora #275-Int. 40",
+        "Jardines de la Corregidora",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b0df4709681:0x1604567ea058f0ae",
+      "latitude": 19.250045,
+      "longitude": -103.727341,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b0df4709681%3A0x1604567ea058f0ae",
+      "name": "Nueve Niveles Tattoo Studio",
+      "phone": null,
+      "phone_e164": null,
+      "place_id": "ChIJgZZw9A1bJYQRrvBYoH5WBBY",
+      "price_level": null,
+      "rating": 4.8,
+      "review_count": 22,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "P.º Miguel de la Madrid Hurtado 113, Esmeralda, 28017 Colima, Col., Mexico",
+      "address_lines": [
+        "P.º Miguel de la Madrid Hurtado 113",
+        "Esmeralda",
+        "28017 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Barber shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b051db29d29:0x2ae2689a1de1f143",
+      "latitude": 19.2723396,
+      "longitude": -103.7121969,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b051db29d29%3A0x2ae2689a1de1f143",
+      "name": "Imperius Barber & Tattoo",
+      "phone": null,
+      "phone_e164": null,
+      "place_id": "ChIJKZ2yHQVbJYQRQ_HhHZpo4io",
+      "price_level": null,
+      "rating": 4.8,
+      "review_count": 19,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [
+        "Categoría principal recuperada barbería; nombre incluye tattoo. Confirmar que siga ofreciendo tatuajes."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "José Pimentel Llerenas #4, Centro, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "José Pimentel Llerenas #4",
+        "Centro",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b52df6773cd:0xd25447c78027cb19",
+      "latitude": 19.2375965,
+      "longitude": -103.7197715,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b52df6773cd%3A0xd25447c78027cb19",
+      "name": "Smoke Shop Tattoo Colima",
+      "phone": "+52 312 319 3200",
+      "phone_e164": "+523123193200",
+      "place_id": "ChIJzXNn31JbJYQRGcsngMdHVNI",
+      "price_level": null,
+      "rating": 4.2,
+      "review_count": 19,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Independencia 548, Placetas Estadio, 28050 Colima, Col., Mexico",
+      "address_lines": [
+        "Independencia 548",
+        "Placetas Estadio",
+        "28050 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84254575b2518da7:0x76f3e853e0e83500",
+      "latitude": 19.2486652,
+      "longitude": -103.7373565,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84254575b2518da7%3A0x76f3e853e0e83500",
+      "name": "Infierno Tattoo Studio",
+      "phone": "+52 312 198 5504",
+      "phone_e164": "+523121985504",
+      "place_id": "ChIJp41RsnVFJYQRADXo4FPo83Y",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 17,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://www.facebook.com/p/Infierno-Tattoo-Studio-Colima-61574046068384/",
+          "source": "https://www.facebook.com/p/Infierno-Tattoo-Studio-Colima-61574046068384/"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [
+        "Ficha Maps sitúa dirección en Colima; encabezado de Facebook dice Villa de Álvarez. Confirmar ubicación antes de visitar."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "Av. Constitución 900-Loc B, Lomas Vista Hermosa, 28016 Colima, Col., Mexico",
+      "address_lines": [
+        "Av. Constitución 900-Loc B",
+        "Lomas Vista Hermosa",
+        "28016 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Art studio"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b000c642ff9:0xe8b2641c0a95be9e",
+      "latitude": 19.2556294,
+      "longitude": -103.7172427,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b000c642ff9%3A0xe8b2641c0a95be9e",
+      "name": "Papillon Tattoo House",
+      "phone": "+52 33 2528 2489",
+      "phone_e164": "+523325282489",
+      "place_id": "ChIJ-S9kDABbJYQRnr6VChxksug",
+      "price_level": null,
+      "rating": 2.7,
+      "review_count": 14,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://www.instagram.com/papillon_tattoohouse/",
+          "source": "https://www.instagram.com/papillon_tattoohouse/"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [
+        "Calificación publicada de ficha, no valoración propia de calidad; sin análisis de sus reseñas textuales."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "Daniel Larios #175, Fátima, 28050 Colima, Col., Mexico",
+      "address_lines": [
+        "Daniel Larios #175",
+        "Fátima",
+        "28050 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo artist"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x842545cf630ea573:0x7a192d3edd690081",
+      "latitude": 19.2514248,
+      "longitude": -103.7331797,
+      "maps_url": "https://maps.firecrawl.dev/place/0x842545cf630ea573%3A0x7a192d3edd690081",
+      "name": "Mayack Ramirez tattoo",
+      "phone": "+52 312 120 2543",
+      "phone_e164": "+523121202543",
+      "place_id": "ChIJc6UOY89FJYQRgQBp3T4tGXo",
+      "price_level": null,
+      "rating": 4.9,
+      "review_count": 13,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Aldama 95, Centro, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "Aldama 95",
+        "Centro",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Art studio"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b0071a56d5d:0x421ac6e7fc01ef8c",
+      "latitude": 19.2453401,
+      "longitude": -103.7241116,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b0071a56d5d%3A0x421ac6e7fc01ef8c",
+      "name": "Orquídea tattoo studio",
+      "phone": null,
+      "phone_e164": null,
+      "place_id": "ChIJXW2lcQBbJYQRjO8B_OfGGkI",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 13,
+      "timezone": "America/Mexico_City",
+      "website": "https://www.instagram.com/orquidea_tattoostudio?igsh=NmJuc2w3MGNkMXFq&utm_source=qr",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://www.instagram.com/orquidea_tattoostudio?igsh=NmJuc2w3MGNkMXFq&utm_source=qr",
+          "source": "https://maps.firecrawl.dev/place/0x84255b0071a56d5d%3A0x421ac6e7fc01ef8c"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Reforma 160, Centro, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "Reforma 160",
+        "Centro",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255be320c3d89d:0x7c136dc670d39d7d",
+      "latitude": 19.2412683,
+      "longitude": -103.7297845,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255be320c3d89d%3A0x7c136dc670d39d7d",
+      "name": "Tres de Espadas Estudio",
+      "phone": null,
+      "phone_e164": null,
+      "place_id": "ChIJndjDIONbJYQRfZ3TcMZtE3w",
+      "price_level": null,
+      "rating": 4.6,
+      "review_count": 10,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Calle Gral. Silverio Núñez 105, Centro, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "Calle Gral. Silverio Núñez 105",
+        "Centro",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255ba5b0178391:0x7b5767de2d2bc5a1",
+      "latitude": 19.2418048,
+      "longitude": -103.7225874,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255ba5b0178391%3A0x7b5767de2d2bc5a1",
+      "name": "Mano Santa Studio",
+      "phone": null,
+      "phone_e164": null,
+      "place_id": "ChIJkYMXsKVbJYQRocUrLd5nV3s",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 8,
+      "timezone": "America/Mexico_City",
+      "website": "http://www.instagram.com/manosantastudio",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "http://www.instagram.com/manosantastudio",
+          "source": "https://maps.firecrawl.dev/place/0x84255ba5b0178391%3A0x7b5767de2d2bc5a1"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Calle Ignacio Sandoval 1906, Las Pergolas, Real Vista Hermosa, 28018 Colima, Col., Mexico",
+      "address_lines": [
+        "Calle Ignacio Sandoval 1906",
+        "Las Pergolas, Real Vista Hermosa",
+        "28018 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255bc2694cd465:0x2f3ee9225be2fb22",
+      "latitude": 19.2614225,
+      "longitude": -103.7051423,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255bc2694cd465%3A0x2f3ee9225be2fb22",
+      "name": "Stop Tattoo & Piercing Sucursal Norte",
+      "phone": "+52 312 303 8559",
+      "phone_e164": "+523123038559",
+      "place_id": "ChIJZdRMacJbJYQRIvviWyLpPi8",
+      "price_level": null,
+      "rating": 3.8,
+      "review_count": 5,
+      "timezone": "America/Mexico_City",
+      "website": "https://instagram.com/stoptattoopiercing?igshid=OGQ5ZDc2ODk2ZA==",
+      "source_search": "https://maps.firecrawl.dev/search?q=tatuajes+piercing+Colima+norte+Ignacio+Sandoval+tattoo+studio",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://instagram.com/stoptattoopiercing?igshid=OGQ5ZDc2ODk2ZA==",
+          "source": "https://maps.firecrawl.dev/place/0x84255bc2694cd465%3A0x2f3ee9225be2fb22"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [
+        "Sucursal distinta; agrupar con Stop al contar oportunidades, sujeto a confirmar propietario."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "Medellín 142B, Centro, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "Medellín 142B",
+        "Centro",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b893368648f:0x387c72886b320f9d",
+      "latitude": 19.2410738,
+      "longitude": -103.7288664,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b893368648f%3A0x387c72886b320f9d",
+      "name": "Jr Tattoos",
+      "phone": "+52 312 129 2642",
+      "phone_e164": "+523121292642",
+      "place_id": "ChIJj2RoM4lbJYQRnQ8ya4hyfDg",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 3,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Avenida Venustiano Carranza 1456, Sta Bárbara, 28017 Colima, Col., Mexico",
+      "address_lines": [
+        "Avenida Venustiano Carranza 1456",
+        "Sta Bárbara",
+        "28017 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b0a77b0c9e7:0x44f99434e20a2f04",
+      "latitude": 19.2697128,
+      "longitude": -103.716371,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b0a77b0c9e7%3A0x44f99434e20a2f04",
+      "name": "Black Goat Studio",
+      "phone": "+52 312 154 7873",
+      "phone_e164": "+523121547873",
+      "place_id": "ChIJ58mwdwpbJYQRBC8K4jSU-UQ",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 2,
+      "timezone": "America/Mexico_City",
+      "website": "https://www.facebook.com/BlackGoatTattooStudio/",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://www.facebook.com/BlackGoatTattooStudio/",
+          "source": "https://maps.firecrawl.dev/place/0x84255b0a77b0c9e7%3A0x44f99434e20a2f04"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Vicente Guerrero 169-C, Sangre de Cristo, 28000 Colima, Col., Mexico",
+      "address_lines": [
+        "Vicente Guerrero 169-C",
+        "Sangre de Cristo",
+        "28000 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255aabf7b3f6c3:0xc346980c16b2c2d9",
+      "latitude": 19.2427312,
+      "longitude": -103.7240106,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255aabf7b3f6c3%3A0xc346980c16b2c2d9",
+      "name": "Dali Tattoo & Piercing Studio",
+      "phone": "+52 312 303 0360",
+      "phone_e164": "+523123030360",
+      "place_id": "ChIJw_az96taJYQR2cKyFgyYRsM",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 2,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Manuel Álvarez 599, Fátima, 28050 Colima, Col., Mexico",
+      "address_lines": [
+        "Manuel Álvarez 599",
+        "Fátima",
+        "28050 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop",
+        "Barber shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x842545bda6e9787b:0x2a4a52575d38af20",
+      "latitude": 19.2514798,
+      "longitude": -103.7364523,
+      "maps_url": "https://maps.firecrawl.dev/place/0x842545bda6e9787b%3A0x2a4a52575d38af20",
+      "name": "Liz Tattoo Studio",
+      "phone": "+52 312 101 2915",
+      "phone_e164": "+523121012915",
+      "place_id": "ChIJe3jppr1FJYQRIK84XVdSSio",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 1,
+      "timezone": "America/Mexico_City",
+      "website": "https://instagram.com/liz_tattoo_studio1?igshid=YmMyMTA2M2Y=",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [
+        {
+          "url": "https://instagram.com/liz_tattoo_studio1?igshid=YmMyMTA2M2Y=",
+          "source": "https://maps.firecrawl.dev/place/0x842545bda6e9787b%3A0x2a4a52575d38af20"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Av. Maclovio Herrera 557-B, San Francisco, 28035 Colima, Col., Mexico",
+      "address_lines": [
+        "Av. Maclovio Herrera 557-B",
+        "San Francisco",
+        "28035 Colima, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84254500693d9ad5:0x5194f12f6be6d15f",
+      "latitude": 19.255993,
+      "longitude": -103.731194,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84254500693d9ad5%3A0x5194f12f6be6d15f",
+      "name": "Un Toke De",
+      "phone": null,
+      "phone_e164": null,
+      "place_id": "ChIJ1Zo9aQBFJYQRX9Hmay_xlFE",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 1,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Colima+Colima+M%C3%A9xico",
+      "city": "Colima",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "María Ahumada de Gómez 354, Alfredo V. Bonfil, 28979 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "María Ahumada de Gómez 354",
+        "Alfredo V. Bonfil",
+        "28979 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop",
+        "Barber school",
+        "Barber shop",
+        "Ear piercing service",
+        "Tattoo artist",
+        "Tattoo supply store",
+        "Hairdresser"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84254515eccea039:0x914abe767bce79e",
+      "latitude": 19.274378799999997,
+      "longitude": -103.738707,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84254515eccea039%3A0x914abe767bce79e",
+      "name": "SACRUM STUDIO (tatuajes / piercings / barbería) COLIMA",
+      "phone": "+52 312 102 7834",
+      "phone_e164": "+523121027834",
+      "place_id": "ChIJOaDO7BVFJYQRnue8Z-erFAk",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 150,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [
+        {
+          "url": "https://www.instagram.com/sacrumstudio/",
+          "source": "https://www.instagram.com/sacrumstudio/"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Plaza Palmas, C. Nevado de Toluca 127 Col, La Frontera, 28975 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "Plaza Palmas, C. Nevado de Toluca 127 Col",
+        "La Frontera",
+        "28975 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b317540c0f1:0x941d9b8a89a7661f",
+      "latitude": 19.2714978,
+      "longitude": -103.7354531,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b317540c0f1%3A0x941d9b8a89a7661f",
+      "name": "Rebel Monster Tattoo Mx",
+      "phone": "+52 312 138 0480",
+      "phone_e164": "+523121380480",
+      "place_id": "ChIJ8cBAdTFbJYQRH2aniYqbHZQ",
+      "price_level": null,
+      "rating": 4.8,
+      "review_count": 21,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [
+        {
+          "url": "https://www.instagram.com/rebelmonstertattoomx/",
+          "source": "https://www.instagram.com/rebelmonstertattoomx/"
+        },
+        {
+          "url": "https://www.facebook.com/MaiMonsterReyes/",
+          "source": "https://www.facebook.com/MaiMonsterReyes/"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "López Mateos 201, La Gloria, 28980 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "López Mateos 201",
+        "La Gloria",
+        "28980 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop",
+        "Body piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x8425454a62962a21:0x2161541bd08862eb",
+      "latitude": 19.2593045,
+      "longitude": -103.7416802,
+      "maps_url": "https://maps.firecrawl.dev/place/0x8425454a62962a21%3A0x2161541bd08862eb",
+      "name": "* Magic Tattoo *",
+      "phone": "+52 312 193 1754",
+      "phone_e164": "+523121931754",
+      "place_id": "ChIJISqWYkpFJYQR62KI0BtUYSE",
+      "price_level": null,
+      "rating": 4.8,
+      "review_count": 11,
+      "timezone": "America/Mexico_City",
+      "website": "https://magictattoocolima.lovable.app/",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [],
+      "website_status": "Sitio independiente identificado",
+      "website_own": "https://magictattoocolima.lovable.app/",
+      "notes": [
+        "Web consultada enlaza WhatsApp a https://wa.me/52 (sin número completo) e Instagram del artista a https://instagram.com/ (genérico). Muestra4.9, distinto de4.8/11 en la ficha consultada. No se confirmó agenda autónoma; CTA dirige a contacto."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "Flor de Nochebuena 826, Arboledas del Carmen, 28978 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "Flor de Nochebuena 826",
+        "Arboledas del Carmen",
+        "28978 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo artist"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84255b4b8dfd5d2f:0x1e1998dee246a801",
+      "latitude": 19.274883,
+      "longitude": -103.7267789,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84255b4b8dfd5d2f%3A0x1e1998dee246a801",
+      "name": "O K I R U * T A T T O O",
+      "phone": "+52 312 138 3663",
+      "phone_e164": "+523121383663",
+      "place_id": "ChIJL139jUtbJYQRAahG4t6YGR4",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 11,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Av. Benito Juárez 984, La Floresta, 28984 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "Av. Benito Juárez 984",
+        "La Floresta",
+        "28984 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84254543614c4651:0xe071cf357c00aa1b",
+      "latitude": 19.2487033,
+      "longitude": -103.7466408,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84254543614c4651%3A0xe071cf357c00aa1b",
+      "name": "Caballo Loco",
+      "phone": "+52 312 114 4958",
+      "phone_e164": "+523121144958",
+      "place_id": "ChIJUUZMYUNFJYQRG6oAfDXPceA",
+      "price_level": null,
+      "rating": 4.7,
+      "review_count": 7,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "San Isidro, 28974 Villa de Álvarez, Colima, Mexico",
+      "address_lines": [
+        "San Isidro",
+        "28974 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84254549bfffffff:0xcb2d948edf8e7338",
+      "latitude": 19.2575722,
+      "longitude": -103.7349401,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84254549bfffffff%3A0xcb2d948edf8e7338",
+      "name": "Casa De La Tatuadora",
+      "phone": "+52 312 309 1476",
+      "phone_e164": "+523123091476",
+      "place_id": "ChIJ____v0lFJYQROHOO346ULcs",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 2,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [
+        "Comparte teléfono público con Casa De La Tatuadora / Blanka; posible relación o ficha antigua. No contar como dos compradores sin confirmar."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "María de la Luz Delgado 1281, residencial punta diamante, 28984 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "María de la Luz Delgado 1281",
+        "residencial punta diamante",
+        "28984 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo artist"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x842545fcaba4a6fd:0x36201f85df886d8d",
+      "latitude": 19.2764634,
+      "longitude": -103.7653998,
+      "maps_url": "https://maps.firecrawl.dev/place/0x842545fcaba4a6fd%3A0x36201f85df886d8d",
+      "name": "El Templo Estudio de Tatuajes",
+      "phone": "+52 322 304 6010",
+      "phone_e164": "+523223046010",
+      "place_id": "ChIJ_aakq_xFJYQRjW2I34UfIDY",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 2,
+      "timezone": "America/Mexico_City",
+      "website": null,
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [],
+      "website_status": "Web independiente no localizada en esta revisión",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Bernardo Celis de La Rosa 1199, 28983 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "Bernardo Celis de La Rosa 1199",
+        "28983 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo and piercing shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x84254552bab103d5:0x950ee3a2b91bd712",
+      "latitude": 19.2407759,
+      "longitude": -103.7662959,
+      "maps_url": "https://maps.firecrawl.dev/place/0x84254552bab103d5%3A0x950ee3a2b91bd712",
+      "name": "Blanka Tatuadora Studio",
+      "phone": "+52 312 309 1476",
+      "phone_e164": "+523123091476",
+      "place_id": "ChIJ1QOxulJFJYQREtcbuaLjDpU",
+      "price_level": null,
+      "rating": 4,
+      "review_count": 1,
+      "timezone": "America/Mexico_City",
+      "website": "http://facebook.com/blankatatuadora",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [
+        {
+          "url": "http://facebook.com/blankatatuadora",
+          "source": "https://maps.firecrawl.dev/place/0x84254552bab103d5%3A0x950ee3a2b91bd712"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [
+        "Comparte teléfono público con Casa De La Tatuadora / Blanka; posible relación o ficha antigua. No contar como dos compradores sin confirmar."
+      ],
+      "email_publico": null
+    },
+    {
+      "address": "Av José de Ruiz 245c, Jardines de la Villa, 28984 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "Av José de Ruiz 245c",
+        "Jardines de la Villa",
+        "28984 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x842545007c2b06b3:0x312884e6fc1251ec",
+      "latitude": 19.2514362,
+      "longitude": -103.7463768,
+      "maps_url": "https://maps.firecrawl.dev/place/0x842545007c2b06b3%3A0x312884e6fc1251ec",
+      "name": "Sol de Tarde ESTUDIO DE ARTE Y TATUAJES",
+      "phone": "+52 312 101 4686",
+      "phone_e164": "+523121014686",
+      "place_id": "ChIJswYrfABFJYQR7FES_OaEKDE",
+      "price_level": null,
+      "rating": 5,
+      "review_count": 1,
+      "timezone": "America/Mexico_City",
+      "website": "https://www.instagram.com/soldetarde.estudio?igsh=bmNkNnU3eGRnbHVz&utm_source=qr",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [
+        {
+          "url": "https://www.instagram.com/soldetarde.estudio?igsh=bmNkNnU3eGRnbHVz&utm_source=qr",
+          "source": "https://maps.firecrawl.dev/place/0x842545007c2b06b3%3A0x312884e6fc1251ec"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    },
+    {
+      "address": "Salvador Magaña Farias 334, Loma Dorada, Linda Vista, 28979 Cdad. de Villa de Álvarez, Col., Mexico",
+      "address_lines": [
+        "Salvador Magaña Farias 334",
+        "Loma Dorada, Linda Vista",
+        "28979 Cdad. de Villa de Álvarez, Col.",
+        "Mexico"
+      ],
+      "categories": [
+        "Tattoo shop"
+      ],
+      "editorial_summary": null,
+      "feature_id": "0x8425450523dbf771:0x906c6cf462502faa",
+      "latitude": 19.2892921,
+      "longitude": -103.7404373,
+      "maps_url": "https://maps.firecrawl.dev/place/0x8425450523dbf771%3A0x906c6cf462502faa",
+      "name": "Hellfire Tattoo Studio",
+      "phone": "+52 312 196 5881",
+      "phone_e164": "+523121965881",
+      "place_id": "ChIJcffbIwVFJYQRqi9QYvRsbJA",
+      "price_level": null,
+      "rating": null,
+      "review_count": null,
+      "timezone": "America/Mexico_City",
+      "website": "https://instagram.com/hellfire_tattoo.studio?igshid=ZDdkNTZiNTM=",
+      "source_search": "https://maps.firecrawl.dev/search?q=estudios+de+tatuajes+Villa+de+%C3%81lvarez+Colima+M%C3%A9xico",
+      "city": "Villa de Álvarez",
+      "social_urls": [
+        {
+          "url": "https://instagram.com/hellfire_tattoo.studio?igshid=ZDdkNTZiNTM=",
+          "source": "https://maps.firecrawl.dev/place/0x8425450523dbf771%3A0x906c6cf462502faa"
+        }
+      ],
+      "website_status": "Redes identificadas; web independiente no localizada",
+      "website_own": null,
+      "notes": [],
+      "email_publico": null
+    }
+  ],
+  "review_samples": [
+    {
+      "name": "SACRUM STUDIO (tatuajes / piercings / barbería) COLIMA",
+      "source": "https://maps.firecrawl.dev/place/0x84254515eccea039%3A0x914abe767bce79e",
+      "observed_at_ms": 1792380394858,
+      "sort": "newest",
+      "summary": {
+        "owner_response_rate": 0,
+        "owner_responses": 0,
+        "sample_average_rating": 4.4,
+        "sample_histogram": {
+          "1": 0,
+          "2": 1,
+          "3": 0,
+          "4": 0,
+          "5": 4
+        },
+        "sample_size": 5,
+        "with_text": 5
+      },
+      "reviews": [
+        {
+          "rating": 5,
+          "date_ms": 1792275226567,
+          "summary": "Valora la limpieza y el ambiente tranquilo.",
+          "url": "https://maps.firecrawl.dev/place/0x84254515eccea039%3A0x914abe767bce79e#review-Ci9DQUlRQUNvZENodHljRjlvT2s5UVJuZHlTSFl5VnkxbWJuaGxhR3hpTUdsR1QzYxAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 2,
+          "date_ms": 1792265390480,
+          "summary": "Expresa insatisfacción con la explicación y el servicio de perforación; es un testimonio, no una verificación independiente.",
+          "url": "https://maps.firecrawl.dev/place/0x84254515eccea039%3A0x914abe767bce79e#review-Ci9DQUlRQUNvZENodHljRjlvT2xOeGJtVTNka1JvU2tWd04yZ3lZV1ZmZVVod1QzYxAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 5,
+          "date_ms": 1791512910898,
+          "summary": "Valora servicio, calidad y limpieza.",
+          "url": "https://maps.firecrawl.dev/place/0x84254515eccea039%3A0x914abe767bce79e#review-Ci9DQUlRQUNvZENodHljRjlvT2pkRFExZDBSMXBJTFVodFpsVTRUWEEwUmpWeExXYxAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 5,
+          "date_ms": 1791351018431,
+          "summary": "Recomienda al artista y describe comodidad y atención profesional.",
+          "url": "https://maps.firecrawl.dev/place/0x84254515eccea039%3A0x914abe767bce79e#review-Ci9DQUlRQUNvZENodHljRjlvT2xWMVExOUlPV0ZyY25WZk9FNHRZelp1TkZBNVYyYxAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 5,
+          "date_ms": 1791308886804,
+          "summary": "Valora la calidad del trabajo.",
+          "url": "https://maps.firecrawl.dev/place/0x84254515eccea039%3A0x914abe767bce79e#review-Ci9DQUlRQUNvZENodHljRjlvT2poa1RrOXljRVJ2VXpoa1gzazJURWd3T0Y5S1oyYxAB",
+          "owner_responded": false
+        }
+      ]
+    },
+    {
+      "name": "Reinarojacolima (Yosoyluanmx)",
+      "source": "https://maps.firecrawl.dev/place/0x84255bbdd769ff3f%3A0x8bb2de95d0b00a51",
+      "observed_at_ms": 1792380394750,
+      "sort": "newest",
+      "summary": {
+        "owner_response_rate": 1,
+        "owner_responses": 5,
+        "sample_average_rating": 5,
+        "sample_histogram": {
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 5
+        },
+        "sample_size": 5,
+        "with_text": 2
+      },
+      "reviews": [
+        {
+          "rating": 5,
+          "date_ms": 1791840585769,
+          "summary": "Recomienda al artista por su profesionalismo.",
+          "url": "https://maps.firecrawl.dev/place/0x84255bbdd769ff3f%3A0x8bb2de95d0b00a51#review-Ci9DQUlRQUNvZENodHljRjlvT2pkU1pHUkdPVVUxT0d0SmNXMDNhVFpEV0VkTE5rRRAB",
+          "owner_responded": true
+        },
+        {
+          "rating": 5,
+          "date_ms": 1788105501064,
+          "text": null,
+          "url": "https://maps.firecrawl.dev/place/0x84255bbdd769ff3f%3A0x8bb2de95d0b00a51#review-Ci9DQUlRQUNvZENodHljRjlvT2xKTWNrNXhhMHRxYjFkM04zbElSMDlKZVZGdFFsRRAB",
+          "owner_responded": true
+        },
+        {
+          "rating": 5,
+          "date_ms": 1780706230591,
+          "text": null,
+          "url": "https://maps.firecrawl.dev/place/0x84255bbdd769ff3f%3A0x8bb2de95d0b00a51#review-Ci9DQUlRQUNvZENodHljRjlvT2prd1kzRlhSR2sxWlUxbVQxVlhNWEJ3WldwWGEzYxAB",
+          "owner_responded": true
+        },
+        {
+          "rating": 5,
+          "date_ms": 1763961857762,
+          "summary": "Menciona cover-up y atención personalizada; texto recuperado parcialmente truncado.",
+          "url": "https://maps.firecrawl.dev/place/0x84255bbdd769ff3f%3A0x8bb2de95d0b00a51#review-Ci9DQUlRQUNvZENodHljRjlvT2w5YVRIQmlTWEZTYldaeUxXMTBaMmRTTjA5d1YyYxAB",
+          "owner_responded": true
+        },
+        {
+          "rating": 5,
+          "date_ms": 1761862819992,
+          "text": null,
+          "url": "https://maps.firecrawl.dev/place/0x84255bbdd769ff3f%3A0x8bb2de95d0b00a51#review-Ci9DQUlRQUNvZENodHljRjlvT25KelRtRjVZV1JVVVdGeWJXNHRMWEpUVmt0VFFVRRAB",
+          "owner_responded": true
+        }
+      ]
+    },
+    {
+      "name": "Stop tattoo, piercing & smoke shop",
+      "source": "https://maps.firecrawl.dev/place/0x84255ab179eb4d4b%3A0xd628380aa040df98",
+      "observed_at_ms": 1792380394761,
+      "sort": "newest",
+      "summary": {
+        "owner_response_rate": 0,
+        "owner_responses": 0,
+        "sample_average_rating": 3.4,
+        "sample_histogram": {
+          "1": 2,
+          "2": 0,
+          "3": 0,
+          "4": 0,
+          "5": 3
+        },
+        "sample_size": 5,
+        "with_text": 5
+      },
+      "reviews": [
+        {
+          "rating": 5,
+          "date_ms": 1792349717163,
+          "summary": "Valora los precios.",
+          "url": "https://maps.firecrawl.dev/place/0x84255ab179eb4d4b%3A0xd628380aa040df98#review-Ci9DQUlRQUNvZENodHljRjlvT21FNFdGZDBNM1ZPYzBKbE9XSTBVRlpOZERZeU0wRRAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 1,
+          "date_ms": 1780509662321,
+          "summary": "Expresa insatisfacción con la orientación en la compra y las condiciones de cambios.",
+          "url": "https://maps.firecrawl.dev/place/0x84255ab179eb4d4b%3A0xd628380aa040df98#review-Ci9DQUlRQUNvZENodHljRjlvT2xCQ1VHOVdUV1p2VFRkNVkwUk9NMXBSWkdoRFpVRRAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 1,
+          "date_ms": 1757520616850,
+          "summary": "Señala una discrepancia con el horario de apertura.",
+          "url": "https://maps.firecrawl.dev/place/0x84255ab179eb4d4b%3A0xd628380aa040df98#review-Ci9DQUlRQUNvZENodHljRjlvT210SFNVdG5UelJQV2twc1JrOWpWR3hsUVhKUmVHYxAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 5,
+          "date_ms": 1755226376712,
+          "summary": "Valora amabilidad y servicio.",
+          "url": "https://maps.firecrawl.dev/place/0x84255ab179eb4d4b%3A0xd628380aa040df98#review-Ci9DQUlRQUNvZENodHljRjlvT2tGVWIybERiamhCTldwcFNGaE1VRlZyV21RdFVtYxAB",
+          "owner_responded": false
+        },
+        {
+          "rating": 5,
+          "date_ms": 1751947339158,
+          "summary": "Valora variedad, calidad percibida y precios de productos.",
+          "url": "https://maps.firecrawl.dev/place/0x84255ab179eb4d4b%3A0xd628380aa040df98#review-Ci9DQUlRQUNvZENodHljRjlvT210eWJsZzRTM2ROTVhscFF6Vk9URlpYZGpSSGRYYxAB",
+          "owner_responded": false
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "name": "Sangre Viva tattoo & barber shop",
+      "address": "Av. Pablo Silva García 473, Villa de Álvarez",
+      "phone": "+52 312 550 5680",
+      "social": "https://www.instagram.com/droopytattoo_colima_sangreviva/",
+      "source": "https://www.fresha.com/es/lvp/sangre-viva-tattoo-barber-shop-avenida-benito-juarez-ciudad-de-villa-de-alvarez-Qv6E2P",
+      "note": "Directorio y extracto de perfil coinciden en dirección/teléfono. Sin rating Maps recuperado en las búsquedas; no se añade al total28."
+    },
+    {
+      "name": "Kraken ink",
+      "source": "https://tatuadores.mx/ubicacion/colima/villa-de-alvarez/",
+      "note": "Descubierto solo en directorio local; sin verificación de ficha Maps/contacto propio. Confirmar existencia y actividad antes de prospectar."
+    },
+    {
+      "name": "Scart Colima",
+      "source": "https://tatuadores.mx/ubicacion/colima/villa-de-alvarez/",
+      "note": "Descubierto solo en directorio local; sin verificación de ficha Maps/contacto propio. Confirmar existencia y actividad antes de prospectar."
+    },
+    {
+      "name": "Óleo galería",
+      "source": "https://tatuadores.mx/ubicacion/colima/villa-de-alvarez/",
+      "note": "Descubierto solo en directorio local; sin verificación de ficha Maps/contacto propio. Confirmar existencia y actividad antes de prospectar."
+    },
+    {
+      "name": "Centro Cultural",
+      "source": "https://tatuadores.mx/ubicacion/colima/villa-de-alvarez/",
+      "note": "Descubierto solo en directorio local; sin verificación de ficha Maps/contacto propio. Confirmar existencia y actividad antes de prospectar."
+    },
+    {
+      "name": "CABALO TATTOO",
+      "source": "https://tatuadores.mx/ubicacion/colima/villa-de-alvarez/",
+      "note": "Descubierto solo en directorio local; sin verificación de ficha Maps/contacto propio. Confirmar existencia y actividad antes de prospectar."
+    }
+  ],
+  "excluded": [
+    {
+      "name": "Estudio Tatuajes y Piercing Mortuus",
+      "reason": "Manzanillo; fuera de zona"
+    },
+    {
+      "name": ".",
+      "reason": "Sin nombre identificable y categoría salón; no confirmado como estudio"
+    },
+    {
+      "name": "Estudio22",
+      "url": "https://estudio22tattoo.com/",
+      "reason": "Web leída: Playa del Carmen, fuera de zona"
+    }
+  ]
+}

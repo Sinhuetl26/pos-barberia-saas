@@ -1,0 +1,38 @@
+{
+  "startedAt": "2026-10-09T18:24:01.074Z",
+  "finishedAt": "2026-10-09T18:24:18.796Z",
+  "date": "2026-10-09",
+  "engine": "PostgreSQL 16",
+  "isolated": true,
+  "suites": [
+    {
+      "script": "test_inventory_receipt_integrity.js",
+      "count": 6,
+      "checks": [
+        "Invalid purchase quantities, costs and services are rejected before creating orders",
+        "Manual movements reject services and invalid quantities without changing stock or ledger",
+        "Eight concurrent receipts across two processes and a later retry increment exactly once",
+        "Receipts concurrent with POS preserve every stock transition and reconcile the ledger",
+        "Cancellation racing a receipt leaves either one receipt or a cancelled order with no movement",
+        "Historical invalid items roll back reception status, product stock, cost, ledger and audit"
+      ],
+      "pass": true
+    },
+    {
+      "script": "test_inventory_permissions_csv.js",
+      "count": 6,
+      "checks": [
+        "Catalog and Kardex reads isolate two tenants and two branches, retaining the shared catalog",
+        "Cashier, barber and platform cannot write products, inventory, suppliers or orders, nor read restricted ledgers/exports",
+        "Manager product writes and movements work in assigned branch; other branches, tenants and common writes fail",
+        "Supplier directory is tenant scoped; owner CRUD works while manager writes and foreign IDs fail",
+        "Purchase creation, reception and cancellation enforce manager branch and owner tenant, with positive permitted writes",
+        "CSV parses fourteen columns and reconciles sale, partial return, net and historical collector without leaking branches"
+      ],
+      "pass": true
+    }
+  ],
+  "working_database_before_sha256": "b5aebc3b7f87e5eee7e4b9372f5795ff05a237064932d23efc2ea609e9ac9e69",
+  "working_database_after_sha256": "b5aebc3b7f87e5eee7e4b9372f5795ff05a237064932d23efc2ea609e9ac9e69",
+  "external_providers_contacted": false
+}

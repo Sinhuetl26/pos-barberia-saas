@@ -1,0 +1,29 @@
+{
+  "fecha": "2026-10-07",
+  "motor": "PostgreSQL",
+  "count": 20,
+  "pass": true,
+  "checks": [
+    "Civil branch time is converted to UTC regardless of server time zone; eight retries create one appointment and notice",
+    "Distinct concurrent public and internal intentions cannot double-book the same professional",
+    "Any-barber availability stays free when another professional is occupied and concurrent allocation uses both safely",
+    "Branch closing, professional hours, accented rest days and invalid dates fail without changing customer records",
+    "Branch-wide blocks affect every barber and block creation races atomically with booking",
+    "No four-hour lookback: a long historical appointment beginning the day before blocks the interval",
+    "Service duration and price come from the catalog, never caller estimates",
+    "Public booking cannot overwrite existing customer name or email",
+    "Public lookup contains no customer name, phone, notes or management token",
+    "Public reprogramming requires a valid capability, preserves one appointment and rejects occupied targets",
+    "Cancellation is repeatable, does not fake a WhatsApp or waitlist delivery, and cannot reopen",
+    "An expired management capability cannot change an appointment",
+    "Concurrent status completion and repeated no-show each count the customer once; absence before appointment end fails",
+    "Durable public limits span two API processes and replays do not consume another quota",
+    "Foreign branch and barber inputs never create customer or booking effects",
+    "DST ambiguous and missing civil hours are rejected, explicit instants and day boundaries remain precise",
+    "Wrong tenant slug cannot replay a cancelled capability; duplicate reprogramming produces one audit",
+    "A barber can create and move their own appointment but cannot move another professional",
+    "Attended appointment has one sale under concurrent payment and never adds a second CRM visit",
+    "Working database stays unchanged"
+  ],
+  "datos": "Ficticios; dos procesos API; sin mensajes externos ni datos operativos"
+}

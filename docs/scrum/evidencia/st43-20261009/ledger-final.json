@@ -1,0 +1,305 @@
+{
+  "recordedAt": "2026-10-11T03:55:11.736Z",
+  "stage": "final",
+  "engine": "sqlite-disposable",
+  "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+  "expected": {
+    "service": 200,
+    "commissionPercent": 40,
+    "commission": 80,
+    "openingCash": 500,
+    "cashReceived": 300,
+    "change": 100,
+    "barberCustodyBeforeHandoff": 200,
+    "handedOffCash": 200,
+    "barberCustodyAfterHandoff": 0,
+    "cashCount": 700,
+    "difference": 0,
+    "sales": 1,
+    "appointments": 1,
+    "commissions": 1
+  },
+  "checks": [
+    {
+      "name": "Una cita",
+      "pass": true
+    },
+    {
+      "name": "Una venta",
+      "pass": true
+    },
+    {
+      "name": "Una comisión",
+      "pass": true
+    },
+    {
+      "name": "Un turno cerrado",
+      "pass": true
+    },
+    {
+      "name": "Cita completada y vinculada a venta",
+      "pass": true
+    },
+    {
+      "name": "Cliente compartido cita/venta",
+      "pass": true
+    },
+    {
+      "name": "Servicio y profesional autorizados",
+      "pass": true
+    },
+    {
+      "name": "Cuenta propia del barbero cobró",
+      "pass": true
+    },
+    {
+      "name": "Venta completada en efectivo",
+      "pass": true
+    },
+    {
+      "name": "Total200 sin descuento/impuesto/propina/devolución",
+      "pass": true
+    },
+    {
+      "name": "Recibido300 cambio100 neto200 persistentes",
+      "pass": true
+    },
+    {
+      "name": "Una línea de servicio200 cantidad1 comisión80",
+      "pass": true
+    },
+    {
+      "name": "Comisión40%80 pendiente ligada a venta",
+      "pass": true
+    },
+    {
+      "name": "Fondo500 contado700 diferencia0",
+      "pass": true
+    },
+    {
+      "name": "Resumen de corte esperado700/entregas200/caja directa0",
+      "pass": true
+    },
+    {
+      "name": "Venta200 y efectivo200 en corte",
+      "pass": true
+    },
+    {
+      "name": "Ledger tiene venta y par de entrega, tres registros",
+      "pass": true
+    },
+    {
+      "name": "Custodia barbero neta0",
+      "pass": true
+    },
+    {
+      "name": "Caja recibe200 sin sumar venta bajo custodia",
+      "pass": true
+    },
+    {
+      "name": "Una visita y gasto200 cliente",
+      "pass": true
+    },
+    {
+      "name": "Servicio conserva stock0 sin Kardex",
+      "pass": true
+    },
+    {
+      "name": "Aviso interno único de venta",
+      "pass": true
+    },
+    {
+      "name": "Todas las operaciones pertenecen a sucursal QA",
+      "pass": true
+    },
+    {
+      "name": "Cierre tiene fecha y huella",
+      "pass": true
+    }
+  ],
+  "counts": {
+    "appointments": 1,
+    "sales": 1,
+    "commissions": 1,
+    "turns": 1,
+    "cash": 3,
+    "customers": 1,
+    "kardex": 0
+  },
+  "appointments": [
+    {
+      "id": "e937e2ab-6d73-4f1e-a385-03b021d0bad3",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "barberoId": "161c11d0-ccd9-426a-9b82-d74170344ece",
+      "clienteId": "ec8c205a-5ff2-4162-82d2-f82c1f6d6ce2",
+      "servicioId": "dae7e51c-66e6-4c6e-99a4-067e49698529",
+      "nombreServicio": "Corte de demostración",
+      "fechaHora": "2026-10-10T03:00:00.000Z",
+      "duracionMinutos": 30,
+      "estado": "COMPLETADA",
+      "precioEstimado": "200",
+      "codigoReserva": "RES-FE132B1ACC4802F2"
+    }
+  ],
+  "sales": [
+    {
+      "id": "5f363108-60b5-41e3-8518-22f9fc5e8324",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "barberoId": "161c11d0-ccd9-426a-9b82-d74170344ece",
+      "clienteId": "ec8c205a-5ff2-4162-82d2-f82c1f6d6ce2",
+      "citaId": "e937e2ab-6d73-4f1e-a385-03b021d0bad3",
+      "folio": "A-000001",
+      "serie": "A",
+      "folioConsecutivo": 1,
+      "estado": "COMPLETADA",
+      "motivoCancelacion": null,
+      "canceladoPor": null,
+      "subtotal": "200",
+      "descuento": "0",
+      "propina": "0",
+      "total": "200",
+      "impuesto": "0",
+      "metodoPago": "EFECTIVO",
+      "detallesPago": "{\"metodo\":\"EFECTIVO\",\"efectivoRecibido\":300,\"montoEfectivo\":200,\"cambio\":100,\"total\":200,\"idempotencyKey\":\"05407953-9351-4596-a2d5-612ec156a00e\",\"registroVisita\":true,\"reglasComision\":{\"serviciosPct\":40,\"productosPct\":10,\"base\":\"Importe por línea después de descuento y sin impuesto incluido ni propina\",\"redondeo\":\"Mitad hacia arriba a centavos por línea; devolución por proporción acumulada de unidades\"}}",
+      "fecha": "2026-10-10T02:04:46.783Z",
+      "totalDevuelto": "0",
+      "propinaDevuelta": "0",
+      "cobradoPorId": "c645261a-b94d-4f16-8da1-51e58ad068ca",
+      "cobradoPorNombre": "barbero.st43@qa.invalid",
+      "corteCajaId": "e02cb481-8151-4cd9-9f8a-d24c6caabb97",
+      "items": [
+        {
+          "id": "b0444536-ed98-4413-9910-56be4622459d",
+          "ventaId": "5f363108-60b5-41e3-8518-22f9fc5e8324",
+          "productoId": "dae7e51c-66e6-4c6e-99a4-067e49698529",
+          "nombreItem": "Corte de demostración",
+          "tipoItem": "SERVICIO",
+          "cantidad": 1,
+          "precioUnitario": "200",
+          "subtotal": "200",
+          "descuento": "0",
+          "impuesto": "0",
+          "tasaImpuesto": "0",
+          "comision": "80"
+        }
+      ]
+    }
+  ],
+  "commissions": [
+    {
+      "id": "0011a35e-9aad-445a-b495-7c31331899ed",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "ventaId": "5f363108-60b5-41e3-8518-22f9fc5e8324",
+      "barberoId": "161c11d0-ccd9-426a-9b82-d74170344ece",
+      "monto": "80",
+      "porcentaje": "40",
+      "pagada": false,
+      "fechaPago": null,
+      "metodoPagoComision": null,
+      "origen": "VENTA",
+      "devolucionId": null,
+      "corteCajaId": null
+    }
+  ],
+  "turns": [
+    {
+      "id": "e02cb481-8151-4cd9-9f8a-d24c6caabb97",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "usuarioId": "f6fd760f-fc81-484e-bdf1-6a7f6628e82a",
+      "fechaApertura": "2026-10-10T01:58:12.180Z",
+      "fechaCierre": "2026-10-10T02:07:53.458Z",
+      "fondoInicial": "500",
+      "totalEfectivo": "200",
+      "totalTarjeta": "0",
+      "totalTransferencia": "0",
+      "totalPropinas": "0",
+      "totalVentas": "200",
+      "conteoEfectivoReal": "700",
+      "descuadre": "0",
+      "notas": "QA ST43 · fondo contado ficticio 500 | QA ST43 · conteo ficticio independiente: un billete500 y uno200",
+      "resumenJson": "{\"fondoInicial\":500,\"totalEfectivo\":200,\"totalTarjeta\":0,\"totalTransferencia\":0,\"totalVentas\":200,\"totalPropinas\":0,\"totalIngresos\":0,\"totalEntregas\":200,\"efectivoCobradoEnCaja\":0,\"totalRetiros\":0,\"totalGastosMenores\":0,\"efectivoEsperado\":700,\"conteoReal\":700,\"descuadre\":0,\"descuadrado\":false}",
+      "cierreHash": "d2770ec371cfd35b84563ebad87197805abe82925546eb53d7a934ec66c2534f",
+      "estado": "CERRADO"
+    }
+  ],
+  "cash": [
+    {
+      "id": "b07070b4-b6ba-4152-b63a-563d974c4c4f",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "corteCajaId": "e02cb481-8151-4cd9-9f8a-d24c6caabb97",
+      "ventaId": "5f363108-60b5-41e3-8518-22f9fc5e8324",
+      "tipo": "VENTA",
+      "metodoPago": "EFECTIVO",
+      "monto": "200",
+      "custodiaUsuarioId": "c645261a-b94d-4f16-8da1-51e58ad068ca",
+      "usuarioId": "c645261a-b94d-4f16-8da1-51e58ad068ca",
+      "usuarioNombre": "barbero.st43@qa.invalid",
+      "concepto": "Cobro A-000001",
+      "fecha": "2026-10-10T02:04:46.787Z"
+    },
+    {
+      "id": "ed528e06-86d2-40d5-a830-ac35bcc1f7c2",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "corteCajaId": null,
+      "ventaId": null,
+      "tipo": "ENTREGA",
+      "metodoPago": "EFECTIVO",
+      "monto": "-200",
+      "custodiaUsuarioId": "c645261a-b94d-4f16-8da1-51e58ad068ca",
+      "usuarioId": "f6fd760f-fc81-484e-bdf1-6a7f6628e82a",
+      "usuarioNombre": "dueno.st43@qa.invalid",
+      "concepto": "Entrega de barbero.st43@qa.invalid; recibe dueno.st43@qa.invalid",
+      "fecha": "2026-10-10T02:05:44.031Z"
+    },
+    {
+      "id": "0b3636da-da70-4dd1-b89e-4fcdf3d36044",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "corteCajaId": "e02cb481-8151-4cd9-9f8a-d24c6caabb97",
+      "ventaId": null,
+      "tipo": "ENTREGA",
+      "metodoPago": "EFECTIVO",
+      "monto": "200",
+      "custodiaUsuarioId": null,
+      "usuarioId": "f6fd760f-fc81-484e-bdf1-6a7f6628e82a",
+      "usuarioNombre": "dueno.st43@qa.invalid",
+      "concepto": "Entrega de barbero.st43@qa.invalid; recibe dueno.st43@qa.invalid",
+      "fecha": "2026-10-10T02:05:44.033Z"
+    }
+  ],
+  "customers": [
+    {
+      "id": "ec8c205a-5ff2-4162-82d2-f82c1f6d6ce2",
+      "nombre": "Cliente QA ST43 ficticio",
+      "totalVisitas": 1,
+      "gastoTotal": "200",
+      "fechaUltimaVisita": "2026-10-10T02:04:46.792Z"
+    }
+  ],
+  "service": {
+    "id": "dae7e51c-66e6-4c6e-99a4-067e49698529",
+    "precioVenta": "200",
+    "stockActual": 0,
+    "tipo": "SERVICIO"
+  },
+  "notices": [
+    {
+      "id": "e5671c74-3e4c-4ccb-bb8c-16d506f68fdb",
+      "tipo": "CONFIRMACION_CITA",
+      "canal": "INTERNO",
+      "estado": "REGISTRADO",
+      "fecha": "2026-10-10T02:02:06.736Z"
+    },
+    {
+      "id": "01f24ce0-bc0a-4fbc-982f-53dbe0350fa1",
+      "tipo": "VENTA_CONFIRMADA",
+      "canal": "INTERNO",
+      "estado": "REGISTRADO",
+      "fecha": "2026-10-10T02:04:46.788Z"
+    }
+  ]
+}

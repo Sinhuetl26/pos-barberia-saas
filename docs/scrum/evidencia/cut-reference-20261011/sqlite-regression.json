@@ -1,0 +1,26 @@
+{
+  "finishedAt": "2026-10-14T07:28:16.955Z",
+  "engine": "SQLite",
+  "passed": 17,
+  "checks": [
+    "Actual JPEG encoder fixture and exact type limit pass bounded validation",
+    "Public booking saves photo separately and preserves catalog price and duration",
+    "Repeated and concurrent idempotent requests keep one photo, customer, notice and appointment",
+    "UUID booking intent recovers an interrupted result without photo, PII or extra writes",
+    "Booking intent rejects guessable keys and cannot resolve another tenant or internal actor",
+    "Owner, assigned manager, cashier and own barber can retrieve a no-cache reference",
+    "Agenda lists only text and presence flag and never loads the photo column",
+    "No public folio, cancellation capability or printable voucher exposes the reference",
+    "Other tenant and other barber get 404 without a reference leak",
+    "Invalid type and JPEG inputs fail before all public booking side effects",
+    "Invalid internal reference fails before customer, appointment and notification writes",
+    "Internal creation and barber-owned creation persist optional references",
+    "Existing and photo-free appointments retain nullable defaults and readable agenda",
+    "Photo creation is transactionally rolled back with a failed booking notification",
+    "References cannot cross tenant or branch during creation",
+    "Deleting an appointment cascades its private reference only",
+    "Operational SQLite file remains unchanged"
+  ],
+  "fixture": "Fictitious isolated businesses; actual .NET encoded JPEG; no provider calls",
+  "operationalDatabaseUnchanged": true
+}

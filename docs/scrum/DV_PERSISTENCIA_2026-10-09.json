@@ -1,0 +1,37 @@
+{
+  "execution": "DV-20261009-R01",
+  "checkedAt": "2026-10-09T17:42:06.343Z",
+  "environment": "Disposable SQLite; desktop and mobile viewport simulation",
+  "result": "PASS",
+  "appointments": [
+    {
+      "estado": "COMPLETADA",
+      "fechaHora": "2026-10-09T23:45:00.000Z"
+    },
+    {
+      "estado": "CANCELADA",
+      "fechaHora": "2026-10-10T19:00:00.000Z"
+    }
+  ],
+  "saleCount": 1,
+  "folio": "A-000001",
+  "total": 200,
+  "cashReceived": 500,
+  "change": 300,
+  "commission": 80,
+  "commissionPaid": false,
+  "shiftCount": 1,
+  "shiftState": "CERRADO",
+  "openingFloat": 300,
+  "delivered": 150,
+  "pendingCustody": 50,
+  "expectedCash": 450,
+  "countedCash": 440,
+  "difference": -10,
+  "limits": [
+    "No physical device/printer",
+    "No real bank/provider delivery",
+    "No PostgreSQL in this run",
+    "No complete accessibility certification"
+  ]
+}

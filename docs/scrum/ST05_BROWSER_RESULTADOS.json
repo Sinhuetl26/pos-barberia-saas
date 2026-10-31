@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-07",
+  "environment": "Disposable local demo; fictional records only",
+  "scenario": "Commit sale, drop POST response, reload same tab, recover original sale",
+  "sales_before": 3,
+  "sales_after": 4,
+  "stock_before": 8,
+  "stock_after": 7,
+  "total_mxn": 390,
+  "folio": "A-000002",
+  "pending_survived_reload": true,
+  "pending_cleared_after_recovery": true,
+  "repeated_recovery_sales_after": 4,
+  "mobile": { "width": 390, "height": 844, "ticket_close_button_visible": true, "payment_confirm_button_visible": true, "horizontal_overflow": false },
+  "desktop": { "width": 1440, "height": 900, "payment_confirm_button_visible": true, "horizontal_overflow": false },
+  "simulated_network_fault_removed": true,
+  "external_charge_or_message": false,
+  "working_database_modified": false
+}

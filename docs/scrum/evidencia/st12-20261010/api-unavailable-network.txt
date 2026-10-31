@@ -1,0 +1,10 @@
+67. [GET] http://127.0.0.1:3112/api/jobs => [200] OK
+68. [GET] http://127.0.0.1:3112/api/jobs/status => [200] OK
+72. [GET] http://127.0.0.1:3112/api/jobs => [200] OK
+73. [GET] http://127.0.0.1:3112/api/jobs/status => [200] OK
+108. [GET] http://127.0.0.1:3112/api/jobs => [200] OK
+109. [GET] http://127.0.0.1:3112/api/jobs/status => [200] OK
+126. [GET] http://127.0.0.1:3112/api/jobs => [FAILED] net::ERR_CONNECTION_REFUSED
+127. [GET] http://127.0.0.1:3112/api/jobs/status => [FAILED] net::ERR_CONNECTION_REFUSED
+
+Note: 60 static requests not shown, run with "static" option to see them.

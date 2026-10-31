@@ -1,0 +1,396 @@
+{
+  "fecha_configuracion": "2026-10-04",
+  "workspace": "Notion de Sinhue",
+  "fuente_principal_de_estados": "Notion; respaldo local al cierre de sesión, sin sincronización automática bidireccional",
+  "inicio": {
+    "id": "3f02035a-c0d0-8154-99d2-f73304873c63",
+    "url": "https://app.notion.com/p/3f02035ac0d0815499d2f73304873c63?pvs=204",
+    "properties": {
+      "title": "SYSTECH · Lanzamiento comercial"
+    }
+  },
+  "base_actividades": "https://app.notion.com/p/7d5e4be5e1ef45d6a28f3df61f50b154",
+  "data_source": "collection://efabb290-6377-4dae-9e16-632e24e934a8",
+  "vistas": [
+    {
+      "nombre": "Tablero · Todos",
+      "url": "view://3f02035a-c0d0-812d-b521-000ccc7973df"
+    },
+    {
+      "nombre": "Sprint 1",
+      "url": "view://3f02035a-c0d0-81c1-bb20-000cc48ac99b"
+    },
+    {
+      "nombre": "P0 · Lanzamiento",
+      "url": "view://3f02035a-c0d0-815a-9de9-000cdef4d17b"
+    },
+    {
+      "nombre": "Bloqueadas",
+      "url": "view://3f02035a-c0d0-81f0-8ef7-000cdb2dd58c"
+    },
+    {
+      "nombre": "Pendientes de Sinhue",
+      "url": "view://3f02035a-c0d0-81ec-b77b-000c6d1941bb"
+    },
+    {
+      "nombre": "Validadas",
+      "url": "view://3f02035a-c0d0-8143-8f4c-000c9c5b9194"
+    }
+  ],
+  "documentos": [
+    {
+      "id": "3f02035a-c0d0-8197-a243-eb05c54f515f",
+      "url": "https://app.notion.com/p/3f02035ac0d08197a243eb05c54f515f?pvs=204",
+      "properties": {
+        "title": "Sprint 1 · Seguridad y modelo comercial"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-8182-a8c9-ed1ed7b6d376",
+      "url": "https://app.notion.com/p/3f02035ac0d08182a8c9ed1ed7b6d376?pvs=204",
+      "properties": {
+        "title": "Sprint 2 · Operación de mostrador"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-81dd-8694-d5642222c4d3",
+      "url": "https://app.notion.com/p/3f02035ac0d081dd8694d5642222c4d3?pvs=204",
+      "properties": {
+        "title": "Sprint 3 · Demo profesional y validación de demanda"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-812f-b806-ecaee46890f4",
+      "url": "https://app.notion.com/p/3f02035ac0d0812fb806ecaee46890f4?pvs=204",
+      "properties": {
+        "title": "Sprint 4 · Operación segura y cobranza lista"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-81b7-aa5d-c95d8ee6c170",
+      "url": "https://app.notion.com/p/3f02035ac0d081b7aa5dc95d8ee6c170?pvs=204",
+      "properties": {
+        "title": "Sprint 5 · Pilotos independientes y primera renovación"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-8100-bbb5-def23c9980fe",
+      "url": "https://app.notion.com/p/3f02035ac0d08100bbb5def23c9980fe?pvs=204",
+      "properties": {
+        "title": "Sprint 6 · Valor agregado y salida independiente"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-817c-8971-dfd12f122118",
+      "url": "https://app.notion.com/p/3f02035ac0d0817c8971dfd12f122118?pvs=204",
+      "properties": {
+        "title": "Sprint 7 · Cadenas con autorización propia"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-815e-86db-d4f1a8e1b6c8",
+      "url": "https://app.notion.com/p/3f02035ac0d0815e86dbd4f1a8e1b6c8?pvs=204",
+      "properties": {
+        "title": "Sprint 8 · Conectores opcionales sostenibles"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-81de-8d5f-cc4552bb57a4",
+      "url": "https://app.notion.com/p/3f02035ac0d081de8d5fcc4552bb57a4?pvs=204",
+      "properties": {
+        "title": "Plan ágil · Alcance, licencias y puertas de lanzamiento"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-8114-bc82-f9f211e9c161",
+      "url": "https://app.notion.com/p/3f02035ac0d08114bc82f9f211e9c161?pvs=204",
+      "properties": {
+        "title": "Costos y precios · Escenarios 10, 30 y 100"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-816d-8d8e-e0ae556497df",
+      "url": "https://app.notion.com/p/3f02035ac0d0816d8d8ee0ae556497df?pvs=204",
+      "properties": {
+        "title": "Decisiones · Producto y operación"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-81dc-9f36-f5f095eb63a8",
+      "url": "https://app.notion.com/p/3f02035ac0d081dc9f36f5f095eb63a8?pvs=204",
+      "properties": {
+        "title": "Bitácora · Seguimiento diario"
+      }
+    },
+    {
+      "id": "3f02035a-c0d0-81fb-a6c2-d9ab08209ae4",
+      "url": "https://app.notion.com/p/3f02035ac0d081fba6c2d9ab08209ae4?pvs=204",
+      "properties": {
+        "title": "Cómo trabajamos · Scrum y evidencia"
+      }
+    },
+    {
+      "id": "3f62035a-c0d0-8147-a524-c5c7fb8d9d5e",
+      "url": "https://app.notion.com/p/3f62035ac0d08147a524c5c7fb8d9d5e?pvs=204",
+      "properties": {
+        "title": "Reporte del equipo · Sprint 3: demo y automatizaciones · 10 de octubre"
+      }
+    }
+  ],
+  "actividades": [
+    {
+      "codigo": "ST-01",
+      "id": "3f02035a-c0d0-8179-a1c8-d1c0ea98f10b",
+      "url": "https://app.notion.com/p/3f02035ac0d08179a1c8d1c0ea98f10b?pvs=204"
+    },
+    {
+      "codigo": "ST-02",
+      "id": "3f02035a-c0d0-819f-b631-fa823e96f084",
+      "url": "https://app.notion.com/p/3f02035ac0d0819fb631fa823e96f084?pvs=204"
+    },
+    {
+      "codigo": "ST-03",
+      "id": "3f02035a-c0d0-8109-9aaa-f27e6e4e15d3",
+      "url": "https://app.notion.com/p/3f02035ac0d081099aaaf27e6e4e15d3?pvs=204"
+    },
+    {
+      "codigo": "ST-04",
+      "id": "3f02035a-c0d0-81ac-9626-d7c3d2fd15e6",
+      "url": "https://app.notion.com/p/3f02035ac0d081ac9626d7c3d2fd15e6?pvs=204"
+    },
+    {
+      "codigo": "ST-05",
+      "id": "3f02035a-c0d0-81ea-b74c-c1ac02180cc1",
+      "url": "https://app.notion.com/p/3f02035ac0d081eab74cc1ac02180cc1?pvs=204"
+    },
+    {
+      "codigo": "ST-06",
+      "id": "3f02035a-c0d0-81e0-ba34-f6021231b2df",
+      "url": "https://app.notion.com/p/3f02035ac0d081e0ba34f6021231b2df?pvs=204"
+    },
+    {
+      "codigo": "ST-07",
+      "id": "3f02035a-c0d0-819d-9981-f817abd79478",
+      "url": "https://app.notion.com/p/3f02035ac0d0819d9981f817abd79478?pvs=204"
+    },
+    {
+      "codigo": "ST-08",
+      "id": "3f02035a-c0d0-816a-b888-f914d76b0490",
+      "url": "https://app.notion.com/p/3f02035ac0d0816ab888f914d76b0490?pvs=204"
+    },
+    {
+      "codigo": "ST-09",
+      "id": "3f02035a-c0d0-8101-91a5-cdfca8386be5",
+      "url": "https://app.notion.com/p/3f02035ac0d0810191a5cdfca8386be5?pvs=204"
+    },
+    {
+      "codigo": "ST-10",
+      "id": "3f02035a-c0d0-81b2-b346-d316e326a4e7",
+      "url": "https://app.notion.com/p/3f02035ac0d081b2b346d316e326a4e7?pvs=204"
+    },
+    {
+      "codigo": "ST-11",
+      "id": "3f02035a-c0d0-81a2-92f0-df706c20819a",
+      "url": "https://app.notion.com/p/3f02035ac0d081a292f0df706c20819a?pvs=204"
+    },
+    {
+      "codigo": "ST-12",
+      "id": "3f02035a-c0d0-81e6-8779-d14c0d8508fe",
+      "url": "https://app.notion.com/p/3f02035ac0d081e68779d14c0d8508fe?pvs=204"
+    },
+    {
+      "codigo": "ST-13",
+      "id": "3f02035a-c0d0-81e1-9f27-da3ffc3f194c",
+      "url": "https://app.notion.com/p/3f02035ac0d081e19f27da3ffc3f194c?pvs=204"
+    },
+    {
+      "codigo": "ST-14",
+      "id": "3f02035a-c0d0-8154-8fa8-e6a100eb4518",
+      "url": "https://app.notion.com/p/3f02035ac0d081548fa8e6a100eb4518?pvs=204"
+    },
+    {
+      "codigo": "ST-15",
+      "id": "3f02035a-c0d0-8138-8ee8-da2b8d104fe5",
+      "url": "https://app.notion.com/p/3f02035ac0d081388ee8da2b8d104fe5?pvs=204"
+    },
+    {
+      "codigo": "ST-16",
+      "id": "3f02035a-c0d0-812e-be07-e28906606c4d",
+      "url": "https://app.notion.com/p/3f02035ac0d0812ebe07e28906606c4d?pvs=204"
+    },
+    {
+      "codigo": "ST-17",
+      "id": "3f02035a-c0d0-8143-ac44-fe16457c1ba4",
+      "url": "https://app.notion.com/p/3f02035ac0d08143ac44fe16457c1ba4?pvs=204"
+    },
+    {
+      "codigo": "ST-18",
+      "id": "3f02035a-c0d0-81d6-a988-dbaf5b943fcb",
+      "url": "https://app.notion.com/p/3f02035ac0d081d6a988dbaf5b943fcb?pvs=204"
+    },
+    {
+      "codigo": "ST-19",
+      "id": "3f02035a-c0d0-810a-ace0-ee320653b1cc",
+      "url": "https://app.notion.com/p/3f02035ac0d0810aace0ee320653b1cc?pvs=204"
+    },
+    {
+      "codigo": "ST-20",
+      "id": "3f02035a-c0d0-8165-90c8-f704e65a3f8b",
+      "url": "https://app.notion.com/p/3f02035ac0d0816590c8f704e65a3f8b?pvs=204"
+    },
+    {
+      "codigo": "ST-21",
+      "id": "3f02035a-c0d0-8149-b379-f53c51193277",
+      "url": "https://app.notion.com/p/3f02035ac0d08149b379f53c51193277?pvs=204"
+    },
+    {
+      "codigo": "ST-22",
+      "id": "3f02035a-c0d0-8192-a720-d5731653db9b",
+      "url": "https://app.notion.com/p/3f02035ac0d08192a720d5731653db9b?pvs=204"
+    },
+    {
+      "codigo": "ST-23",
+      "id": "3f02035a-c0d0-81f2-b3b0-e9f7f5f5d6ed",
+      "url": "https://app.notion.com/p/3f02035ac0d081f2b3b0e9f7f5f5d6ed?pvs=204"
+    },
+    {
+      "codigo": "ST-24",
+      "id": "3f02035a-c0d0-817b-9b60-f1e1b3085a38",
+      "url": "https://app.notion.com/p/3f02035ac0d0817b9b60f1e1b3085a38?pvs=204"
+    },
+    {
+      "codigo": "ST-25",
+      "id": "3f02035a-c0d0-81c1-8204-f23e41815eff",
+      "url": "https://app.notion.com/p/3f02035ac0d081c18204f23e41815eff?pvs=204"
+    },
+    {
+      "codigo": "ST-26",
+      "id": "3f02035a-c0d0-81b8-bfb3-e53b162b9ccf",
+      "url": "https://app.notion.com/p/3f02035ac0d081b8bfb3e53b162b9ccf?pvs=204"
+    },
+    {
+      "codigo": "ST-27",
+      "id": "3f02035a-c0d0-815f-ae3a-d6fd81587f41",
+      "url": "https://app.notion.com/p/3f02035ac0d0815fae3ad6fd81587f41?pvs=204"
+    },
+    {
+      "codigo": "ST-28",
+      "id": "3f02035a-c0d0-8191-a5fa-eb36ef83415b",
+      "url": "https://app.notion.com/p/3f02035ac0d08191a5faeb36ef83415b?pvs=204"
+    },
+    {
+      "codigo": "ST-29",
+      "id": "3f02035a-c0d0-8100-8f0d-d3fd4cbcdb0f",
+      "url": "https://app.notion.com/p/3f02035ac0d081008f0dd3fd4cbcdb0f?pvs=204"
+    },
+    {
+      "codigo": "ST-30",
+      "id": "3f02035a-c0d0-8136-9707-d104f656dec8",
+      "url": "https://app.notion.com/p/3f02035ac0d081369707d104f656dec8?pvs=204"
+    },
+    {
+      "codigo": "ST-31",
+      "id": "3f02035a-c0d0-81ac-9c8c-fd8e0612b142",
+      "url": "https://app.notion.com/p/3f02035ac0d081ac9c8cfd8e0612b142?pvs=204"
+    },
+    {
+      "codigo": "ST-32",
+      "id": "3f02035a-c0d0-81ec-97c0-e4ba0d456b0d",
+      "url": "https://app.notion.com/p/3f02035ac0d081ec97c0e4ba0d456b0d?pvs=204"
+    },
+    {
+      "codigo": "ST-33",
+      "id": "3f02035a-c0d0-810e-a51e-f7ef2f402cbe",
+      "url": "https://app.notion.com/p/3f02035ac0d0810ea51ef7ef2f402cbe?pvs=204"
+    },
+    {
+      "codigo": "ST-34",
+      "id": "3f02035a-c0d0-815e-9ffc-f0171fe71d39",
+      "url": "https://app.notion.com/p/3f02035ac0d0815e9ffcf0171fe71d39?pvs=204"
+    },
+    {
+      "codigo": "ST-35",
+      "id": "3f02035a-c0d0-8118-83fd-f53140e315b0",
+      "url": "https://app.notion.com/p/3f02035ac0d0811883fdf53140e315b0?pvs=204"
+    },
+    {
+      "codigo": "ST-36",
+      "id": "3f02035a-c0d0-811d-b78c-fd2731d04b23",
+      "url": "https://app.notion.com/p/3f02035ac0d0811db78cfd2731d04b23?pvs=204"
+    },
+    {
+      "codigo": "ST-37",
+      "id": "3f02035a-c0d0-81cf-842e-d0e9de44aac1",
+      "url": "https://app.notion.com/p/3f02035ac0d081cf842ed0e9de44aac1?pvs=204"
+    },
+    {
+      "codigo": "ST-38",
+      "id": "3f02035a-c0d0-8168-a8cc-f6cf159be979",
+      "url": "https://app.notion.com/p/3f02035ac0d08168a8ccf6cf159be979?pvs=204"
+    },
+    {
+      "codigo": "ST-39",
+      "id": "3f02035a-c0d0-81a0-b82d-feebc0217923",
+      "url": "https://app.notion.com/p/3f02035ac0d081a0b82dfeebc0217923?pvs=204"
+    },
+    {
+      "codigo": "ST-40",
+      "id": "3f02035a-c0d0-81fc-adb5-d86597b21320",
+      "url": "https://app.notion.com/p/3f02035ac0d081fcadb5d86597b21320?pvs=204"
+    },
+    {
+      "codigo": "ST-41",
+      "id": "3f32035a-c0d0-8138-9ab6-dc26d2b26585",
+      "url": "https://app.notion.com/p/3f32035ac0d081389ab6dc26d2b26585?pvs=204"
+    },
+    {
+      "codigo": "ST-42",
+      "id": "3f32035a-c0d0-8184-960e-fe898c548c2c",
+      "url": "https://app.notion.com/p/3f32035ac0d08184960efe898c548c2c?pvs=204"
+    },
+    {
+      "codigo": "ST-43",
+      "id": "3f42035a-c0d0-817e-8020-f300ca1b8ce5",
+      "url": "https://app.notion.com/p/3f42035ac0d0817e8020f300ca1b8ce5?pvs=204"
+    },
+    {
+      "codigo": "ST-44",
+      "id": "3f42035a-c0d0-814d-ad18-d6c47c3d9dcf",
+      "url": "https://app.notion.com/p/3f42035ac0d0814dad18d6c47c3d9dcf?pvs=204"
+    },
+    {
+      "codigo": "ST-45",
+      "id": "3f42035a-c0d0-81f0-adc3-c0bb21aea40c",
+      "url": "https://app.notion.com/p/3f42035ac0d081f0adc3c0bb21aea40c?pvs=204"
+    },
+    {
+      "codigo": "ST-46",
+      "id": "3f42035a-c0d0-812b-8799-e0523d11e1bb",
+      "url": "https://app.notion.com/p/3f42035ac0d0812b8799e0523d11e1bb?pvs=204"
+    },
+    {
+      "codigo": "ST-47",
+      "id": "3f42035a-c0d0-81ab-a3a6-c4bbd2d9d08e",
+      "url": "https://app.notion.com/p/3f42035ac0d081aba3a6c4bbd2d9d08e?pvs=204"
+    },
+    {
+      "codigo": "ST-48",
+      "id": "3f42035a-c0d0-81d1-aba3-ede3a8892b2e",
+      "url": "https://app.notion.com/p/3f42035ac0d081d1aba3ede3a8892b2e?pvs=204"
+    }
+  ],
+  "revision_integral": {
+    "fecha": "2026-10-06",
+    "id": "3f12035a-c0d0-81a1-bc9a-dd4c3b984303",
+    "url": "https://app.notion.com/p/3f12035ac0d081a1bc9add4c3b984303?pvs=204",
+    "archivo": "docs/scrum/REVISION_INTEGRAL_2026-10-06.md",
+    "propuestas_adicionales": 18
+  },
+  "verificacion": {
+    "total_actividades": 42,
+    "historias_sprint_1": 4,
+    "estados_pendientes": 40,
+    "fecha_actualizacion": "2026-10-08"
+  },
+  "reorganizacion": "2026-10-09"
+}

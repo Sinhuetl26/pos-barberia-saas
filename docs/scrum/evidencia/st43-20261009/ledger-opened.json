@@ -1,0 +1,65 @@
+{
+  "recordedAt": "2026-10-10T01:58:26.659Z",
+  "stage": "opened",
+  "engine": "sqlite-disposable",
+  "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+  "expected": {
+    "service": 200,
+    "commissionPercent": 40,
+    "commission": 80,
+    "openingCash": 500,
+    "cashReceived": 300,
+    "change": 100,
+    "barberCustodyBeforeHandoff": 200,
+    "handedOffCash": 200,
+    "barberCustodyAfterHandoff": 0,
+    "cashCount": 700,
+    "difference": 0,
+    "sales": 1,
+    "appointments": 1,
+    "commissions": 1
+  },
+  "counts": {
+    "appointments": 0,
+    "sales": 0,
+    "commissions": 0,
+    "turns": 1,
+    "cash": 0,
+    "customers": 0,
+    "kardex": 0
+  },
+  "appointments": [],
+  "sales": [],
+  "commissions": [],
+  "turns": [
+    {
+      "id": "e02cb481-8151-4cd9-9f8a-d24c6caabb97",
+      "tenantId": "4d3e08ca-b532-4b76-af55-6423975e0606",
+      "sucursalId": "8bde8702-91e4-446e-a330-3121a6777cef",
+      "usuarioId": "f6fd760f-fc81-484e-bdf1-6a7f6628e82a",
+      "fechaApertura": "2026-10-10T01:58:12.180Z",
+      "fechaCierre": null,
+      "fondoInicial": "500",
+      "totalEfectivo": "0",
+      "totalTarjeta": "0",
+      "totalTransferencia": "0",
+      "totalPropinas": "0",
+      "totalVentas": "0",
+      "conteoEfectivoReal": null,
+      "descuadre": null,
+      "notas": "QA ST43 · fondo contado ficticio 500",
+      "resumenJson": null,
+      "cierreHash": null,
+      "estado": "ABIERTO"
+    }
+  ],
+  "cash": [],
+  "customers": [],
+  "service": {
+    "id": "dae7e51c-66e6-4c6e-99a4-067e49698529",
+    "precioVenta": "200",
+    "stockActual": 0,
+    "tipo": "SERVICIO"
+  },
+  "notices": []
+}

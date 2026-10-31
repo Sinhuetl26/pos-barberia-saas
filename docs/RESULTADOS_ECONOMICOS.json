@@ -1,0 +1,182 @@
+{
+  "fecha": "2026-10-04",
+  "moneda": "MXN",
+  "tipo_de_resultado": "Escenario presupuestario, antes de ISR, adquisición y sueldo del fundador",
+  "precio_promedio_sin_iva_recomendado": 699,
+  "infraestructura_calculada_referencia": 3540.85,
+  "recomendado_precios_mas_iva": [
+    {
+      "clientes": 10,
+      "ingreso_sin_iva": 6990,
+      "cobrado_con_iva": 8108.4,
+      "comisiones_presupuestadas": 439.25,
+      "reserva_riesgo": 139.8,
+      "soporte_valorizado": 1000,
+      "infraestructura": 3500,
+      "mantenimiento_valorizado": 7200,
+      "resultado_operativo_estimado": -5289.05,
+      "saldo_antes_de_trabajo_humano": 2910.95,
+      "clientes_equilibrio_con_estructura_del_escenario": 20
+    },
+    {
+      "clientes": 30,
+      "ingreso_sin_iva": 20970,
+      "cobrado_con_iva": 24325.2,
+      "comisiones_presupuestadas": 1317.74,
+      "reserva_riesgo": 419.4,
+      "soporte_valorizado": 3000,
+      "infraestructura": 3500,
+      "mantenimiento_valorizado": 7200,
+      "resultado_operativo_estimado": 5532.86,
+      "saldo_antes_de_trabajo_humano": 15732.86,
+      "clientes_equilibrio_con_estructura_del_escenario": 20
+    },
+    {
+      "clientes": 100,
+      "ingreso_sin_iva": 69900,
+      "cobrado_con_iva": 81084,
+      "comisiones_presupuestadas": 4392.47,
+      "reserva_riesgo": 1398,
+      "soporte_valorizado": 10000,
+      "infraestructura": 5500,
+      "mantenimiento_valorizado": 12000,
+      "resultado_operativo_estimado": 36609.53,
+      "saldo_antes_de_trabajo_humano": 58609.53,
+      "clientes_equilibrio_con_estructura_del_escenario": 33
+    }
+  ],
+  "alternativa_precios_iva_incluido": [
+    {
+      "clientes": 10,
+      "ingreso_sin_iva": 6025.86,
+      "cobrado_con_iva": 6990,
+      "comisiones_presupuestadas": 383.46,
+      "reserva_riesgo": 120.52,
+      "soporte_valorizado": 1000,
+      "infraestructura": 3500,
+      "mantenimiento_valorizado": 7200,
+      "resultado_operativo_estimado": -6178.12,
+      "saldo_antes_de_trabajo_humano": 2021.88,
+      "clientes_equilibrio_con_estructura_del_escenario": 24
+    },
+    {
+      "clientes": 30,
+      "ingreso_sin_iva": 18077.59,
+      "cobrado_con_iva": 20970,
+      "comisiones_presupuestadas": 1150.38,
+      "reserva_riesgo": 361.55,
+      "soporte_valorizado": 3000,
+      "infraestructura": 3500,
+      "mantenimiento_valorizado": 7200,
+      "resultado_operativo_estimado": 2865.65,
+      "saldo_antes_de_trabajo_humano": 13065.65,
+      "clientes_equilibrio_con_estructura_del_escenario": 24
+    },
+    {
+      "clientes": 100,
+      "ingreso_sin_iva": 60258.62,
+      "cobrado_con_iva": 69900,
+      "comisiones_presupuestadas": 3834.61,
+      "reserva_riesgo": 1205.17,
+      "soporte_valorizado": 10000,
+      "infraestructura": 5500,
+      "mantenimiento_valorizado": 12000,
+      "resultado_operativo_estimado": 27718.84,
+      "saldo_antes_de_trabajo_humano": 49718.84,
+      "clientes_equilibrio_con_estructura_del_escenario": 39
+    }
+  ],
+  "sensibilidad_soporte_60_minutos": [
+    {
+      "clientes": 10,
+      "ingreso_sin_iva": 6990,
+      "cobrado_con_iva": 8108.4,
+      "comisiones_presupuestadas": 439.25,
+      "reserva_riesgo": 139.8,
+      "soporte_valorizado": 3000,
+      "infraestructura": 3500,
+      "mantenimiento_valorizado": 7200,
+      "resultado_operativo_estimado": -7289.05,
+      "saldo_antes_de_trabajo_humano": 2910.95,
+      "clientes_equilibrio_con_estructura_del_escenario": 32
+    },
+    {
+      "clientes": 30,
+      "ingreso_sin_iva": 20970,
+      "cobrado_con_iva": 24325.2,
+      "comisiones_presupuestadas": 1317.74,
+      "reserva_riesgo": 419.4,
+      "soporte_valorizado": 9000,
+      "infraestructura": 3500,
+      "mantenimiento_valorizado": 7200,
+      "resultado_operativo_estimado": -467.14,
+      "saldo_antes_de_trabajo_humano": 15732.86,
+      "clientes_equilibrio_con_estructura_del_escenario": 32
+    },
+    {
+      "clientes": 100,
+      "ingreso_sin_iva": 69900,
+      "cobrado_con_iva": 81084,
+      "comisiones_presupuestadas": 4392.47,
+      "reserva_riesgo": 1398,
+      "soporte_valorizado": 30000,
+      "infraestructura": 5500,
+      "mantenimiento_valorizado": 12000,
+      "resultado_operativo_estimado": 16609.53,
+      "saldo_antes_de_trabajo_humano": 58609.53,
+      "clientes_equilibrio_con_estructura_del_escenario": 52
+    }
+  ],
+  "sensibilidad_diez_esencial": {
+    "resultado_operativo_estimado": -7133.33,
+    "clientes_equilibrio": 30
+  },
+  "fuentes": [
+    {
+      "proveedor": "Stripe México",
+      "url": "https://stripe.com/mx/pricing",
+      "dato": "Tarjeta nacional 3.6% + MXN3; Billing 0.7%; tarifas excluyen IVA."
+    },
+    {
+      "proveedor": "Render",
+      "url": "https://render.com/pricing",
+      "dato": "UI pública consultada: API 1c-2g USD25; worker pequeño USD7; PostgreSQL 0.5c-1g USD19; Key Value 256MB USD10; workspace Pro USD25. Compute adicional al workspace."
+    },
+    {
+      "proveedor": "Resend",
+      "url": "https://resend.com/pricing?volume=50000",
+      "dato": "Pro USD20/mes, 50,000 correos; exceso USD0.90/1,000."
+    },
+    {
+      "proveedor": "Facturapi",
+      "url": "https://www.facturapi.io/pricing",
+      "dato": "API CFDI multi-organización MXN299/mes + MXN0.60/timbre; IVA incluido. Diferente de Facturapi para Stripe por organización."
+    },
+    {
+      "proveedor": "WhatsApp Business",
+      "url": "https://whatsappbusiness.com/es-la/products/platform-pricing/",
+      "dato": "Variable por mercado y categoría. Sin tarifa unitaria fijada en este modelo; verificar rate card y condiciones al contratar."
+    },
+    {
+      "proveedor": "Booksy México",
+      "url": "https://booksy.com/biz/es-mx/precios",
+      "dato": "Base MXN429/mes + MXN100 por empleado adicional, con las condiciones publicadas. No se supone equivalencia fiscal/funcional."
+    },
+    {
+      "proveedor": "Fresha México",
+      "url": "https://www.fresha.com/es-MX/pricing",
+      "dato": "Independiente USD19.95/mes; equipo USD14.95 por miembro reservable/mes. No se supone equivalencia funcional."
+    }
+  ],
+  "advertencias": [
+    "La mezcla 60/40 no es venta observada. Cadenas y add-ons excluidos del escenario base.",
+    "El tipo de cambio de 20 es un colchón presupuestario, no una cotización actual.",
+    "IVA de 16% y tratamiento de comisiones son hipótesis a validar con el contador. No se modela acreditamiento de IVA ni ISR.",
+    "El costo incluye desembolso de IVA sobre comisiones por prudencia; el IVA acreditable podría cambiar el resultado contable.",
+    "La reserva del 2% no sustituye la exposición real a contracargos ni garantiza cobranza.",
+    "Se supone cobranza completa mensual con tarjetas nacionales, sin FX ni tarjetas internacionales.",
+    "La capacidad de servidores por número de clientes debe validarse con carga real.",
+    "No incluye desarrollo inicial, sueldo del fundador, adquisición de clientes, contabilidad, asesoría legal, hardware ni nuevas funciones.",
+    "Consumos de WhatsApp y CFDI se presupuestan aparte. No se incluyen ingresos de add-ons para no anticipar ganancias."
+  ]
+}

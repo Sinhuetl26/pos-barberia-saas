@@ -1,0 +1,90 @@
+{
+  "recordedAt": "2026-10-11T03:54:29.413Z",
+  "localDate": "2026-10-10",
+  "evidenceType": "Tool execution output observed by backend agent; these legacy suites do not generate execution UUIDs",
+  "fixturesOnly": true,
+  "externalMessages": false,
+  "charges": false,
+  "results": [
+    {
+      "suite": "Account security",
+      "engine": "SQLite disposable",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:1358",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Account service unchanged afterward; queue INSERT UTC helper refined later and tested in final SQLite14."
+    },
+    {
+      "suite": "Account security",
+      "engine": "PostgreSQL isolated",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:74109",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Executed after PostgreSQL UTC fix."
+    },
+    {
+      "suite": "Mail/onboarding",
+      "engine": "SQLite disposable",
+      "passed": 17,
+      "failed": 0,
+      "executionId": "exec-output:63e901",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Provider intercepted; no actual DNS or delivery proof. Queue UTC helper refined later, validated by final SQLite14."
+    },
+    {
+      "suite": "Mail/onboarding",
+      "engine": "PostgreSQL isolated",
+      "passed": 17,
+      "failed": 0,
+      "executionId": "exec-output:92d7c2",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Provider intercepted; executed after PostgreSQL UTC fix."
+    },
+    {
+      "suite": "Authorization",
+      "engine": "SQLite disposable",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:86972",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Route grants tested; inventory mapping later added four jobs routes."
+    },
+    {
+      "suite": "Authorization",
+      "engine": "PostgreSQL isolated",
+      "passed": 19,
+      "failed": 0,
+      "executionId": "session:10964",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Inventory contains151 routes including all four jobs handlers."
+    },
+    {
+      "suite": "Phase2 integrations/dunning",
+      "engine": "SQLite disposable",
+      "passed": 25,
+      "failed": 0,
+      "executionId": "session:47084",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Disposable seeded database; controlled webhooks and no external charges/messages."
+    },
+    {
+      "suite": "Phase2 integrations/dunning",
+      "engine": "PostgreSQL isolated",
+      "passed": 25,
+      "failed": 0,
+      "executionId": "session:59712",
+      "executionIdKind": "tool execution/session identifier",
+      "localDate": "2026-10-10",
+      "scope": "Disposable seeded schema; controlled webhooks and no external charges/messages."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "fecha": "2026-10-08",
+  "motor": "POSTGRES",
+  "count": 17,
+  "pass": true,
+  "checks": [
+    "Self-service starts without fictional catalog, barber, customers, sales or stock",
+    "Account mail with no provider is not marked delivered; unverified account sees safe own status only",
+    "First-day guide reflects real persisted schedule, services, team and first cash opening",
+    "Wizard preserves intentional zero commissions and zero price, creating only selected resources",
+    "Invalid schedules, zones, commissions, prices and service durations have no partial onboarding effects",
+    "Wizard can start with no barber and no selected catalog",
+    "Foreign branch and non-owner cannot change preparation or read company mail",
+    "Provider acceptance stores correlation ID but never claims delivery",
+    "Unsigned, altered and expired webhook signatures fail without adding events",
+    "Duplicate concurrent deliveries count once and stale sent/delayed events cannot downgrade delivery",
+    "Early callback is retained and reconciled after API acceptance saves its message ID",
+    "Provider failure remains retryable and uses the same immutable request",
+    "Hard bounce and complaint override delivery; future mail to a suppressed recipient is never sent",
+    "Signed suppression and unrelated events expose no payload or cross-business account data",
+    "Domain and DNS verification are separate from keys and from proof of real delivery",
+    "Manual catalog services have no invented stock and registration has no invented address",
+    "Working database stays unchanged"
+  ],
+  "proveedor": "Doble controlado; no acredita entrega real ni DNS",
+  "baseOperativaIntacta": true
+}

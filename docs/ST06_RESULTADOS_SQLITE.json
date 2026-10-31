@@ -1,0 +1,30 @@
+{
+  "fecha": "2026-10-07",
+  "motor": "SQLite",
+  "checks": [
+    "Eight concurrent openings across two API processes create one shift and one stable response",
+    "Barber checkout records branch, service provider, collector and one durable owner notice on retries",
+    "Custody is private to the collecting barber and branch; mixed card money is never cash",
+    "Receiving the same handoff eight times moves custody once and preserves sales and commission",
+    "Cash movements require exact cents, a reason, an open branch and a durable key",
+    "Blind closing never exposes its expectation before counting, including printable capabilities",
+    "Blind close separates mixed payments and custody from physical cash and treats one cent as a difference",
+    "Commission settlement persists a receipt and cannot pay the same selection twice",
+    "Partial refund after a closed shift restores one unit, reverses a historical commission and keeps paid history",
+    "Partial returns do not reprice when the product price and barber commission change",
+    "Paid commission adjustments remain pending and cannot disappear in a zero-clamped payroll",
+    "Refund permissions, reason, foreign branch and excessive quantity fail before stock changes",
+    "Concurrent new-key refunds cannot restore the same last unit twice",
+    "A sale concurrent with closing belongs wholly to that shift or to the collector, never half-committed",
+    "Custody from a prior closed shift is received into a new shift without a new sale",
+    "A late refund database failure rolls back stock, commission, cash, customer and intention; the same key recovers once",
+    "A tip-only remainder can be refunded without restocking an already returned unit",
+    "The next payroll must include past paid-sale reversals and offsets them without changing the earlier receipt",
+    "Free units and a fully discounted sale can be returned without prematurely cancelling outstanding units",
+    "Refunding an already attended appointment preserves the prior CRM visit",
+    "The real working database is untouched"
+  ],
+  "count": 21,
+  "pass": true,
+  "datos": "Ficticios; dos procesos API; sin pagos reales ni cambios a la base de trabajo"
+}

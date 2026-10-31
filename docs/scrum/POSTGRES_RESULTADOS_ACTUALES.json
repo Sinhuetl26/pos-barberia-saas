@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-09",
+  "engine": "PostgreSQL 16",
+  "passed": 13,
+  "checks": [
+    "Clean PostgreSQL database installs every versioned migration",
+    "Database and canonical PostgreSQL model have no schema drift",
+    "Read-only release preflight accepts current schema without changing any rows",
+    "Read-only release preflight rejects drift without repairing or deleting it",
+    "Read-only release preflight rejects pending historical upgrades without changing rows",
+    "Populated legacy upgrade preserves subscriptions, dates, appointments and invoices",
+    "Repeat deploy is idempotent and preserves complete rows",
+    "Numeric precision, UTC instants, uniqueness and foreign keys are enforced",
+    "Anonymized SQLite copy upgrades without losing business rows or money",
+    "Failed transactional migration rolls back and recovery preserves records",
+    "Pre-migration backup restores to a new isolated database with identical rows",
+    "Full API regression executes against PostgreSQL with separate test schemas",
+    "Working SQLite database is unchanged"
+  ],
+  "working_database_unchanged": true,
+  "source_snapshot": "Anonymized local SQLite copy; authentication queues omitted",
+  "migrations": [
+    "0_init",
+    "20261005_account_security",
+    "20261005_authorization",
+    "20261006_01_postgres_compatibility",
+    "20261006_02_postgres_integrity",
+    "20261007_booking_integrity",
+    "20261007_cash_traceability",
+    "20261007_pos_integrity",
+    "20261008_mail_onboarding"
+  ]
+}

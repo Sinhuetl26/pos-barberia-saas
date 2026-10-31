@@ -1,0 +1,84 @@
+{
+  "viewport": 390,
+  "pageWidth": 390,
+  "buttons": [
+    {
+      "text": "",
+      "aria": "Abrir menú",
+      "height": 36,
+      "width": 36
+    },
+    {
+      "text": "Mi página de reservas",
+      "aria": null,
+      "height": 14,
+      "width": 14
+    },
+    {
+      "text": "Avisos de ventas · 1 recientes ↓",
+      "aria": null,
+      "height": 32,
+      "width": 165.953125
+    },
+    {
+      "text": "Ventas y devoluciones",
+      "aria": null,
+      "height": 44,
+      "width": 169.984375
+    },
+    {
+      "text": "Movimiento de caja",
+      "aria": null,
+      "height": 44,
+      "width": 151.984375
+    },
+    {
+      "text": "Todos",
+      "aria": null,
+      "height": 44,
+      "width": 58.203125
+    },
+    {
+      "text": "General",
+      "aria": null,
+      "height": 44,
+      "width": 68.046875
+    },
+    {
+      "text": "30 min • GeneralCorte de demostración$200.00+ Agregar",
+      "aria": "Agregar Corte de demostración, $200.00 MXN",
+      "height": 147,
+      "width": 173
+    },
+    {
+      "text": "0%",
+      "aria": null,
+      "height": 44,
+      "width": 36.5
+    },
+    {
+      "text": "10%",
+      "aria": null,
+      "height": 44,
+      "width": 36.5
+    },
+    {
+      "text": "15%",
+      "aria": null,
+      "height": 44,
+      "width": 36.5
+    },
+    {
+      "text": "20%",
+      "aria": null,
+      "height": 44,
+      "width": 36.5
+    },
+    {
+      "text": "Cobrar $0.00 MXN",
+      "aria": null,
+      "height": 44,
+      "width": 324
+    }
+  ]
+}
