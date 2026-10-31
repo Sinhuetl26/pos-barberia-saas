@@ -1,0 +1,42 @@
+{
+  "version": "2026-10-30.1",
+  "currency": "MXN",
+  "interval": "month",
+  "tax": {
+    "defaultPolicy": "PENDIENTE",
+    "exclusiveRateBps": 1600,
+    "notice": "El tratamiento fiscal requiere revisión antes del lanzamiento. El total se muestra antes de confirmar el pago."
+  },
+  "plans": [
+    {
+      "code": "BASICO",
+      "name": "Studio Esencial",
+      "monthlyBaseMxn": 499,
+      "branchLimit": 1,
+      "barbersPerBranch": 3,
+      "subtitle": "Todo lo necesario para operar bien.",
+      "features": ["Agenda y página de reservas", "Cobros, clientes, caja y tickets", "Comisiones e inventario", "Reporte de ventas y exportación"],
+      "capabilities": ["CORE_OPERATIONS", "BASIC_REPORTS", "DATA_EXPORT", "BARBER_ACCESS", "PUBLIC_BOOKING"]
+    },
+    {
+      "code": "PRO",
+      "name": "Studio Pro",
+      "monthlyBaseMxn": 999,
+      "branchLimit": 1,
+      "barbersPerBranch": 8,
+      "subtitle": "Más equipo, control e inteligencia.",
+      "features": ["Todo lo de Esencial", "Hasta ocho barberos activos", "Gerente, cajero y permisos", "Inteligencia, gastos y auditoría", "Descuentos y liquidaciones avanzadas", "Acompañamiento prioritario"],
+      "capabilities": ["CORE_OPERATIONS", "BASIC_REPORTS", "DATA_EXPORT", "BARBER_ACCESS", "PUBLIC_BOOKING", "STAFF_ROLES", "ADVANCED_REPORTS", "AUDIT_TRAIL", "DISCOUNT_APPROVALS", "PROFESSIONAL_PRICING", "COMMISSION_SETTLEMENTS", "PRIORITY_SUPPORT"]
+    },
+    {
+      "code": "CADENA",
+      "name": "Studio Cadena",
+      "monthlyBaseMxn": 2699,
+      "branchLimit": 3,
+      "barbersPerBranch": 8,
+      "subtitle": "Control de varias ubicaciones.",
+      "features": ["Todo lo de Pro", "Hasta tres sucursales", "Ocho barberos por sucursal", "Catálogo y operación por ubicación", "Supervisión central del dueño"],
+      "capabilities": ["CORE_OPERATIONS", "BASIC_REPORTS", "DATA_EXPORT", "BARBER_ACCESS", "PUBLIC_BOOKING", "STAFF_ROLES", "ADVANCED_REPORTS", "AUDIT_TRAIL", "DISCOUNT_APPROVALS", "PROFESSIONAL_PRICING", "COMMISSION_SETTLEMENTS", "PRIORITY_SUPPORT", "MULTI_BRANCH"]
+    }
+  ]
+}

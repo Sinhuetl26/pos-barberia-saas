@@ -1,0 +1,21 @@
+BEGIN;
+ALTER TABLE "Producto" ADD COLUMN "tasaImpuesto" DECIMAL(65,30) NOT NULL DEFAULT 0;
+ALTER TABLE "Venta" ADD COLUMN "impuesto" DECIMAL(65,30) NOT NULL DEFAULT 0;
+ALTER TABLE "VentaItem" ADD COLUMN "descuento" DECIMAL(65,30) NOT NULL DEFAULT 0;
+ALTER TABLE "VentaItem" ADD COLUMN "impuesto" DECIMAL(65,30) NOT NULL DEFAULT 0;
+ALTER TABLE "VentaItem" ADD COLUMN "tasaImpuesto" DECIMAL(65,30) NOT NULL DEFAULT 0;
+ALTER TABLE "VentaItem" ADD COLUMN "comision" DECIMAL(65,30) NOT NULL DEFAULT 0;
+CREATE TABLE "POSOperacion" (
+  "id" TEXT NOT NULL,
+  "tenantId" TEXT NOT NULL,
+  "clave" TEXT NOT NULL,
+  "requestHash" TEXT NOT NULL,
+  "ventaId" TEXT,
+  "respuesta" TEXT,
+  "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT "POSOperacion_pkey" PRIMARY KEY ("id")
+);
+CREATE UNIQUE INDEX "POSOperacion_tenantId_clave_key" ON "POSOperacion"("tenantId", "clave");
+CREATE UNIQUE INDEX "POSOperacion_ventaId_key" ON "POSOperacion"("ventaId");
+ALTER TABLE "POSOperacion" ADD CONSTRAINT "POSOperacion_ventaId_fkey" FOREIGN KEY ("ventaId") REFERENCES "Venta"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+COMMIT;

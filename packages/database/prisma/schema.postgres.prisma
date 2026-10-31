@@ -4,7 +4,6 @@
 generator client {
   provider = "prisma-client-js"
 }
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -29,7 +28,7 @@ model Tenant {
   id                String       @id @default(uuid())
   nombre            String
   slug              String?      @unique
-  plan              String       @default("BASICO") // BASICO, PRO
+  plan              String       @default("BASICO") // BASICO, PRO, CADENA; catálogo packages/licensing
   planId            String?
   planRel           Plan?        @relation(fields: [planId], references: [id])
   estado            String       @default("ACTIVO") // ACTIVO, EN_RIESGO, SUSPENDIDO, CANCELADO
@@ -44,10 +43,11 @@ model Tenant {
   facebook          String?
   tiktok            String?
   whatsappPublico   String?
+  personalizacionWeb String? // Validated JSON presentation options; null uses legacy defaults.
   limiteSucursales  Int          @default(1) // 1 for BASICO, 999 for PRO
   limiteBarberos    Int          @default(3) // 3 for BASICO, 999 for PRO
   fechaCreacion     DateTime     @default(now())
-  
+
   sucursales        Sucursal[]
   usuarios          Usuario[]
   clientes          ClienteFinal[]
@@ -84,9 +84,14 @@ model Suscripcion {
   fechaProximoCobro    DateTime?
   fechaUltimoCobro     DateTime?
   fechaSuspension      DateTime?
+  // Preserve subscription metadata from 0_init; excluded from the application client.
+  plan                 String    @default("BASICO") @ignore
+  cancelarAlFin        Boolean   @default(false) @ignore
+  reintentosFallidos   Int       @default(0) @ignore
 }
 
 model Sucursal {
+  configuradaEn DateTime?
   id              String       @id @default(uuid())
   tenantId        String
   tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -98,7 +103,7 @@ model Sucursal {
   horarioCierre   String       @default("20:00")
   diasLaborales   String       @default("Lunes a Sábado")
   eliminadoEn     DateTime?
-  
+
   barberos        Barbero[]
   citas           Cita[]
   ventas          Venta[]
@@ -112,16 +117,22 @@ model Sucursal {
 }
 
 model Usuario {
+  sessionVersion Int @default(0)
+  emailVerifiedAt DateTime?
+  verificationRequired Boolean @default(false)
+  invitationPending Boolean @default(false)
+  authActions AuthAction[]
   id           String      @id @default(uuid())
   tenantId     String
   tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   email        String      @unique
   passwordHash String
-  rol          String      // SUPER_ADMIN, DUENO, GERENTE, BARBERO
+  rol          String      // SUPER_ADMIN, DUENO, GERENTE, CAJERO, BARBERO
   nombre       String
   telefono     String?
   sucursalId   String?
   barberoId    String?
+  sucursalesAsignadasJson String? // null: legacy sucursalId; []: no branch access
   activo       Boolean     @default(true)
   fechaAlta    DateTime    @default(now())
   eliminadoEn  DateTime?
@@ -147,7 +158,7 @@ model Barbero {
   horarioFin           String           @default("20:00")
   activo               Boolean          @default(true)
   eliminadoEn          DateTime?
-  
+
   citas                Cita[]
   ventas               Venta[]
   comisiones           Comision[]
@@ -160,6 +171,7 @@ model Barbero {
 }
 
 model ClienteFinal {
+  sucursalOrigenId String? // New clients inherit the creating operator branch
   id                String       @id @default(uuid())
   tenantId          String
   tenant            Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -174,7 +186,7 @@ model ClienteFinal {
   fechaNacimiento   DateTime?
   notasEstilo       String?
   eliminadoEn       DateTime?
-  
+
   citas             Cita[]
   ventas            Venta[]
   consentimientos   ConsentimientoCliente[]
@@ -191,17 +203,23 @@ model Producto {
   sucursalId      String?
   sucursal        Sucursal?           @relation(fields: [sucursalId], references: [id], onDelete: Cascade)
   nombre          String
+  imagen          String?
   tipo            String              @default("PRODUCTO") // PRODUCTO, SERVICIO
   categoria       String              @default("General")
   duracionMinutos Int                 @default(30) // Para servicios
   sku             String?
   precioVenta     Decimal
+  tasaImpuesto    Decimal             @default(0) // Porcentaje incluido en el precio final
   costo           Decimal?            @default(0)
-  stockActual     Int                 @default(0)
-  stockMinimo     Int                 @default(0)
+  stockActual     Decimal             @default(0) @db.Decimal(20,3)
+  stockMinimo     Decimal             @default(0) @db.Decimal(20,3)
+  naturaleza     String              @default("REVENTA")
+  unidad         String              @default("PIEZA")
+  presentacionNombre String?
+  presentacionCantidad Decimal @default(1) @db.Decimal(20,3)
   activo          Boolean             @default(true)
   eliminadoEn     DateTime?
-  
+
   kardex          KardexMovimiento[]
   ventaItems      VentaItem[]
 
@@ -225,18 +243,31 @@ model Cita {
   duracionMinutos Int          @default(30)
   estado          String       @default("PENDIENTE") // PENDIENTE, CONFIRMADA, COMPLETADA, CANCELADA, NO_SHOW
   notas           String?
+  tipoCorte       String?
+  referencia      CitaReferencia?
+  fechaCreacion   DateTime @default(now()) @ignore
   precioEstimado  Decimal?
   codigoReserva    String?
   tokenCancelacion String?      @unique
+  tokenExpiraEn DateTime?
+  claveReserva String?
+  solicitudHash String?
   serviciosJson    String?
   bufferMinutos    Int          @default(10)
-  
+
   venta           Venta?
   resena          Resena?
 
   @@unique([tenantId, codigoReserva])
+  @@unique([tenantId, claveReserva])
   @@index([tenantId, fechaHora])
   @@index([sucursalId, barberoId, fechaHora])
+}
+
+model CitaReferencia {
+  citaId String @id
+  cita Cita @relation(fields: [citaId], references: [id], onDelete: Cascade)
+  imagen String
 }
 
 model BloqueoHorario {
@@ -252,6 +283,9 @@ model BloqueoHorario {
   motivo      String    // Almuerzo, Mantenimiento, Descanso, Especial
 
   @@index([tenantId, sucursalId, fechaInicio, fechaFin])
+  tipo String @default("BLOQUEO")
+  citasAfectadasJson String?
+
 }
 
 model Venta {
@@ -276,16 +310,37 @@ model Venta {
   descuento     Decimal       @default(0)
   propina       Decimal       @default(0)
   total         Decimal
+  impuesto      Decimal       @default(0) // Incluido en el total; excluye propina
   metodoPago    String        // EFECTIVO, TARJETA, TRANSFERENCIA, MIXTO
   detallesPago  String?       // JSON string for split payments
   fecha         DateTime      @default(now())
-  
+
   items         VentaItem[]
   comisiones    Comision[]
+  operacionPOS  POSOperacion?
+  totalDevuelto Decimal @default(0)
+  propinaDevuelta Decimal @default(0)
+  cobradoPorId String?
+  cobradoPorNombre String?
+  corteCajaId String?
+  devoluciones DevolucionVenta[]
 
   @@unique([tenantId, sucursalId, folio])
   @@index([tenantId, fecha])
   @@index([sucursalId, fecha])
+}
+
+model POSOperacion {
+  id          String   @id @default(uuid())
+  tenantId    String
+  clave       String
+  requestHash String
+  ventaId     String?  @unique
+  venta       Venta?   @relation(fields: [ventaId], references: [id], onDelete: Restrict)
+  respuesta   String?
+  fecha       DateTime @default(now())
+
+  @@unique([tenantId, clave])
 }
 
 model VentaItem {
@@ -299,6 +354,10 @@ model VentaItem {
   cantidad       Int       @default(1)
   precioUnitario Decimal
   subtotal       Decimal
+  descuento      Decimal   @default(0)
+  impuesto       Decimal   @default(0)
+  tasaImpuesto   Decimal   @default(0)
+  comision       Decimal   @default(0)
 
   @@index([ventaId])
 }
@@ -316,6 +375,8 @@ model Comision {
   pagada             Boolean    @default(false)
   fechaPago          DateTime?
   metodoPagoComision String?
+  origen String @default("VENTA")
+  devolucionId String?
   corteCajaId        String?
   corteCaja          CorteCaja? @relation(fields: [corteCajaId], references: [id])
 
@@ -340,8 +401,10 @@ model CorteCaja {
   conteoEfectivoReal Decimal?
   descuadre          Decimal?
   notas              String?
+  resumenJson String?
+  cierreHash String?
   estado             String     @default("ABIERTO") // ABIERTO, CERRADO
-  
+
   comisiones         Comision[]
   movimientos        MovimientoCaja[]
 
@@ -356,14 +419,39 @@ model KardexMovimiento {
   productoId     String
   producto       Producto  @relation(fields: [productoId], references: [id], onDelete: Cascade)
   tipoMovimiento String    // VENTA_POS, ENTRADA_COMPRA, AJUSTE_INVENTARIO, MERMA_DEVOLUCION
-  cantidad       Int
-  stockAnterior  Int
-  stockNuevo     Int
+  cantidad       Decimal @db.Decimal(20,3)
+  stockAnterior  Decimal @db.Decimal(20,3)
+  stockNuevo     Decimal @db.Decimal(20,3)
   motivo         String?
   fecha          DateTime  @default(now())
   usuarioId      String?
+  metadataJson   String?   // Immutable purchase cost/document/actor snapshot.
 
   @@index([tenantId, productoId, fecha])
+}
+
+model InventarioOperacion {
+  id          String   @id @default(uuid())
+  tenantId    String
+  clave       String
+  requestHash String
+  respuesta   String?
+  fecha       DateTime @default(now())
+  @@unique([tenantId, clave])
+}
+
+model ConteoInventario {
+  id           String   @id @default(uuid())
+  tenantId     String
+  sucursalId   String
+  usuarioId    String
+  estado       String   @default("BORRADOR")
+  version      Int      @default(0)
+  itemsJson    String
+  motivo       String?
+  fecha        DateTime @default(now())
+  confirmadoEn DateTime?
+  @@index([tenantId, sucursalId, fecha])
 }
 
 model NotificacionLog {
@@ -569,4 +657,319 @@ model Secuencia {
   actualizado DateTime @updatedAt
 
   @@unique([tenantId, sucursalId, tipo])
+}
+
+// Security actions also form a durable, encrypted transactional mail outbox.
+model AuthAction {
+  id String @id @default(uuid())
+  userId String
+  user Usuario @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String
+  purpose String
+  tokenHash String @unique
+  sessionVersion Int
+  expiresAt DateTime
+  consumedAt DateTime?
+  encryptedToken String?
+  providerMessageId String? @unique
+  deliveryStatus String @default("PENDING")
+  mailStatus String @default("QUEUED")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  @@index([userId, purpose])
+  @@index([mailStatus, nextAttemptAt])
+}
+model EmailDeliveryEvent {
+  id String @id
+  emailId String
+  status String
+  occurredAt DateTime
+  receivedAt DateTime @default(now())
+  @@index([emailId])
+}
+model EmailSuppression {
+  id String @id
+  reason String
+  createdAt DateTime @default(now())
+}
+model AuthThrottle {
+  id String @id
+  count Int @default(1)
+  expiresAt DateTime
+  @@index([expiresAt])
+}
+
+// Historical invoices are retained physically; the upcoming CFDI implementation owns their API.
+model Factura {
+  id             String @id
+  tenantId       String
+  ventaId        String?
+  rfcEmisor      String
+  rfcReceptor    String
+  razonSocial    String
+  regimenFiscal  String
+  usoCfdi        String
+  codigoPostal   String
+  subtotal       Decimal
+  iva            Decimal
+  total          Decimal
+  uuidFiscal     String? @unique
+  serie          String @default("F")
+  folio          String
+  fechaTimbrado  DateTime?
+  estado         String @default("GENERADA")
+  xmlUrl         String?
+  pdfUrl         String?
+  errorDetalle   String?
+  esPrueba       Boolean @default(true)
+  fechaCreacion  DateTime @default(now())
+  @@ignore
+}
+
+// Immutable financial events. Only recorded locally; no provider refund is implied.
+model CajaOperacion {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  clave String
+  requestHash String
+  respuesta String?
+  fecha DateTime @default(now())
+  @@unique([tenantId, clave])
+}
+
+model RegistroCaja {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  corteCajaId String?
+  ventaId String?
+  tipo String
+  metodoPago String
+  monto Decimal
+  custodiaUsuarioId String?
+  usuarioId String
+  usuarioNombre String
+  concepto String
+  fecha DateTime @default(now())
+  @@index([tenantId, sucursalId, corteCajaId])
+  @@index([tenantId, custodiaUsuarioId])
+}
+
+model DevolucionVenta {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  ventaId String
+  venta Venta @relation(fields: [ventaId], references: [id], onDelete: Restrict)
+  motivo String
+  usuarioId String
+  usuarioNombre String
+  itemsJson String
+  pagosJson String
+  total Decimal
+  comision Decimal
+  propina Decimal @default(0)
+  fecha DateTime @default(now())
+  @@index([tenantId, ventaId])
+}
+
+model ReservaLimite {
+  id String @id
+  tenantId String
+  contador Int @default(0)
+  expiraEn DateTime
+  @@index([expiraEn])
+}
+
+model DurableJob {
+  id String @id @default(uuid())
+  tenantId String
+  key String
+  kind String
+  provider String
+  entityId String?
+  entityVersion String?
+  state String @default("QUEUED")
+  attempts Int @default(0)
+  maxAttempts Int @default(4)
+  availableAt DateTime @default(now())
+  expiresAt DateTime
+  leaseToken String?
+  leaseUntil DateTime?
+  lastCode String?
+  completedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, key])
+  @@index([state, availableAt])
+  @@index([tenantId, provider, state])
+}
+
+model JobProviderControl {
+  id String @id
+  tenantId String
+  provider String
+  paused Boolean @default(false)
+  updatedAt DateTime @updatedAt
+  @@unique([tenantId, provider])
+}
+
+model JobWorkerPulse {
+  id String @id
+  lastSeen DateTime
+  rssBytes Int
+}
+
+model RecetaServicio {
+  id String @id @default(uuid())
+  tenantId String
+  servicioId String
+  version Int
+  itemsJson String
+  fecha DateTime @default(now())
+  usuarioId String
+  @@unique([tenantId, servicioId, version])
+}
+model ConsumoServicio {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  servicioId String
+  eventoClave String
+  recetaVersion Int
+  itemsJson String
+  citaId String?
+  ventaId String?
+  usuarioId String
+  fecha DateTime @default(now())
+  @@unique([tenantId, eventoClave, servicioId])
+  @@index([tenantId, sucursalId, fecha])
+}
+
+model FilaPresencial {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  clienteNombre String?
+  clienteTelefono String?
+  serviciosJson String
+  barberoPreferidoId String?
+  barberoId String?
+  citaId String? @unique
+  estado String @default("ESPERANDO")
+  version Int @default(0)
+  fechaLlegada DateTime @default(now())
+  usuarioId String
+  motivoRetiro String?
+  @@index([tenantId, sucursalId, estado, fechaLlegada])
+}
+model OperacionAgenda {
+  id String @id @default(uuid())
+  tenantId String
+  clave String
+  requestHash String
+  respuesta String?
+  fecha DateTime @default(now())
+  @@unique([tenantId, clave])
+}
+model TurnoEspecial {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  barberoId String
+  fecha String
+  horarioInicio String
+  horarioFin String
+  motivo String
+  version Int @default(1)
+  usuarioId String
+  fechaCreacion DateTime @default(now())
+  @@unique([tenantId, barberoId, fecha])
+  @@index([tenantId, sucursalId, fecha])
+}
+
+model TarifaProfesional {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  barberoId String
+  servicioId String
+  version Int
+  precio Decimal?
+  vigenteDesde DateTime
+  vigenteHasta DateTime?
+  anulada Boolean @default(false)
+  usuarioId String
+  fecha DateTime @default(now())
+  @@unique([tenantId, sucursalId, barberoId, servicioId, version], map: "TarifaProfesional_scope_version_key")
+  @@index([tenantId, sucursalId, vigenteDesde])
+}
+model PoliticaDescuento {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  version Int
+  activa Boolean @default(true)
+  limitesJson String
+  motivoObligatorio Boolean
+  vigenciaAprobacionMinutos Int
+  usuarioId String
+  fecha DateTime @default(now())
+  @@unique([tenantId, sucursalId, version])
+}
+model AprobacionDescuento {
+  id String @id @default(uuid())
+  tenantId String
+  sucursalId String
+  solicitadoPorId String
+  rolSolicitante String
+  cartHash String
+  carritoJson String
+  resumenJson String
+  motivo String
+  politicaVersion Int?
+  estado String @default("PENDIENTE")
+  aprobadoPorId String?
+  aprobadoPorNombre String?
+  aprobadoEn DateTime?
+  expiraEn DateTime?
+  ventaId String? @unique
+  fecha DateTime @default(now())
+  @@index([tenantId, sucursalId, estado, fecha])
+}
+
+model GastoOperativo {
+ id String @id @default(uuid())
+ tenantId String
+ sucursalId String
+ concepto String
+ categoria String
+ fecha DateTime
+ importe Decimal @db.Decimal(20,2)
+ metodoPago String
+ comprobanteReferencia String?
+ registroCajaId String? @unique
+ usuarioId String
+ usuarioNombre String
+ version Int @default(1)
+ creadoEn DateTime @default(now())
+ @@index([tenantId, sucursalId, fecha])
+}
+model CorreccionGasto {
+ id String @id @default(uuid())
+ tenantId String
+ sucursalId String
+ gastoId String
+ version Int
+ registroCajaId String? @unique
+ anteriorJson String
+ actualJson String
+ motivo String
+ usuarioId String
+ usuarioNombre String
+ fecha DateTime @default(now())
+ @@unique([gastoId, version])
+ @@index([tenantId, sucursalId, gastoId])
 }

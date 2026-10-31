@@ -22,6 +22,9 @@ var currentDir = typeof __dirname !== 'undefined'
     : path.resolve(process.cwd(), 'packages', 'database');
 var defaultDbPath = path.resolve(currentDir, 'prisma', 'dev.db');
 var rawUrl = process.env.DATABASE_URL;
+if (process.env.NODE_ENV === 'production' && !/^postgres(?:ql)?:\/\//.test(rawUrl || '')) {
+    throw new Error('Production requires an explicit PostgreSQL DATABASE_URL.');
+}
 var finalDbUrl = undefined;
 if (!rawUrl || (rawUrl.startsWith('file:') && !path.isAbsolute(rawUrl.replace(/^file:/, '')))) {
     finalDbUrl = "file:".concat(defaultDbPath.replace(/\\/g, '/'));

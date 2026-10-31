@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
+const licenseCatalog = require('../licensing/catalog.json');
 const hash = (pwd: string) => bcrypt.hashSync(pwd, 10);
 
 async function main() {
@@ -27,29 +28,17 @@ async function main() {
   await prisma.plan.deleteMany();
 
   // Create Standard SaaS Plans
-  const planBasico = await prisma.plan.create({
-    data: {
-      codigo: 'BASICO',
-      nombre: 'Plan Básico',
-      precioMensual: 499,
-      limiteSucursales: 1,
-      limiteBarberos: 3,
-      whatsappPro: false,
-      analiticaAvanzada: false
-    }
-  });
-
-  const planPro = await prisma.plan.create({
-    data: {
-      codigo: 'PRO',
-      nombre: 'Plan Pro',
-      precioMensual: 999,
-      limiteSucursales: 999,
-      limiteBarberos: 999,
-      whatsappPro: true,
-      analiticaAvanzada: true
-    }
-  });
+  const seededPlans: Record<string, any> = {};
+  for (const plan of licenseCatalog.plans) {
+    seededPlans[plan.code] = await prisma.plan.create({ data: {
+      codigo: plan.code, nombre: plan.name, precioMensual: plan.monthlyBaseMxn,
+      limiteSucursales: plan.branchLimit, limiteBarberos: plan.barbersPerBranch,
+      whatsappPro: false, analiticaAvanzada: plan.code !== 'BASICO'
+    } });
+  }
+  const planBasico = seededPlans.BASICO;
+  const planPro = seededPlans.PRO;
+  const planCadena = seededPlans.CADENA;
 
   // 1. Super Admin User (SYSTECH Global Admin)
   // Can be tied to a system tenant or global
@@ -59,6 +48,8 @@ async function main() {
       slug: 'systech-global',
       plan: 'PRO',
       planId: planPro.id,
+      limiteSucursales: planPro.limiteSucursales,
+      limiteBarberos: planPro.limiteBarberos,
       estado: 'ACTIVO',
       emailContacto: 'soporte@systech.mx',
       telefono: '5500000000',
@@ -77,26 +68,26 @@ async function main() {
     }
   });
 
-  // 2. Tenant 1: Barbería El Bigote (PLAN PRO - Multiple branches, multiple barbers)
+  // 2. Tenant 1: Barbería El Bigote (CADENA - multiple branches)
   const tenant1 = await prisma.tenant.create({
     data: {
       nombre: 'Barbería El Bigote',
       slug: 'el-bigote',
-      plan: 'PRO',
-      planId: planPro.id,
+      plan: 'CADENA',
+      planId: planCadena.id,
       estado: 'ACTIVO',
       emailContacto: 'contacto@elbigote.mx',
       telefono: '5551234567',
       direccion: 'Av. Álvaro Obregón 123, Col. Roma Norte, Cuauhtémoc, CDMX',
-      limiteSucursales: 999,
-      limiteBarberos: 999
+      limiteSucursales: planCadena.limiteSucursales,
+      limiteBarberos: planCadena.limiteBarberos
     }
   });
 
   await prisma.suscripcion.create({
     data: {
       tenantId: tenant1.id,
-      montoMensual: 999,
+      montoMensual: planCadena.precioMensual,
       estadoPago: 'active',
       diasGracia: 3,
       fechaUltimoCobro: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
@@ -205,6 +196,8 @@ async function main() {
       email: 'barbero@elbigote.com',
       passwordHash: hash('Barbero123!'),
       rol: 'BARBERO',
+      barberoId: barberoCarlos.id,
+      sucursalId: sucursalRoma.id,
       telefono: '5551112233'
     }
   });
@@ -711,7 +704,7 @@ async function main() {
       tenantId: tenant1.id,
       usuarioEmail: 'admin@systech.com',
       accion: 'ALTA_TENANT',
-      detalles: 'Registro de Barbería El Bigote con Plan PRO'
+      detalles: 'Registro de Barbería El Bigote con Plan CADENA'
     }
   });
 
@@ -828,7 +821,7 @@ async function main() {
 
   console.log('✅ SEED COMPLETED SUCCESSFULLY!');
   console.log(`- Super Admin: admin@systech.com`);
-  console.log(`- Tenant 1 (PRO): ${tenant1.id} (slug: el-bigote)`);
+  console.log(`- Tenant 1 (CADENA): ${tenant1.id} (slug: el-bigote)`);
   console.log(`- Tenant 2 (BASICO): ${tenant2.id} (slug: la-clasica)`);
   console.log(`- Tenant 3 (EN RIESGO): ${tenant3.id} (slug: urban-barber)`);
 }
