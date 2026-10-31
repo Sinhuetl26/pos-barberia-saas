@@ -48,6 +48,7 @@ async function main() {
       const auditBlocked = await request(basic, '/operacion/auditoria'); assert.equal(auditBlocked.status, 403); assert.equal(auditBlocked.data.code, 'PLAN_UPGRADE_REQUIRED');
       const auditAllowed = await request(pro, '/operacion/auditoria'); assert.equal(auditAllowed.status, 200);
       const managerBlocked = await request(basic, '/usuarios', 'POST', { nombre: 'Gerente básico', email: 'manager-basic@test.invalid', rol: 'GERENTE', branchIds: [basic.branch.id], activo: true }); assert.equal(managerBlocked.status, 403); assert.equal(managerBlocked.data.code, 'PLAN_UPGRADE_REQUIRED');
+      const payrollBlocked = await request(basic, '/comisiones/liquidar-nomina', 'POST', { idempotencyKey: 'basic-payroll' }); assert.equal(payrollBlocked.status, 403); assert.equal(payrollBlocked.data.code, 'PLAN_UPGRADE_REQUIRED');
     });
     await check('A price alone never advertises a usable checkout; readiness is plan-specific and secret-free', async () => {
       const { licenseCheckoutReadiness, publicAppOrigin } = require('../apps/api/dist/services/provider-config.service');

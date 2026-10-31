@@ -23,7 +23,9 @@ async function main() {
   let owner, branch, tenant, ownerToken;
   const link = async (user, purpose) => { await prisma.$transaction(tx => security.queueAction(tx, user.id, purpose)); await security.processSecurityMail(); const msg = [...mail].reverse().find(m => m.to === user.email); assert(msg); return msg.html.match(/#token=([a-f0-9]{64})/)[1]; };
   try {
-    tenant = await prisma.tenant.create({ data: { nombre: 'Fixture seguridad', slug: 'fixture-security' } });
+    // Inviting GERENTE/CAJERO is a Studio Pro capability (STAFF_ROLES); the plan is declared
+    // here so the licensing gate remains enforced instead of being bypassed by the suite.
+    tenant = await prisma.tenant.create({ data: { nombre: 'Fixture seguridad', slug: 'fixture-security', plan: 'PRO' } });
     branch = await prisma.sucursal.create({ data: { tenantId: tenant.id, nombre: 'Matriz' } });
     owner = await prisma.usuario.create({ data: { tenantId: tenant.id, nombre: '<Owner>', email: 'owner@security.invalid', rol: 'DUENO', passwordHash: await bcrypt.hash(password, 12), emailVerifiedAt: new Date() } }); ownerToken = sign(owner);
     await check('Recovery does not enumerate accounts or return secrets; mail is queued durably', async () => {

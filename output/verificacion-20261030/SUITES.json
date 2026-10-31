@@ -1,0 +1,102 @@
+{
+  "ejecutadoEn": "2026-10-30T23:42:07-06:00",
+  "comando": "npm test",
+  "motor": "SQLite aislado",
+  "resumen": "13/13 suites aprobadas. Las pruebas no certifican preparación para producción.",
+  "suitesAprobadas": 13,
+  "suitesTotales": 13,
+  "comprobaciones": 279,
+  "suites": [
+    {
+      "nombre": "ST-09: tickets de mostrador",
+      "resultado": "APROBADA",
+      "comprobaciones": 7,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "ST-08: alta y correo transaccional",
+      "resultado": "APROBADA",
+      "comprobaciones": 17,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "ST-07: agenda y reservas concurrentes",
+      "resultado": "APROBADA",
+      "comprobaciones": 20,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "ST-06: caja, custodia y devoluciones concurrentes",
+      "resultado": "APROBADA",
+      "comprobaciones": 21,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "ST-05: ventas, inventario y reintentos concurrentes",
+      "resultado": "APROBADA",
+      "comprobaciones": 17,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Recuperación, invitaciones y revocación de sesiones",
+      "resultado": "APROBADA",
+      "comprobaciones": 19,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Seguridad y aislamiento",
+      "resultado": "APROBADA",
+      "comprobaciones": 42,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Finanzas y concurrencia",
+      "resultado": "APROBADA",
+      "comprobaciones": 19,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Integraciones y tickets",
+      "resultado": "APROBADA",
+      "comprobaciones": 25,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Agenda, clientes y comisiones",
+      "resultado": "APROBADA",
+      "comprobaciones": 23,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Base comercial y licencias",
+      "resultado": "APROBADA",
+      "comprobaciones": 19,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Roles, sucursales y capacidades públicas",
+      "resultado": "APROBADA",
+      "comprobaciones": 19,
+      "errores": 0,
+      "notas": []
+    },
+    {
+      "nombre": "Catálogo y capacidad por sucursal",
+      "resultado": "APROBADA",
+      "comprobaciones": 31,
+      "errores": 0,
+      "notas": []
+    }
+  ]
+}

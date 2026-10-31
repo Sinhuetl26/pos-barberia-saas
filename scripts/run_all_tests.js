@@ -27,6 +27,7 @@ async function main() {
   let fixture;
   let server;
   let failures = 0;
+  const failedSuites = [];
   try {
     fixture = createTestFixture();
     seedTestFixture(fixture.env);
@@ -43,11 +44,23 @@ async function main() {
         execFileSync(process.execPath, [...(process.env.SYSTECH_TEST_PRISMA_CLIENT ? ['--require', path.join(__dirname, 'test_prisma_client.js')] : []), path.join(__dirname, suite.script)], {
           cwd: root, env: { ...fixture.env, TEST_API_BASE: base, SYSTECH_ISOLATED_TESTS: 'true' }, stdio: 'inherit', timeout: 120000,
         });
-      } catch { failures++; }
+        console.log(`[OK] APROBADA: ${suite.name}`);
+      } catch (error) {
+        failures++;
+        failedSuites.push({ id: suite.id, name: suite.name, code: error && error.status ? error.status : null });
+        // A failed suite must never pass silently: name it, and say whether it was killed by the timeout.
+        const reason = error && error.signal ? `señal ${error.signal}` : error && error.status ? `código ${error.status}` : 'error sin código';
+        console.error(`\n[FALLO] ${suite.name} (${suite.id}) · ${reason}`);
+        if (error && error.code === 'ETIMEDOUT') console.error('  La suite excedió el tiempo límite de 120 s.');
+      }
     }
   } finally {
     if (server && server.exitCode === null) await new Promise(resolve => { server.once('exit', resolve); server.kill(); });
     if (fixture) cleanTestFixture(fixture.directory);
+  }
+  if (failedSuites.length) {
+    console.log(`\nSuites fallidas (${failedSuites.length}):`);
+    for (const suite of failedSuites) console.log(`  · ${suite.name} (${suite.id})${suite.code ? ` · código ${suite.code}` : ''}`);
   }
   console.log(`\n${selected.length - failures}/${selected.length} suites aprobadas. Las pruebas no certifican preparación para producción.`);
   process.exitCode = failures ? 1 : 0;

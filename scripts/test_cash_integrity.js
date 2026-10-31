@@ -23,7 +23,9 @@ async function main() {
       return { status: response.status, body: content.includes('json') ? await response.json() : await response.text() };
     };
     const setup = async name => {
-      const tenant = await prisma.tenant.create({ data: { nombre: 'Caja ficticia ' + name, slug: 'cash-' + name } });
+      // This suite exercises commission settlements, a Studio Pro capability; the plan is
+      // declared so the licensing gate stays enforced instead of being bypassed.
+      const tenant = await prisma.tenant.create({ data: { nombre: 'Caja ficticia ' + name, slug: 'cash-' + name, plan: 'PRO' } });
       const branch = await prisma.sucursal.create({ data: { tenantId: tenant.id, nombre: 'Matriz' } });
       const barber = await prisma.barbero.create({ data: { sucursalId: branch.id, nombre: 'Profesional', comisionServiciosPct: 50, comisionProductosPct: 10 } });
       const user = async (role, linked = null) => prisma.usuario.create({ data: { tenantId: tenant.id, nombre: role, email: name + role + '@cash.invalid', rol: role, sucursalId: branch.id, barberoId: linked, passwordHash: 'disabled' } });
