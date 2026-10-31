@@ -706,7 +706,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
             <div className="overflow-x-auto">
               <table className="operation-table w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase text-[10px]">
+                  <tr className="border-b border-stone-200 text-stone-600 font-bold uppercase text-[10px]">
                     <th className="py-2.5">ID / Fecha</th>
                     <th className="py-2.5">Fondo Inicial</th>
                     <th className="py-2.5">Ventas EF</th>
@@ -722,7 +722,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                     <tr key={c.id} className="hover:bg-stone-50/60">
                       <td data-label="Apertura" className="py-3 font-mono font-medium">
                         <div>{new Date(c.fechaApertura).toLocaleDateString('es-MX', { timeZone: currentSucursal?.zonaHoraria || 'America/Mexico_City' })}</div>
-                        <div className="text-[10px] text-stone-400">{new Date(c.fechaApertura).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: currentSucursal?.zonaHoraria || 'America/Mexico_City' })}</div>
+                        <div className="text-[10px] text-stone-600">{new Date(c.fechaApertura).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: currentSucursal?.zonaHoraria || 'America/Mexico_City' })}</div>
                       </td>
                       <td data-label="Fondo inicial" className="py-3 font-mono">${Number(c.fondoInicial).toFixed(2)}</td>
                       <td data-label="Ventas en efectivo" className="py-3 font-mono font-semibold text-emerald-700">{c.estado === 'ABIERTO' ? 'Al cerrar' : `$${Number(c.totalEfectivo).toFixed(2)}`}</td>
@@ -822,7 +822,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
             <div className="overflow-x-auto">
               <table className="operation-table w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase text-[10px]">
+                  <tr className="border-b border-stone-200 text-stone-600 font-bold uppercase text-[10px]">
                     {!isBarberoRole && <th className="py-2.5 w-8"></th>}
                     <th className="py-2.5">Barbero</th>
                     <th className="py-2.5">Concepto / Venta</th>

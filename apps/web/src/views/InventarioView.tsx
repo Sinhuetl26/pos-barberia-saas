@@ -427,7 +427,7 @@ export const InventarioView: React.FC<InventarioViewProps> = ({ currentSucursal 
                         <td className="py-3 px-4">
                           <div className="inventory-catalog-identity">
                             {(p.imagen || (isService ? serviceIllustration(p.nombre) : null)) ? <img src={p.imagen || serviceIllustration(p.nombre)!} alt="" /> : <span aria-hidden="true">{p.nombre.charAt(0).toUpperCase()}</span>}
-                            <div><div className="font-bold text-stone-900">{p.nombre}</div><div className="text-[10px] text-stone-400 font-mono mt-0.5">{p.sku || 'N/A'} {isService ? `• ${p.duracionMinutos}m` : ''}</div></div>
+                            <div><div className="font-bold text-stone-900">{p.nombre}</div><div className="text-[10px] text-stone-600 font-mono mt-0.5">{p.sku || 'N/A'} {isService ? `• ${p.duracionMinutos}m` : ''}</div></div>
                           </div>
                         </td>
                         <td className="py-3 px-4">

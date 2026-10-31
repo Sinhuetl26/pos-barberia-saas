@@ -523,7 +523,7 @@ export function App() {
               tenantName={currentTenant?.nombre}
             />
 
-            <footer className="studio-workspace py-5 text-center text-[10px] text-stone-400">
+            <footer className="studio-workspace py-5 text-center text-[10px] text-stone-600">
               SYSTECH Studio · Hecho para el oficio, pensado para tu negocio.
             </footer>
           </div>

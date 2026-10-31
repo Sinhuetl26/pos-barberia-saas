@@ -139,6 +139,10 @@
 @media(max-width:640px){.studio-topbar-inner {height:60px}.studio-topbar select {max-width:128px}.studio-topbar-tools>button {min-width:32px}.studio-topbar .financial-notices {padding-bottom:0}.studio-shell .studio-home .operation-page-header {gap:12px;margin-bottom:16px}}
 @media(max-width:380px){.studio-topbar .workspace-title {display:none}.studio-topbar select {max-width:118px}}
 
+/* El resumen "Mi negocio" heredaba el color de texto base sobre la barra carbón
+   (#121416 sobre #17191c = 1.04:1). Se iguala al resto de la navegación (12.85:1). */
+.studio-more-navigation>summary{color:#d9dddc}
+
 .studio-more-navigation summary:focus-visible{outline:3px solid #e9a278;outline-offset:-3px;border-radius:6px}
 
 
