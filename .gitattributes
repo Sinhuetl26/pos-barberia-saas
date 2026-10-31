@@ -1,0 +1,2 @@
+# Keep the production entrypoint executable in Linux after Windows checkouts.
+scripts/docker-entrypoint.sh text eol=lf

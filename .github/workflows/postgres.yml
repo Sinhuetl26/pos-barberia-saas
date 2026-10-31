@@ -1,0 +1,51 @@
+name: PostgreSQL migration and regression
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: systech_test
+          POSTGRES_PASSWORD: ci-disposable-test-only
+          POSTGRES_DB: systech_test_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U systech_test -d systech_test_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SYSTECH_TEST_PG_URL: postgresql://systech_test:ci-disposable-test-only@127.0.0.1:5432/systech_test_ci
+      SYSTECH_ANON_SOURCE: .tools/ci-source.db
+      PYTHON_BIN: python3
+      PG_BIN: /usr/lib/postgresql/16/bin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+      - run: npm run db:generate && npm run build:db
+      - run: npm run test:postgres:snapshot
+      - run: npm run test:postgres
+      - uses: actions/upload-artifact@v4
+        with:
+          name: postgres-validation
+          path: |
+            docs/scrum/POSTGRES_RESULTADOS_ACTUALES.json
+            docs/scrum/ST05_RESULTADOS_postgres.json
+            docs/ST06_RESULTADOS_POSTGRES.json
+            docs/ST07_RESULTADOS_POSTGRES.json
+            docs/ST08_RESULTADOS_POSTGRES.json
+            docs/ST09_RESULTADOS_POSTGRES.json

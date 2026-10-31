@@ -32,8 +32,24 @@ RUN npm run db:generate
 # Compile API TypeScript to CommonJS (dist/)
 RUN npm run build --workspace=@systech/api
 
+RUN npm run build --workspace=@systech/database
+
 # Prune devDependencies to reduce image footprint
-RUN npm prune --production
+# The lockfile retains Prisma through @prisma/client's peer dependency.
+# Keep that CLI for checked migrations, without retaining build/watch tooling.
+RUN npm prune --omit=dev --ignore-scripts --offline --no-audit --no-fund
+
+# Fail the build if pruning loses required generated/runtime assets or leaves
+# development tools (including their currently reported advisory chains).
+RUN test -f node_modules/prisma/build/index.js && \
+    test -f node_modules/.prisma/client/index.js && \
+    test -f packages/database/index.js && \
+    test ! -d node_modules/vite && \
+    test ! -d node_modules/tailwindcss && \
+    test ! -d node_modules/ts-node-dev && \
+    test ! -d node_modules/braces && \
+    test ! -d node_modules/source-map-js && \
+    test ! -d node_modules/postcss-selector-parser
 
 # --- STAGE 2: Lightweight Production Runner ---
 FROM node:20-alpine AS runner
@@ -55,10 +71,12 @@ RUN addgroup -g 1001 -S systech && \
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/packages/database ./packages/database
+COPY --from=builder /app/packages/licensing ./packages/licensing
 COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+COPY --from=builder /app/scripts/check_postgres.js ./scripts/check_postgres.js
 
 RUN chmod +x ./scripts/docker-entrypoint.sh
 

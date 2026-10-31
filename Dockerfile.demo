@@ -1,0 +1,16 @@
+# Local fictional demo only. Production keeps its separate PostgreSQL Dockerfile.
+FROM node:22-bookworm-slim
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY package.json package-lock.json ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+COPY packages/database/package.json ./packages/database/
+RUN npm ci
+COPY apps/api ./apps/api
+COPY packages ./packages
+RUN node -e "const s=require('fs').readFileSync('packages/database/prisma/schema.prisma','utf8');if(!/provider\s*=\s*\"sqlite\"/.test(s))throw Error('This demo requires the SQLite schema')"
+RUN npm run db:generate && npm run build:db && npm run build:api
+COPY scripts/docker-demo-api.cjs ./scripts/docker-demo-api.cjs
+EXPOSE 3103
+CMD ["node", "scripts/docker-demo-api.cjs"]

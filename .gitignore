@@ -11,3 +11,10 @@ build/
 *.zip
 .DS_Store
 Thumbs.db
+.test-db-*/
+.tools/
+.obsidian/workspace*.json
+.obsidian/cache/
+
+# Registro transitorio de la herramienta de navegador (consola, snapshots de página)
+.playwright-mcp/
