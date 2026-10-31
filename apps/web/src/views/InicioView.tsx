@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Calendar, CreditCard, Package, RefreshCw, AlertCircle, ArrowRight, CheckCircle2, Clock } from 'lucide-react';
 import { PreparationChecklist } from '../components/PreparationChecklist';
+import { DaybookOpenDay } from '../components/DaybookOpenDay';
 import { OperationState } from '../components/OperationState';
 import { api } from '../api';
 import { Barbero, Cita, Sucursal, Tenant } from '../types';
@@ -36,6 +37,10 @@ export function InicioView({ currentSucursal, onNavigate, rol, onBranchUpdated }
   const data = current?.summary;
   const m = data?.metrics;
   const columns = current ? daybookColumns(current.barbers, current.appointments) : [];
+  // Un día sin atenciones ni citas registradas se presenta como un solo bloque:
+  // tres columnas idénticas diciendo "sin citas" no aportan información.
+  const visibleAppointments = columns.reduce((total, column) => total + column.appointments.length, 0);
+  const openDay = columns.length > 0 && visibleAppointments === 0 && columns.every(column => column.todayCount === 0);
   const day = data ? new Date(`${data.localDate}T12:00:00`) : null;
   const time = (date: string) => new Date(date).toLocaleTimeString('es-MX', { timeZone: data?.timeZone, hour: '2-digit', minute: '2-digit', hour12: false });
   const agenda = data ? `agenda?fecha=${data.localDate}` : 'agenda';
@@ -46,15 +51,16 @@ export function InicioView({ currentSucursal, onNavigate, rol, onBranchUpdated }
     {!branchId && !loading && <OperationState title="Elige una sucursal">Selecciona la sucursal que vas a revisar.</OperationState>}
     {loading && <OperationState busy title="Cargando tu día">Consultando citas y ventas.</OperationState>}
     {data && m && <>
-      <section className="daybook-team" aria-label="Próximas atenciones por barbero">
-        {columns.map(column => <section key={column.id} className="daybook-professional" aria-label={`Agenda de ${column.name}`}>
+      <section className={`daybook-team${openDay ? ' is-open' : ''}`} aria-label="Próximas atenciones por barbero">
+        {openDay && <DaybookOpenDay columns={columns} barbers={current!.barbers} localDate={data.localDate} onNavigate={onNavigate} />}
+        {!openDay && columns.map(column => <section key={column.id} className="daybook-professional" aria-label={`Agenda de ${column.name}`}>
           <header><span className="daybook-initial" aria-hidden="true">{column.name.trim().charAt(0).toLocaleUpperCase('es-MX')}</span><div><h2>{column.name}</h2><p>{column.todayCount} {column.todayCount === 1 ? 'cita hoy' : 'citas hoy'}</p></div></header>
           <ol>{column.appointments.map((a, index) => {
             const inProgress = a.estado === 'EN_CURSO', confirmed = a.estado === 'CONFIRMADA';
             const StatusIcon = confirmed ? CheckCircle2 : Clock;
             return <li key={a.id} className={a.id === nextId ? 'daybook-next' : ''}><time dateTime={a.fechaHora}>{time(a.fechaHora)}</time><div className="daybook-visit"><h3>{a.cliente?.nombre || 'Cliente'}</h3><p>{a.nombreServicio || 'Servicio'}</p><span className={`daybook-status ${confirmed ? 'is-confirmed' : inProgress ? 'is-current' : 'is-pending'}`}><StatusIcon size={17} />{inProgress ? 'En atención' : confirmed ? 'Confirmada' : 'Por confirmar'}</span></div><button className={index === 0 ? 'daybook-appointment-primary' : 'daybook-appointment-link'} onClick={() => onNavigate(`${agenda}&citaId=${encodeURIComponent(a.id)}`)} aria-label={`Ver cita de ${a.cliente?.nombre || 'cliente'} a las ${time(a.fechaHora)}`}>Ver cita</button></li>;
           })}</ol>
-          {!column.appointments.length && <p className="daybook-free">Sin próximas citas por hoy.</p>}
+          {!column.appointments.length && <p className="daybook-free-line"><span className="daybook-free-dot" aria-hidden="true" />Libre todo el día</p>}
         </section>)}
         {!columns.length && <div className="daybook-empty"><Calendar size={32} strokeWidth={1.4} /><h2>Tu día empieza aquí</h2><p>Aún no hay equipo ni citas en esta sucursal.</p><button className="studio-button-secondary" onClick={() => onNavigate('barberos')}>Añadir barbero</button></div>}
       </section>
