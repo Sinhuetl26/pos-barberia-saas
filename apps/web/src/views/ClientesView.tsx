@@ -329,7 +329,7 @@ export const ClientesView: React.FC<{ sucursalId?: string; onRebook?: (draft: Re
           </div>
 
           {loading || listScope !== scope ? (
-            <div className="bg-white rounded-2xl border border-stone-200/80 p-12 text-center text-stone-400 text-xs flex items-center justify-center gap-2">
+            <div className="bg-white rounded-2xl border border-stone-200/80 p-12 text-center text-stone-600 text-xs flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-stone-600" />
               Cargando catálogo de clientes...
             </div>

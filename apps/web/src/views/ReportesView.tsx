@@ -288,7 +288,7 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ currentSucursal, pla
                     className="flex items-center justify-between p-2.5 rounded-xl bg-stone-50 border border-stone-200/80 text-xs"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className="text-[11px] text-stone-400 font-mono font-bold">0{idx + 1}</span>
+                      <span className="text-[11px] text-stone-600 font-mono font-bold">0{idx + 1}</span>
                       <div>
                         <div className="font-bold text-stone-900">{item.nombre}</div>
                         <span className="text-[10px] text-stone-500 uppercase font-medium">{item.tipo}</span>
@@ -334,7 +334,7 @@ export const ReportesView: React.FC<ReportesViewProps> = ({ currentSucursal, pla
                     return (
                       <tr key={b.id} className="hover:bg-stone-50/60">
                         <td className="py-2.5 px-4 font-bold text-stone-900 flex items-center gap-2">
-                          <span className="text-[11px] text-stone-400 font-mono">0{idx + 1}</span>
+                          <span className="text-[11px] text-stone-600 font-mono">0{idx + 1}</span>
                           <span>{b.nombre}</span>
                         </td>
                         <td className="py-2.5 px-4 text-stone-600">{b.ventas} ventas</td>
