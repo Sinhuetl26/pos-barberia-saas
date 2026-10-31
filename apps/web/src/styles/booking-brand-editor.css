@@ -1,0 +1,46 @@
+.settings-brand-editor,.settings-brand-fields {display:grid;gap:22px}
+.settings-template-options {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.settings-template-options>button {text-align:left;border:1px solid #ccc;padding:12px;border-radius:10px;display:grid;gap:8px;background:white;color:#141619}
+.settings-template-options>button[aria-pressed=true] {outline:2px solid #064ff4;outline-offset:2px}
+.settings-template-options small {font-size:12px;line-height:1.5}
+.settings-template-sketch {display:block;height:90px;background:#e8e8e4;position:relative;overflow:hidden;border-radius:4px}
+.settings-template-sketch i {position:absolute;background:#6c766f;right:0;top:0;width:48%;height:100%}
+.settings-template-sketch b {position:absolute;left:12px;top:22px;font:32px Georgia,serif;color:#111}
+.sketch-inmersiva i {width:100%;background:linear-gradient(45deg,#151b17,#939b91)}
+.sketch-inmersiva b {color:white;top:40px}
+.sketch-cartel b {font:bold 56px Georgia,serif;top:10px}
+.sketch-cartel i {width:30%;right:12px;top:12px;height:70px;border-radius:50% 50% 0 0}
+.sketch-compacta {height:90px;background:linear-gradient(#e8e8e4 60%,white 60%)}
+.sketch-compacta i {height:60%}
+.settings-color-control {display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.settings-color-control input[type=color] {width:50px;height:44px;min-height:44px;padding:3px;cursor:pointer}
+.settings-color-control input[type=text] {width:110px;min-width:0;font-family:monospace}
+.settings-color-control button {text-decoration:underline;min-height:44px;font-size:12px}
+.settings-section-order {list-style:none;padding:0;margin:20px 0}
+.settings-section-order li {display:flex;align-items:center;gap:8px;border-bottom:1px solid #ddd}
+.settings-section-order li span {flex:1}
+.settings-section-order button {width:44px;min-height:44px;border:1px solid #ddd;border-radius:6px;margin:6px 0}
+.settings-section-order button:disabled {opacity:.35}
+.settings-preview-browser {color:var(--preview-canvas-ink)}
+.settings-preview-cover h3 {font-family:BookingSilla,Impact,sans-serif}
+.preview-type-elegante .settings-preview-cover h3 {font-family:Georgia,serif}
+.preview-type-moderna .settings-preview-cover h3 {font-family:Arial,sans-serif;font-weight:700}
+.preview-photo-mono .settings-preview-cover>img {filter:grayscale(1)}
+.settings-preview-cta {color:var(--preview-ink);background:var(--preview-primary)}
+.preview-buttons-recta .settings-preview-cta {border-radius:0}
+.preview-buttons-redonda .settings-preview-cta {border-radius:999px}
+.settings-preview-cover.preview-cover-inmersiva {position:relative;min-height:300px;background:#101211;display:flex;align-items:stretch;justify-content:flex-end;padding:30px 20px;color:white;isolation:isolate;overflow:hidden}
+.settings-preview-cover.preview-cover-inmersiva>img {position:absolute;inset:0;width:100%;height:100%;max-height:none;margin:0;object-fit:cover;z-index:-2}
+.settings-preview-cover.preview-cover-inmersiva::after {content:'';position:absolute;inset:0;background:linear-gradient(0deg,#000e,#0005);z-index:-1}
+.settings-preview-cover.preview-cover-inmersiva>div {position:relative;background:none;padding:0;color:#fff}
+.settings-preview-cover.preview-cover-inmersiva h3 {font-size:42px;line-height:1.05;color:white}
+.settings-preview-cover.preview-cover-inmersiva p {color:#fff}
+.settings-preview-cover.preview-cover-cartel {display:flex;flex-direction:column-reverse;gap:20px;padding:24px 16px;background:var(--preview-canvas);color:var(--preview-canvas-ink)}
+.settings-preview-cover.preview-cover-cartel>img {width:70%;height:150px;margin:0;border-radius:50% 50% 0 0;transform:rotate(3deg);align-self:center}
+.settings-preview-cover.preview-cover-cartel>div {background:transparent;padding:0}
+.settings-preview-cover.preview-cover-cartel h3 {font-size:48px;line-height:1;color:inherit}
+.settings-preview-body .settings-preview-line {color:var(--preview-canvas-ink);background:transparent}
+.settings-preview-service {display:flex;gap:10px;align-items:center;border-bottom:1px solid #aaa6;padding:10px 0;font-size:12px}
+.settings-preview-service span:first-of-type {flex:1}
+.settings-preview-service img {width:38px;height:44px;object-fit:cover}
+.preview-services-tarjetas .settings-preview-service {flex-wrap:wrap}

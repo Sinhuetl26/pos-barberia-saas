@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import '../styles/collections-workspace.css';
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import { RebookingDraft } from '../types/rebooking';
+import { ClientHistory, clientHistoryEvents, historicalPreference } from '../components/ClientHistory';
+import { OperationDialog } from '../components/OperationDialog';
 import {
   Users,
   Search,
@@ -24,9 +29,19 @@ import {
   Crown
 } from 'lucide-react';
 
-export const ClientesView: React.FC = () => {
+export const ClientesView: React.FC<{ sucursalId?: string; onRebook?: (draft: RebookingDraft) => void }> = ({ sucursalId, onRebook }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const scope = `${api.getTenantId()}:${api.getUserId()}:${api.getUserRole()}:${sucursalId || ''}`;
+  const activeScope = useRef(scope); activeScope.current = scope;
+  const listRequest = useRef(0), campaignRequest = useRef(0);
+  const profileRequest = useRef(0);
+  const profileBranch = useRef(scope);
+  const queryClient = searchParams.get('clienteId');
+  const canManage = api.getUserRole() === 'DUENO';
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [listError, setListError] = useState('');
+  const [listScope, setListScope] = useState(scope);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'todos' | 'reactivacion' | 'membresias'>('todos');
 
@@ -34,6 +49,8 @@ export const ClientesView: React.FC = () => {
   const [reactivacionData, setReactivacionData] = useState<any>(null);
   const [diasInactividad, setDiasInactividad] = useState(30);
   const [loadingCampana, setLoadingCampana] = useState(false);
+  const [campaignError, setCampaignError] = useState('');
+  const [campaignScope, setCampaignScope] = useState('');
 
   // Client 360 Profile Modal
   const [selectedClienteId, setSelectedClienteId] = useState<string | null>(null);
@@ -41,6 +58,7 @@ export const ClientesView: React.FC = () => {
   const [loadingPerfil, setLoadingPerfil] = useState(false);
   const [notasEstilo, setNotasEstilo] = useState('');
   const [savingNotas, setSavingNotas] = useState(false);
+  const [privacyBusy, setPrivacyBusy] = useState(false);
 
   // Membership assignment modal
   const [showMembresiaModal, setShowMembresiaModal] = useState(false);
@@ -58,16 +76,27 @@ export const ClientesView: React.FC = () => {
   const [submittingClient, setSubmittingClient] = useState(false);
 
   const [notification, setNotification] = useState<string | null>(null);
+  useEffect(() => {
+    if (profileBranch.current !== scope) {
+      profileBranch.current = scope; profileRequest.current++; setSelectedClienteId(null); setPerfil(null); setLoadingPerfil(false);
+      if (queryClient) { const next = new URLSearchParams(searchParams); next.delete('clienteId'); setSearchParams(next, { replace: true }); }
+      return;
+    }
+    if (queryClient && ['DUENO', 'GERENTE', 'CAJERO'].includes(api.getUserRole())) void openPerfil(queryClient);
+    return () => { profileRequest.current++; };
+  }, [queryClient, sucursalId, scope]);
 
   useEffect(() => {
-    loadClientes();
-  }, [search]);
+    void loadClientes();
+    return () => { listRequest.current++; };
+  }, [search, scope]);
 
   useEffect(() => {
     if (activeTab === 'reactivacion') {
-      loadCampana();
+      void loadCampana();
     }
-  }, [activeTab, diasInactividad]);
+    return () => { campaignRequest.current++; };
+  }, [activeTab, diasInactividad, scope]);
 
   const showToast = (msg: string) => {
     setNotification(msg);
@@ -75,40 +104,53 @@ export const ClientesView: React.FC = () => {
   };
 
   const loadClientes = async () => {
+    if (scope !== activeScope.current) return;
+    const request = ++listRequest.current;
+    const current = () => request === listRequest.current && scope === activeScope.current;
     try {
-      setLoading(true);
+      setLoading(true); setListError(''); setClientes([]); setListScope(scope);
       const data = await api.getClientes(search);
+      if (!current()) return;
+      if (!Array.isArray(data)) throw Error('La respuesta de clientes no es válida. Vuelve a intentar.');
       setClientes(data);
     } catch (err: any) {
-      console.error('Error al cargar clientes:', err);
+      if (current()) setListError(err.message || 'No pudimos consultar los clientes. Tu catálogo no se ha borrado.');
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
   };
 
   const loadCampana = async () => {
+    if (scope !== activeScope.current) return;
+    const request = ++campaignRequest.current;
+    const current = () => request === campaignRequest.current && scope === activeScope.current;
     try {
-      setLoadingCampana(true);
+      setLoadingCampana(true); setCampaignError(''); setReactivacionData(null); setCampaignScope(scope);
       const data = await api.getReactivacionCampana(diasInactividad);
-      setReactivacionData(data);
+      if (!current()) return;
+      if (!Array.isArray(data?.clientes)) throw Error('La respuesta de seguimiento no es válida. Vuelve a intentar.');
+      setReactivacionData({ clientesInactivos: data.clientes.map((client: any) => ({ ...client, diasInactivo: client.diasSinVenir, ultimaCita: client.fechaUltimaVisita })) });
     } catch (err: any) {
-      console.error('Error al cargar campaña de reactivación:', err);
+      if (current()) setCampaignError(err.message || 'No pudimos consultar el seguimiento de clientes. Vuelve a intentar.');
     } finally {
-      setLoadingCampana(false);
+      if (current()) setLoadingCampana(false);
     }
   };
 
   const openPerfil = async (clienteId: string) => {
+    const request = ++profileRequest.current;
     try {
+      setPerfil(null);
       setSelectedClienteId(clienteId);
       setLoadingPerfil(true);
       const data = await api.getClienteProfile(clienteId);
+      if (request !== profileRequest.current) return;
       setPerfil(data);
       setNotasEstilo(data.cliente.notasEstilo || '');
     } catch (err: any) {
-      showToast(err.message || 'Error al obtener perfil 360°');
+      if (request === profileRequest.current) { setPerfil(null); showToast(err.message || 'No pudimos abrir este cliente. Revisa tu acceso y vuelve a buscar.'); }
     } finally {
-      setLoadingPerfil(false);
+      if (request === profileRequest.current) setLoadingPerfil(false);
     }
   };
 
@@ -148,8 +190,9 @@ export const ClientesView: React.FC = () => {
   };
 
   const handleExportArco = async () => {
-    if (!selectedClienteId) return;
+    if (!selectedClienteId || privacyBusy) return;
     try {
+      setPrivacyBusy(true);
       const data = await api.exportarClienteArco(selectedClienteId);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -161,15 +204,18 @@ export const ClientesView: React.FC = () => {
       showToast('Expediente de datos personales ARCO descargado');
     } catch (err: any) {
       showToast(err.message || 'Error al exportar datos ARCO');
+    } finally {
+      setPrivacyBusy(false);
     }
   };
 
   const handleDeleteArco = async () => {
-    if (!selectedClienteId) return;
+    if (!selectedClienteId || privacyBusy) return;
     if (!window.confirm('¿Confirmas la supresión de datos personales del cliente bajo derecho ARCO (LFPDPPP)? Esta acción anonimizará su nombre y teléfono.')) {
       return;
     }
     try {
+      setPrivacyBusy(true);
       await api.eliminarClienteArco(selectedClienteId);
       showToast('Datos del cliente anonimizados conforme a LFPDPPP');
       setSelectedClienteId(null);
@@ -177,6 +223,8 @@ export const ClientesView: React.FC = () => {
       loadClientes();
     } catch (err: any) {
       showToast(err.message || 'Error al ejecutar solicitud ARCO');
+    } finally {
+      setPrivacyBusy(false);
     }
   };
 
@@ -185,6 +233,7 @@ export const ClientesView: React.FC = () => {
     try {
       setSubmittingClient(true);
       await api.crearCliente({
+        sucursalId,
         nombre: newNombre,
         telefono: newTelefono,
         email: newEmail || undefined,
@@ -205,7 +254,7 @@ export const ClientesView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="studio-page studio-directory clients-workspace">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-6 right-6 z-50 bg-stone-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-stone-800 text-sm animate-fade-in">
@@ -215,18 +264,13 @@ export const ClientesView: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="collection-header flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-stone-100 text-stone-700 border border-stone-200">
-              <Sparkles className="w-3 h-3 text-amber-600" /> CRM 360° Studio
-            </span>
-          </div>
           <h1 className="text-2xl font-bold tracking-tight text-stone-950">
-            Directorio & Fidelización de Clientes
+            Clientes
           </h1>
           <p className="text-sm text-stone-500">
-            Historial de visitas, recurrencia, control de no-shows, campañas de reactivación y membresías.
+            Encuentra a tu cliente y continúa donde se quedó.
           </p>
         </div>
 
@@ -236,7 +280,7 @@ export const ClientesView: React.FC = () => {
             className="flex items-center justify-center gap-2 px-4 py-2.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl transition shadow-sm w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
-            Nuevo Cliente
+            Nuevo cliente
           </button>
         </div>
       </div>
@@ -252,10 +296,10 @@ export const ClientesView: React.FC = () => {
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          Directorio Completo ({clientes.length})
+          {canManage ? 'Directorio del negocio' : 'Clientes de tus sucursales'} ({clientes.length})
         </button>
 
-        <button
+        {canManage && (<button
           onClick={() => setActiveTab('reactivacion')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold transition ${
             activeTab === 'reactivacion'
@@ -264,8 +308,8 @@ export const ClientesView: React.FC = () => {
           }`}
         >
           <Send className="w-3.5 h-3.5" />
-          Campaña de Reactivación WhatsApp
-        </button>
+          Recuperar clientes
+        </button>)}
       </div>
 
       {/* TAB 1: Directorio */}
@@ -277,17 +321,20 @@ export const ClientesView: React.FC = () => {
             <input
               type="text"
               placeholder="Buscar por nombre o número de teléfono..."
+              aria-label="Buscar clientes por nombre o teléfono"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-white border border-stone-200 rounded-xl pl-10 pr-4 py-2.5 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 focus:border-transparent shadow-sm"
             />
           </div>
 
-          {loading ? (
+          {loading || listScope !== scope ? (
             <div className="bg-white rounded-2xl border border-stone-200/80 p-12 text-center text-stone-400 text-xs flex items-center justify-center gap-2">
               <RefreshCw className="w-4 h-4 animate-spin text-stone-600" />
               Cargando catálogo de clientes...
             </div>
+          ) : listError ? (
+            <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-900"><p>{listError}</p><button type="button" className="studio-button-secondary mt-3" onClick={() => void loadClientes()}>Reintentar consulta de clientes</button></div>
           ) : clientes.length === 0 ? (
             <div className="bg-white rounded-2xl border border-dashed border-stone-300 p-12 text-center">
               <Users className="w-8 h-8 text-stone-400 mx-auto mb-2" />
@@ -295,92 +342,9 @@ export const ClientesView: React.FC = () => {
               <p className="text-xs text-stone-500 mt-1">Registra tu primer cliente o agenda una cita para comenzar.</p>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-stone-200/80 overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-stone-600">
-                  <thead className="bg-stone-50 text-[11px] font-semibold text-stone-500 uppercase tracking-wider border-b border-stone-200">
-                    <tr>
-                      <th className="py-3 px-4">Cliente</th>
-                      <th className="py-3 px-4">Contacto</th>
-                      <th className="py-3 px-4 text-center">Visitas</th>
-                      <th className="py-3 px-4 text-right">Gasto Total</th>
-                      <th className="py-3 px-4 text-center">No-Shows</th>
-                      <th className="py-3 px-4 text-center">Estado</th>
-                      <th className="py-3 px-4 text-right">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {clientes.map((c) => {
-                      const totalVisitas = c._count?.citas || 0;
-                      const gasto = Number(c.gastoTotal || 0);
-                      const isVip = gasto >= 1000 || totalVisitas >= 5;
-                      const hasNoShows = (c.noShows || 0) > 0;
-
-                      return (
-                        <tr key={c.id} className="hover:bg-stone-50/80 transition group">
-                          <td className="py-3.5 px-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-stone-100 text-stone-800 font-bold flex items-center justify-center text-xs border border-stone-200">
-                                {c.nombre ? c.nombre.charAt(0).toUpperCase() : 'C'}
-                              </div>
-                              <div>
-                                <span className="font-semibold text-stone-900 block group-hover:text-stone-950">
-                                  {c.nombre}
-                                </span>
-                                {c.membresias && c.membresias.length > 0 && (
-                                  <span className="inline-flex items-center gap-1 text-[10px] text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 mt-0.5">
-                                    <Crown className="w-2.5 h-2.5" /> {c.membresias[0].planNombre}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-3.5 px-4 font-mono text-[11px] text-stone-700">
-                            <div>{c.telefono}</div>
-                            {c.email && <div className="text-[10px] text-stone-400 font-sans">{c.email}</div>}
-                          </td>
-                          <td className="py-3.5 px-4 text-center font-medium text-stone-900">
-                            {totalVisitas}
-                          </td>
-                          <td className="py-3.5 px-4 text-right font-bold text-stone-950 font-mono">
-                            ${gasto.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            {hasNoShows ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                <AlertTriangle className="w-2.5 h-2.5" /> {c.noShows} faltas
-                              </span>
-                            ) : (
-                              <span className="text-[11px] text-emerald-600 font-medium">0</span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-center">
-                            {isVip ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
-                                <Award className="w-2.5 h-2.5" /> VIP
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-stone-100 text-stone-600">
-                                Frecuente
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={() => openPerfil(c.id)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200/80 text-stone-800 font-medium text-xs transition"
-                            >
-                              Perfil 360°
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+            <ul className="client-directory-list" aria-label="Directorio de clientes">
+              {clientes.map(c => <li key={c.id}><button type="button" onClick={() => void openPerfil(c.id)} aria-label={`Abrir ficha de ${c.nombre}`}><span className="collection-initial" aria-hidden="true">{c.nombre?.trim().charAt(0).toUpperCase() || 'C'}</span><span className="client-directory-identity"><strong>{c.nombre}</strong><span>{c.telefono || 'Sin teléfono'}{c.email && ` · ${c.email}`}</span>{c.membresias?.length > 0 && <small>{c.membresias[0].planNombre}</small>}</span>{canManage && <span className="client-directory-history"><span>{typeof c.totalVisitas === 'number' ? c.totalVisitas : '—'} visitas y compras</span><span>{c.gastoTotal == null ? 'Gasto no disponible' : new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(c.gastoTotal))}</span>{c.noShows > 0 && <small>{c.noShows} ausencias</small>}</span>}<span className="collection-open">Ver ficha <span aria-hidden="true">↗</span></span></button></li>)}
+            </ul>
           )}
         </div>
       )}
@@ -396,15 +360,16 @@ export const ClientesView: React.FC = () => {
                   Campaña de Retención & Reactivación de Clientes
                 </h3>
                 <p className="text-xs text-amber-800 mt-1">
-                  Detecta automáticamente a los clientes que no han agendado una cita en los últimos días y envíales un mensaje de bienvenida personalizado en 1 clic.
+                  Consulta clientes con visitas o compras registradas cuya última visita supera el periodo elegido. Puedes preparar una invitación; no se envía automáticamente.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-xs font-medium text-amber-900 whitespace-nowrap">
+                <label htmlFor="client-inactivity-days" className="text-xs font-medium text-amber-900 whitespace-nowrap">
                   Inactividad mayor a:
                 </label>
                 <select
+                  id="client-inactivity-days"
                   value={diasInactividad}
                   onChange={(e) => setDiasInactividad(Number(e.target.value))}
                   className="bg-white border border-amber-300 rounded-lg px-3 py-1.5 text-xs text-stone-900 font-semibold focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-sm"
@@ -418,11 +383,13 @@ export const ClientesView: React.FC = () => {
               </div>
             </div>
 
-            {loadingCampana ? (
+            {loadingCampana || campaignScope !== scope ? (
               <div className="text-center py-8 text-xs text-amber-800 flex items-center justify-center gap-2">
                 <RefreshCw className="w-4 h-4 animate-spin" />
                 Analizando historial de visitas y citas...
               </div>
+            ) : campaignError ? (
+              <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900"><p>{campaignError}</p><button type="button" className="studio-button-secondary mt-3" onClick={() => void loadCampana()}>Reintentar seguimiento</button></div>
             ) : reactivacionData ? (
               <div>
                 <div className="flex items-center gap-4 bg-white/80 backdrop-blur rounded-xl p-4 border border-amber-200/80 mb-6">
@@ -435,7 +402,7 @@ export const ClientesView: React.FC = () => {
                     </span>
                   </div>
                   <div className="border-l border-amber-200 pl-4 text-xs text-stone-600">
-                    Mensaje predeterminado: <span className="italic">"{reactivacionData.mensajeTemplate}"</span>
+                    Si hay un teléfono válido, puedes abrir WhatsApp para revisar la invitación. No se ofrecen descuentos automáticos.
                   </div>
                 </div>
 
@@ -475,15 +442,15 @@ export const ClientesView: React.FC = () => {
                           </div>
                         </div>
 
-                        <a
+                        {cl.whatsappUrl ? <a
                           href={cl.whatsappUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center justify-center gap-1.5 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition shadow-sm"
                         >
                           <Send className="w-3.5 h-3.5" />
-                          Reactivar por WhatsApp
-                        </a>
+                          Revisar invitación en WhatsApp
+                        </a> : <p className="text-xs text-stone-600">Agrega un teléfono válido antes de preparar la invitación.</p>}
                       </div>
                     ))}
                   </div>
@@ -496,19 +463,19 @@ export const ClientesView: React.FC = () => {
 
       {/* MODAL: Perfil 360° del Cliente */}
       {selectedClienteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-stone-200 p-6">
+        <OperationDialog open={Boolean(selectedClienteId) && !showMembresiaModal} busy={savingNotas || submittingMembresia || privacyBusy} titleId="client-profile-title" className="max-w-2xl" onClose={() => { if (savingNotas || submittingMembresia || privacyBusy) return; profileRequest.current++; setSelectedClienteId(null); setPerfil(null); }}>
+          <div className="bg-white rounded-2xl w-full shadow-2xl border border-stone-200 p-4 sm:p-6">
             <div className="flex items-start justify-between pb-4 border-b border-stone-200">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-stone-900 text-white font-bold flex items-center justify-center text-sm">
                   {perfil?.cliente?.nombre ? perfil.cliente.nombre.charAt(0).toUpperCase() : 'C'}
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-stone-950 flex items-center gap-2">
-                    {perfil?.cliente?.nombre}
+                  <h2 id="client-profile-title" tabIndex={-1} className="text-lg font-bold text-stone-950 flex items-center gap-2">
+                    {perfil?.cliente?.nombre || 'Perfil del cliente'}
                     {perfil?.metricas?.noShows > 0 && (
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-semibold">
-                        {perfil.metricas.noShows} No-Shows
+                        {perfil.metricas.noShows} Ausencias
                       </span>
                     )}
                   </h2>
@@ -519,12 +486,17 @@ export const ClientesView: React.FC = () => {
               </div>
 
               <button
-                onClick={() => setSelectedClienteId(null)}
+                type="button"
+                aria-label="Cerrar perfil del cliente"
+                disabled={savingNotas || submittingMembresia || privacyBusy}
+                onClick={() => { profileRequest.current++; setSelectedClienteId(null); setPerfil(null); }}
                 className="text-stone-400 hover:text-stone-700 p-1.5 rounded-lg transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {notification && <p role="status" className="mt-3 rounded-lg bg-stone-100 p-3 text-sm">{notification}</p>}
 
             {loadingPerfil ? (
               <div className="py-12 text-center text-xs text-stone-500 flex items-center justify-center gap-2">
@@ -537,32 +509,33 @@ export const ClientesView: React.FC = () => {
                   <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-3">
                     <span className="text-[10px] text-stone-500 font-medium block">Gasto Total</span>
                     <span className="text-base font-bold text-stone-950 font-mono">
-                      ${Number(perfil.metricas?.gastoTotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                      {canManage ? `$${Number(perfil.metricas?.gastoTotal || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : 'Reservado'}
                     </span>
                   </div>
 
                   <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-3">
-                    <span className="text-[10px] text-stone-500 font-medium block">Total Citas</span>
+                    <span className="text-[10px] text-stone-500 font-medium block">Reservas en esta consulta</span>
                     <span className="text-base font-bold text-stone-950">
-                      {perfil.metricas?.totalCitas || 0}
+                      {perfil.cliente?.citas?.length || 0}
                     </span>
                   </div>
 
                   <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-3">
-                    <span className="text-[10px] text-stone-500 font-medium block">Barbero Favorito</span>
+                    <span className="text-[10px] text-stone-500 font-medium block">Referencia de habitualidad</span>
                     <span className="text-xs font-bold text-stone-900 truncate block mt-0.5">
-                      {perfil.metricas?.barberoFavorito || 'Sin preferencia'}
+                      {historicalPreference(clientHistoryEvents(perfil.cliente?.citas || [], perfil.cliente?.ventas || []), 'professional')}
                     </span>
                   </div>
 
                   <div className="bg-stone-50 border border-stone-200/80 rounded-xl p-3">
                     <span className="text-[10px] text-stone-500 font-medium block">Servicio Frecuente</span>
                     <span className="text-xs font-bold text-stone-900 truncate block mt-0.5">
-                      {perfil.metricas?.servicioFavorito || 'Corte'}
+                      {historicalPreference(clientHistoryEvents(perfil.cliente?.citas || [], perfil.cliente?.ventas || []), 'service')}
                     </span>
                   </div>
                 </div>
 
+                <ClientHistory key={perfil.cliente.id} client={perfil.cliente} branchId={sucursalId} onRebook={onRebook} showAmounts={canManage} />
                 {/* Active Membership Section */}
                 <div className="bg-stone-50/80 border border-stone-200 rounded-xl p-4">
                   <div className="flex items-center justify-between mb-2">
@@ -570,12 +543,13 @@ export const ClientesView: React.FC = () => {
                       <Crown className="w-3.5 h-3.5 text-amber-600" />
                       Membresías Recurrentes
                     </h4>
-                    <button
+                    {canManage && (<button
+                      disabled={privacyBusy || savingNotas}
                       onClick={() => setShowMembresiaModal(true)}
                       className="px-2.5 py-1 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-[11px] font-semibold transition"
                     >
                       + Asignar Membresía
-                    </button>
+                    </button>)}
                   </div>
 
                   {perfil.membresias && perfil.membresias.length > 0 ? (
@@ -601,25 +575,27 @@ export const ClientesView: React.FC = () => {
 
                 {/* Style & Preferences Notes */}
                 <div>
-                  <label className="block text-xs font-bold text-stone-900 mb-1.5 flex items-center gap-1.5">
+                  <label htmlFor="client-style-notes" className="block text-xs font-bold text-stone-900 mb-1.5 flex items-center gap-1.5">
                     <Scissors className="w-3.5 h-3.5 text-stone-600" />
                     Notas de Estilo, Graduación de Navaja y Alergias
                   </label>
                   <textarea
+                    id="client-style-notes"
                     rows={3}
+                    readOnly={!canManage || savingNotas}
                     value={notasEstilo}
                     onChange={(e) => setNotasEstilo(e.target.value)}
                     placeholder="Ej. Fade #0.5 arriba tijera, no aplicar cera con fragancia fuerte, alérgico a la vaselina..."
                     className="w-full bg-white border border-stone-200 rounded-xl p-3 text-xs text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-900 shadow-sm"
                   />
                   <div className="flex justify-end mt-2">
-                    <button
+                    {canManage && (<button
                       onClick={handleSaveNotas}
-                      disabled={savingNotas}
+                      disabled={savingNotas || privacyBusy}
                       className="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-semibold transition disabled:opacity-50"
                     >
                       {savingNotas ? 'Guardando...' : 'Actualizar Notas'}
-                    </button>
+                    </button>)}
                   </div>
                 </div>
 
@@ -629,47 +605,52 @@ export const ClientesView: React.FC = () => {
                     <Shield className="w-3.5 h-3.5 text-emerald-600" />
                     Cumplimiento LFPDPPP México (Derechos ARCO)
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {canManage && (<button
+                      disabled={privacyBusy || savingNotas}
                       onClick={handleExportArco}
                       className="flex items-center gap-1 px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg text-[11px] font-medium transition"
                       title="Descargar todos los datos asociados al cliente en formato JSON"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Exportar Datos
-                    </button>
-                    <button
+                    </button>)}
+                    {canManage && (<button
+                      disabled={privacyBusy || savingNotas}
                       onClick={handleDeleteArco}
                       className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-medium transition"
                       title="Anonimizar permanentemente los datos personales del cliente"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Derecho de Cancelación
-                    </button>
+                    </button>)}
                   </div>
                 </div>
               </div>
             ) : null}
           </div>
-        </div>
+        </OperationDialog>
       )}
 
       {/* MODAL: Asignar Membresía */}
       {showMembresiaModal && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-stone-200 p-6">
-            <h3 className="text-base font-bold text-stone-950 mb-1 flex items-center gap-2">
+        <OperationDialog open={showMembresiaModal} busy={submittingMembresia} titleId="client-membership-title" onClose={() => { if (!submittingMembresia) setShowMembresiaModal(false); }}>
+          <div className="bg-white rounded-2xl w-full shadow-2xl border border-stone-200 p-4 sm:p-6">
+            <h3 id="client-membership-title" tabIndex={-1} className="text-base font-bold text-stone-950 mb-1 flex items-center gap-2">
               <Crown className="w-4 h-4 text-amber-600" />
               Asignar Membresía Recurrente
             </h3>
             <p className="text-xs text-stone-500 mb-4">
               Crea un plan de ingresos predecibles para la barbería con cortes mensuales incluidos.
             </p>
+            {notification && <p role="status" className="mb-3 rounded-lg bg-stone-100 p-3 text-sm">{notification}</p>}
 
             <form onSubmit={handleAssignMembresia} className="space-y-4">
+              <fieldset disabled={submittingMembresia} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Nombre del Plan</label>
+                <label htmlFor="client-membership-name" className="block text-xs font-semibold text-stone-700 mb-1">Nombre del Plan</label>
                 <input
+                  id="client-membership-name"
                   type="text"
                   required
                   value={planMembresia}
@@ -680,8 +661,9 @@ export const ClientesView: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Precio Mensual ($MXN)</label>
+                  <label htmlFor="client-membership-price" className="block text-xs font-semibold text-stone-700 mb-1">Precio Mensual ($MXN)</label>
                   <input
+                    id="client-membership-price"
                     type="number"
                     required
                     min={0}
@@ -691,8 +673,9 @@ export const ClientesView: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">Cortes Incluidos</label>
+                  <label htmlFor="client-membership-cuts" className="block text-xs font-semibold text-stone-700 mb-1">Cortes Incluidos</label>
                   <input
+                    id="client-membership-cuts"
                     type="number"
                     required
                     min={1}
@@ -719,22 +702,26 @@ export const ClientesView: React.FC = () => {
                   {submittingMembresia ? 'Guardando...' : 'Asignar Membresía'}
                 </button>
               </div>
+              </fieldset>
             </form>
           </div>
-        </div>
+        </OperationDialog>
       )}
 
-      {/* MODAL: Nuevo Cliente */}
+      {/* MODAL: Nuevo cliente */}
       {showNewClientModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-stone-200 p-6">
-            <h3 className="text-base font-bold text-stone-950 mb-1">Registrar Nuevo Cliente</h3>
+        <OperationDialog open={showNewClientModal} busy={submittingClient} titleId="client-create-title" onClose={() => { if (!submittingClient) setShowNewClientModal(false); }}>
+          <div className="bg-white rounded-2xl w-full shadow-2xl border border-stone-200 p-4 sm:p-6">
+            <h3 id="client-create-title" tabIndex={-1} className="text-base font-bold text-stone-950 mb-1">Registrar Nuevo cliente</h3>
             <p className="text-xs text-stone-500 mb-4">Ingresa los datos para registrar un perfil en el CRM.</p>
+            {notification && <p role="status" className="mb-3 rounded-lg bg-stone-100 p-3 text-sm">{notification}</p>}
 
             <form onSubmit={handleCreateClient} className="space-y-3">
+              <fieldset disabled={submittingClient} className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Nombre Completo *</label>
+                <label htmlFor="client-create-name" className="block text-xs font-semibold text-stone-700 mb-1">Nombre Completo *</label>
                 <input
+                  id="client-create-name"
                   type="text"
                   required
                   value={newNombre}
@@ -745,8 +732,9 @@ export const ClientesView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Teléfono (10 dígitos) *</label>
+                <label htmlFor="client-create-phone" className="block text-xs font-semibold text-stone-700 mb-1">Teléfono (10 dígitos) *</label>
                 <input
+                  id="client-create-phone"
                   type="tel"
                   required
                   value={newTelefono}
@@ -757,8 +745,9 @@ export const ClientesView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Correo Electrónico (Opcional)</label>
+                <label htmlFor="client-create-email" className="block text-xs font-semibold text-stone-700 mb-1">Correo Electrónico (Opcional)</label>
                 <input
+                  id="client-create-email"
                   type="email"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
@@ -768,8 +757,9 @@ export const ClientesView: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Notas de Estilo / Preferencias</label>
+                <label htmlFor="client-create-notes" className="block text-xs font-semibold text-stone-700 mb-1">Notas de Estilo / Preferencias</label>
                 <textarea
+                  id="client-create-notes"
                   rows={2}
                   value={newNotas}
                   onChange={(e) => setNewNotas(e.target.value)}
@@ -794,9 +784,10 @@ export const ClientesView: React.FC = () => {
                   {submittingClient ? 'Guardando...' : 'Crear Perfil'}
                 </button>
               </div>
+              </fieldset>
             </form>
           </div>
-        </div>
+        </OperationDialog>
       )}
     </div>
   );

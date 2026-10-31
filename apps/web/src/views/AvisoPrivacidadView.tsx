@@ -2,39 +2,45 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Scissors, ShieldCheck, ArrowLeft } from 'lucide-react';
 
-export const AvisoPrivacidadView: React.FC = () => {
+export const AvisoPrivacidadView: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-stone-900 font-sans selection:bg-stone-900 selection:text-white">
       {/* Header */}
       <header className="border-b border-stone-200 bg-white/90 backdrop-blur-md sticky top-0 z-30 py-4 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 text-stone-900 hover:text-stone-700 font-bold text-sm">
+          {onBack ? (
+            <button type="button" onClick={onBack} autoFocus className="flex items-center gap-2 text-stone-900 hover:text-stone-700 font-bold text-sm">
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver a mi reserva</span>
+            </button>
+          ) : <Link to="/" className="flex items-center gap-2 text-stone-900 hover:text-stone-700 font-bold text-sm">
             <ArrowLeft className="w-4 h-4" />
             <span>Volver a SYSTECH</span>
-          </Link>
+          </Link>}
           <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-stone-600">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Cumplimiento Legal LFPDPPP</span>
+            <span>Borrador de privacidad</span>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+        <p role="note" className="mb-6 rounded-xl bg-amber-50 p-4 text-amber-900">Documento de demostración pendiente de revisión legal y de completar la identidad y los canales reales del responsable. No acredita cumplimiento ni está listo para recibir datos reales.</p>
         <div className="bg-white rounded-2xl border border-stone-200/90 p-8 sm:p-12 shadow-sm space-y-8 text-stone-800 text-xs sm:text-sm leading-relaxed">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-950 tracking-tight">
               Aviso de Privacidad Integral
             </h1>
             <p className="text-stone-500 text-xs mt-1">
-              Última actualización: Octubre de 2026 • En estricto apego a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP) de los Estados Unidos Mexicanos.
+              Versión de demostración: octubre de 2026. El texto necesita revisión antes de publicarse como aviso aplicable.
             </p>
           </div>
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-stone-900">1. Identidad y Domicilio del Responsable</h2>
             <p>
-              <strong>SYSTECH Studio México</strong> (en lo sucesivo "SYSTECH"), con domicilio de operaciones en Av. Álvaro Obregón, Colima / Ciudad de México, México, y portal web oficial en este dominio, es responsable del tratamiento legítimo, controlado e informado de sus datos personales.
+              La identidad legal, domicilio y canales de contacto del responsable están pendientes de definir. Esta demo no asigna esos datos a una empresa o barbería real.
             </p>
           </section>
 
@@ -56,6 +62,7 @@ export const AvisoPrivacidadView: React.FC = () => {
             <ul className="list-disc pl-5 space-y-1 text-stone-700">
               <li>Creación y administración de la cuenta multitenant de la barbería.</li>
               <li>Gestión de la agenda, sincronización de turnos y emisión de tickets de venta en terminal POS.</li>
+              <li>Si eliges adjuntarlos, el tipo de corte y la foto de referencia se vinculan a esa cita para que el personal autorizado de la barbería prepare y converse contigo el servicio. Puedes reservar sin ellos y quitar la foto antes de confirmar. La imagen no se muestra en consultas públicas de reservas ni se reutiliza en publicidad.</li>
               <li>Envío de confirmaciones inmediatas, recordatorios de citas (24 horas y 2 horas antes) y enlaces únicos para reprogramación o cancelación.</li>
               <li>Acreditación y liquidación exacta de comisiones a los barberos prestadores de servicio.</li>
             </ul>
@@ -75,7 +82,7 @@ export const AvisoPrivacidadView: React.FC = () => {
             </p>
             <ul className="list-disc pl-5 space-y-1.5 text-stone-700">
               <li>Solicitar directamente desde el módulo CRM de la barbería su exportación o supresión con 1 clic conforme a la ley.</li>
-              <li>Enviar una solicitud formal por escrito al correo oficial: <strong>privacidad@systech.mx</strong> indicando su nombre, teléfono y el derecho que desea hacer valer. Su solicitud será resuelta en un plazo máximo de 15 días hábiles conforme al marco del INAI.</li>
+              <li>El canal real para solicitudes, requisitos de identificación y plazos de respuesta se completarán en la revisión del aviso antes del lanzamiento.</li>
             </ul>
           </section>
 
@@ -99,7 +106,7 @@ export const AvisoPrivacidadView: React.FC = () => {
       </main>
 
       <footer className="border-t border-stone-200 bg-white py-6 text-center text-xs text-stone-500">
-        SYSTECH Studio • Cumplimiento Normativo LFPDPPP México • Todos los derechos reservados.
+        SYSTECH Studio · Borrador de demostración pendiente de revisión.
       </footer>
     </div>
   );

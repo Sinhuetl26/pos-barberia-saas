@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useRef } from 'react';
 import { api } from '../api';
+import { LicensePlanSelector } from '../components/LicensePlanSelector';
+import { OperationDialog } from '../components/OperationDialog';
+import '../styles/secondary-workspaces.css';
 import {
   Sparkles,
   Scissors,
@@ -21,18 +24,24 @@ interface OnboardingModalProps {
 }
 
 export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const submitting=useRef(false);const [saving,setSaving]=useState(false),[error,setError]=useState('');
   const [step, setStep] = useState(1);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
 
   // Step 1: Shop details
   const [nombreBarberia, setNombreBarberia] = useState('');
   const [telefono, setTelefono] = useState('');
   const [emailDueno, setEmailDueno] = useState('');
+  const [nombreDueno, setNombreDueno] = useState('');
+  const [passwordDueno, setPasswordDueno] = useState('');
   const [nombreSucursal, setNombreSucursal] = useState('Matriz Centro');
   const [direccionSucursal, setDireccionSucursal] = useState('');
   const [horarioApertura, setHorarioApertura] = useState('09:00');
   const [horarioCierre, setHorarioCierre] = useState('20:00');
-  const [plan, setPlan] = useState<'BASICO' | 'PRO'>('PRO');
+  const [zonaHoraria,setZonaHoraria]=useState('America/Mexico_City'),[diasLaborales,setDiasLaborales]=useState('Lunes a Sábado');
+  const [plan, setPlan] = useState<'BASICO' | 'PRO' | 'CADENA'>('PRO');
 
   // Step 2: Services selected
   const [selectedTemplates, setSelectedTemplates] = useState<any[]>([]);
@@ -47,18 +56,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
   useEffect(() => {
     if (isOpen) {
-      loadTemplates();
-    }
+      setStep(1);setCreatedTenant(null);setError('');loadTemplates();
+    }else{setPasswordDueno('');}
   }, [isOpen]);
 
   const loadTemplates = async () => {
+    setTemplatesLoading(true); setTemplatesError('');
     try {
       const t = await api.getOnboardingTemplates();
       setTemplates(t);
-      setSelectedTemplates(t); // pre-select all templates by default
-    } catch (e) {
-      console.error(e);
-    }
+      setSelectedTemplates([]); // Suggestions require an explicit choice.
+    } catch {
+      setTemplatesError('No pudimos consultar las sugerencias. Puedes volver a intentarlo o continuar sin servicios y capturarlos después.');
+    } finally { setTemplatesLoading(false); }
   };
 
   const toggleTemplate = (tmpl: any) => {
@@ -71,40 +81,45 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
   const handleFinishOnboarding = async (e: React.FormEvent) => {
     e.preventDefault();
+    if(submitting.current)return;submitting.current=true;setSaving(true);setError('');
     try {
       const res = await api.submitOnboarding({
         nombreBarberia,
         telefono,
         emailDueno,
-        passwordDueno: '123456',
-        nombreDueno: 'Dueño',
+        passwordDueno,
+        nombreDueno,
         nombreSucursal,
         direccionSucursal,
         horarioApertura,
         horarioCierre,
+        zonaHoraria,diasLaborales,
         plan,
         serviciosSeleccionados: selectedTemplates,
-        nombreBarbero: nombreBarbero || 'Barbero Principal',
+        nombreBarbero: nombreBarbero.trim()||undefined,
         comisionServicios,
-        comisionProductos
+        comisionProductosPct:comisionProductos
       });
 
       setCreatedTenant(res.tenant);
       setStep(4);
       onSuccess(res.tenant);
     } catch (e: any) {
-      alert(`Error en el asistente: ${e.message}`);
-    }
+      setError(e.message);
+    }finally{submitting.current=false;setSaving(false);}
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white border border-stone-200 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl animate-luxury-in relative">
+    <OperationDialog open={isOpen} busy={saving} titleId="onboarding-modal-title" onClose={onClose} className="max-w-xl">
+      <div className="onboarding-workbench bg-white border border-stone-200 rounded-3xl max-w-xl w-full p-6 sm:p-8 max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl animate-luxury-in relative">
         
         {/* Close Button */}
         <button
+          type="button"
+          aria-label="Cerrar alta de barbería"
+          disabled={saving}
           onClick={onClose}
           className="absolute top-5 right-5 text-stone-400 hover:text-stone-900 p-1 rounded-lg hover:bg-stone-100 transition"
         >
@@ -118,10 +133,10 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
               <Sparkles className="w-4 h-4 stroke-[2]" />
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight text-stone-900">
-                Alta de Nueva Barbería
+              <h2 id="onboarding-modal-title" tabIndex={-1} className="text-base font-bold tracking-tight text-stone-900">
+                Prepara tu barbería
               </h2>
-              <p className="text-xs text-stone-500">Configuración guiada y catálogo precargado en menos de 3 minutos.</p>
+              <p className="text-xs text-stone-500">Configura tu sucursal y elige los servicios que realmente ofreces.</p>
             </div>
           </div>
 
@@ -137,12 +152,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
         {step === 1 && (
           <div className="space-y-4 animate-luxury-in">
             <h3 className="text-xs font-bold text-stone-500 uppercase tracking-widest">
-              Paso 1: Datos de la Marca & Matriz
+              1. Datos esenciales
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1">Nombre de la Barbería *</label>
-              <input
+              <label htmlFor="onboarding-nombreBarberia" className="block text-xs font-semibold text-stone-700 mb-1">Nombre de la Barbería *</label>
+              <input id="onboarding-nombreBarberia"
                 type="text"
                 required
                 placeholder="Ej. Barbería Black Diamond"
@@ -152,10 +167,12 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
               />
             </div>
 
+            <label className="block text-xs">Nombre del propietario<input required className="studio-input mt-2 w-full" value={nombreDueno} onChange={e => setNombreDueno(e.target.value)} /></label>
+            <label className="block text-xs">Contraseña del propietario<input required type="password" autoComplete="new-password" minLength={12} maxLength={72} className="studio-input mt-2 w-full" value={passwordDueno} onChange={e => setPasswordDueno(e.target.value)} /><span className="block mt-1 text-stone-500">Mínimo 12 caracteres. Necesitarás verificar tu correo para operar.</span></label>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Teléfono WhatsApp *</label>
-                <input
+                <label htmlFor="onboarding-telefono" className="block text-xs font-semibold text-stone-700 mb-1">Teléfono WhatsApp *</label>
+                <input id="onboarding-telefono"
                   type="tel"
                   required
                   placeholder="55..."
@@ -165,8 +182,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Email del Propietario *</label>
-                <input
+                <label htmlFor="onboarding-emailDueno" className="block text-xs font-semibold text-stone-700 mb-1">Email del Propietario *</label>
+                <input id="onboarding-emailDueno"
                   type="email"
                   required
                   placeholder="contacto@..."
@@ -179,8 +196,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Nombre Sucursal Matriz</label>
-                <input
+                <label htmlFor="onboarding-nombreSucursal" className="block text-xs font-semibold text-stone-700 mb-1">Nombre Sucursal Matriz</label>
+                <input id="onboarding-nombreSucursal"
                   type="text"
                   value={nombreSucursal}
                   onChange={(e) => setNombreSucursal(e.target.value)}
@@ -188,8 +205,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Dirección / Zona</label>
-                <input
+                <label htmlFor="onboarding-direccionSucursal" className="block text-xs font-semibold text-stone-700 mb-1">Dirección / Zona</label>
+                <input id="onboarding-direccionSucursal"
                   type="text"
                   placeholder="Av. Masaryk 102"
                   value={direccionSucursal}
@@ -201,8 +218,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Horario Apertura</label>
-                <input
+                <label htmlFor="onboarding-horarioApertura" className="block text-xs font-semibold text-stone-700 mb-1">Horario Apertura</label>
+                <input id="onboarding-horarioApertura"
                   type="time"
                   value={horarioApertura}
                   onChange={(e) => setHorarioApertura(e.target.value)}
@@ -210,8 +227,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-stone-700 mb-1">Horario Cierre</label>
-                <input
+                <label htmlFor="onboarding-horarioCierre" className="block text-xs font-semibold text-stone-700 mb-1">Horario Cierre</label>
+                <input id="onboarding-horarioCierre"
                   type="time"
                   value={horarioCierre}
                   onChange={(e) => setHorarioCierre(e.target.value)}
@@ -222,38 +239,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
             <div>
               <label className="block text-xs font-semibold text-stone-700 mb-1.5">Membresía Inicial</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setPlan('BASICO')}
-                  className={`p-3 rounded-xl border text-left text-xs transition ${
-                    plan === 'BASICO'
-                      ? 'bg-stone-50 border-stone-900 ring-1 ring-stone-900 text-stone-900 font-bold'
-                      : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
-                  }`}
-                >
-                  <div className="font-bold text-stone-900">Plan Básico ($499 MXN)</div>
-                  <div className="text-[10px] text-stone-500 mt-1">1 sucursal, hasta 3 barberos</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPlan('PRO')}
-                  className={`p-3 rounded-xl border text-left text-xs transition ${
-                    plan === 'PRO'
-                      ? 'bg-stone-50 border-stone-900 ring-1 ring-stone-900 text-stone-900 font-bold'
-                      : 'bg-white border-stone-200 text-stone-600 hover:border-stone-300'
-                  }`}
-                >
-                  <div className="font-bold text-stone-900">Plan Pro ($999 MXN)</div>
-                  <div className="text-[10px] text-stone-500 mt-1">Ilimitado + WhatsApp + Kardex</div>
-                </button>
-              </div>
+              <LicensePlanSelector value={plan} onChange={setPlan} />
             </div>
 
             <div className="flex justify-end pt-3">
               <button
                 type="button"
-                disabled={!nombreBarberia || !telefono || !emailDueno}
+                disabled={saving || !nombreBarberia || !telefono || !emailDueno || !nombreDueno.trim() || passwordDueno.length < 12}
                 onClick={() => setStep(2)}
                 className="py-2.5 px-5 bg-stone-900 hover:bg-stone-800 disabled:opacity-40 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-sm"
               >
@@ -267,11 +259,13 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
         {/* STEP 2: PREDEFINED SERVICE TEMPLATES */}
         {step === 2 && (
           <div className="space-y-4 animate-luxury-in">
+            {templatesLoading && <p role="status" className="text-sm text-stone-600">Consultando sugerencias de servicios…</p>}
+            {templatesError && <div role="alert" className="text-sm text-rose-800"><p>{templatesError}</p><button type="button" disabled={templatesLoading} className="studio-button-secondary mt-2" onClick={() => void loadTemplates()}>Volver a consultar sugerencias</button></div>}
             <h3 className="text-xs font-bold text-stone-500 uppercase tracking-widest">
-              Paso 2: Pre-cargar Catálogo de Servicios
+              2. Servicios iniciales
             </h3>
             <p className="text-xs text-stone-500">
-              Selecciona los servicios estándar para inicializar tu catálogo en un clic.
+              Elige solo los servicios que ofreces y ajusta tus precios y duración. También puedes comenzar con el catálogo vacío.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
@@ -300,6 +294,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
               })}
             </div>
 
+            {selectedTemplates.map((serv,i)=><fieldset key={serv.nombre} className="rounded-lg border p-3"><legend className="text-xs font-semibold">{serv.nombre}</legend><div className="grid grid-cols-2 gap-3"><label className="text-xs">Tu precio (MXN)<input type="number" min="0" step="0.01" value={serv.precioVenta} onChange={e=>setSelectedTemplates(v=>v.map((s,j)=>j===i?{...s,precioVenta:Number(e.target.value)}:s))} className="mt-1 w-full rounded border p-2"/></label><label className="text-xs">Duración (min)<input type="number" min="15" max="480" value={serv.duracionMinutos} onChange={e=>setSelectedTemplates(v=>v.map((s,j)=>j===i?{...s,duracionMinutos:Number(e.target.value)}:s))} className="mt-1 w-full rounded border p-2"/></label></div></fieldset>)}
+            <label className="block text-xs font-semibold">Zona horaria<input value={zonaHoraria} onChange={e=>setZonaHoraria(e.target.value)} className="mt-1 w-full rounded-lg border p-2"/></label><label className="block text-xs font-semibold">Días de atención<input value={diasLaborales} onChange={e=>setDiasLaborales(e.target.value)} className="mt-1 w-full rounded-lg border p-2"/></label>
             <div className="flex justify-between pt-3">
               <button
                 type="button"
@@ -321,17 +317,17 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
         )}
 
         {/* STEP 3: FIRST BARBER & COMMISSIONS */}
+        {error&&<p role="alert" className="text-sm text-rose-700">{error}</p>}
         {step === 3 && (
           <div className="space-y-4 animate-luxury-in">
             <h3 className="text-xs font-bold text-stone-500 uppercase tracking-widest">
-              Paso 3: Primer Barbero & Esquema de Comisiones
+              3. Tu primer profesional
             </h3>
 
             <div>
-              <label className="block text-xs font-semibold text-stone-700 mb-1">Nombre del Master Barber Principal *</label>
-              <input
+              <label htmlFor="onboarding-nombreBarbero" className="block text-xs font-semibold text-stone-700 mb-1">Primer barbero (opcional)</label>
+              <input id="onboarding-nombreBarbero"
                 type="text"
-                required
                 placeholder="Ej. Carlos 'Charly' Mendoza"
                 value={nombreBarbero}
                 onChange={(e) => setNombreBarbero(e.target.value)}
@@ -341,8 +337,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
 
             <div className="grid grid-cols-2 gap-3 bg-stone-50 p-4 rounded-xl border border-stone-200/80">
               <div>
-                <label className="block text-xs font-bold text-stone-900 mb-1">Comisión Servicios (%)</label>
-                <input
+                <label htmlFor="onboarding-comisionServicios" className="block text-xs font-bold text-stone-900 mb-1">Comisión Servicios (%)</label>
+                <input id="onboarding-comisionServicios"
                   type="number"
                   min="0"
                   max="100"
@@ -353,8 +349,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
                 <span className="text-[10px] text-stone-500 mt-1 block">Típico boutique: 50%</span>
               </div>
               <div>
-                <label className="block text-xs font-bold text-stone-700 mb-1">Comisión Retail / Prod (%)</label>
-                <input
+                <label htmlFor="onboarding-comisionProductos" className="block text-xs font-bold text-stone-700 mb-1">Comisión Retail / Prod (%)</label>
+                <input id="onboarding-comisionProductos"
                   type="number"
                   min="0"
                   max="100"
@@ -369,18 +365,18 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <div className="flex justify-between pt-3">
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                disabled={saving} onClick={() => setStep(2)}
                 className="py-2 px-4 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold transition"
               >
                 Atrás
               </button>
               <button
                 type="button"
-                onClick={handleFinishOnboarding}
+                disabled={saving} onClick={handleFinishOnboarding}
                 className="py-2.5 px-6 bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs rounded-xl transition flex items-center gap-1.5 shadow-sm"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>Crear y Lanzar Barbería</span>
+                <span>Crear mi barbería</span>
               </button>
             </div>
           </div>
@@ -403,7 +399,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
             <div className="bg-stone-50 p-4 rounded-xl border border-stone-200 text-left text-xs space-y-2">
               <div className="text-stone-500 uppercase text-[10px] tracking-widest font-semibold">Enlace Público de Reservas:</div>
               <div className="font-mono text-stone-900 font-bold bg-white p-2.5 rounded-lg border border-stone-200 break-all">
-                {window.location.origin}/#reservar?slug={createdTenant.slug}
+                {window.location.origin}/b/{encodeURIComponent(createdTenant.slug)}
               </div>
             </div>
 
@@ -419,6 +415,6 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClos
         )}
 
       </div>
-    </div>
+    </OperationDialog>
   );
 };

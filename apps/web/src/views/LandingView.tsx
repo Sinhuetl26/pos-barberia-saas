@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { LicensePlanCode, capacityLabel } from '../utils/licenseCatalog';
+import { useLicenseCatalog } from '../utils/useLicenseCatalog';
+import { formatCurrency } from '../utils/formatters';
 import {
   Scissors,
   CheckCircle2,
@@ -22,7 +25,7 @@ import {
 } from 'lucide-react';
 
 interface LandingViewProps {
-  onStartTrial: (plan: 'BASICO' | 'PRO') => void;
+  onStartTrial: (plan: LicensePlanCode) => void;
   onLogin: () => void;
   onLaunchDemo: (role?: string) => void;
 }
@@ -32,7 +35,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
   onLogin,
   onLaunchDemo
 }) => {
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const { catalog, error: catalogError } = useLicenseCatalog();
   const [barberosCount, setBarberosCount] = useState<number>(4);
   const [cortesPorDia, setCortesPorDia] = useState<number>(8);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
@@ -119,7 +122,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
         </h1>
 
         <p className="mt-6 text-base sm:text-lg text-stone-600 max-w-2xl mx-auto leading-relaxed">
-          Diseñado para barberías reales: cobro en POS en menos de 30 segundos, portal de citas para Instagram/WhatsApp, eliminación de faltantes con arqueo ciego y comisiones exactas al centavo.
+          Diseñado para barberías reales: cobro ágil en POS, portal de citas para Instagram/WhatsApp, control de caja con arqueo ciego y comisiones exactas al centavo.
         </p>
 
         {/* CTA Buttons */}
@@ -148,7 +151,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-stone-700" />
-            <span>Listo en menos de 3 minutos</span>
+            <span>Configura tu negocio paso a paso</span>
           </div>
           <div className="flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-stone-700" />
@@ -163,7 +166,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
             <div className="text-xs text-stone-500 mt-0.5">Prueba completa sin tarjeta</div>
           </div>
           <div className="border-r border-stone-100 last:border-none pr-4">
-            <div className="text-2xl sm:text-3xl font-bold font-mono text-stone-900">&lt; 30 seg</div>
+            <div className="text-2xl sm:text-3xl font-bold font-mono text-stone-900">Cobro ágil</div>
             <div className="text-xs text-stone-500 mt-0.5">Cobro ágil en terminal POS</div>
           </div>
           <div className="border-r border-stone-100 last:border-none pr-4">
@@ -201,7 +204,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               </div>
               <h3 className="text-base font-bold text-stone-900">Punto de Venta Ultra Rápido</h3>
               <p className="text-xs text-stone-600 mt-2 leading-relaxed">
-                Cobros en menos de 30 segundos. Admite pagos divididos (efectivo + tarjeta + transferencia), registro de propinas y cálculo exacto de cambio.
+                Cobro desde una sola pantalla. Admite pagos divididos (efectivo + tarjeta + transferencia), registro de propinas y cálculo exacto de cambio.
               </p>
               <div className="mt-4 pt-3 border-t border-stone-200 text-[11px] font-semibold text-stone-800 flex items-center gap-1">
                 <span>Impresión térmica 58/80mm y ticket digital por WhatsApp</span>
@@ -232,7 +235,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 Asigna esquemas diferenciados: por ejemplo 50% en cortes y 10% en productos capilares. Cada barbero ve su saldo en tiempo real y tú liquidas con 1 clic.
               </p>
               <div className="mt-4 pt-3 border-t border-stone-200 text-[11px] font-semibold text-stone-800 flex items-center gap-1">
-                <span>Cero discusiones de dinero en el equipo</span>
+                <span>Cada comisión tiene un registro para revisarla</span>
               </div>
             </div>
 
@@ -246,7 +249,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
                 Al cerrar turno, el personal debe declarar el efectivo físico sin conocer el saldo que el sistema calculó. El sistema delata descuadres al instante.
               </p>
               <div className="mt-4 pt-3 border-t border-stone-200 text-[11px] font-semibold text-stone-800 flex items-center gap-1">
-                <span>Blindaje anti-robo hormiga para el dueño</span>
+                <span>Diferencias de caja con movimientos para revisar</span>
               </div>
             </div>
 
@@ -257,7 +260,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               </div>
               <h3 className="text-base font-bold text-stone-900">Recordatorios WhatsApp Pro</h3>
               <p className="text-xs text-stone-600 mt-2 leading-relaxed">
-                Recordatorios automáticos 24 horas y 2 horas antes de la cita. Reduce los "no-shows" y cancelaciones de último minuto en más del 80%.
+                Enlaces de recordatorio con los datos de la cita. El envío automático requiere conectar WhatsApp Business y aprobar las plantillas de cada barbería.
               </p>
               <div className="mt-4 pt-3 border-t border-stone-200 text-[11px] font-semibold text-stone-800 flex items-center gap-1">
                 <span>Mensajes con nombre, hora y barbero precargados</span>
@@ -329,7 +332,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               </div>
 
               <div className="p-4 rounded-xl bg-stone-800/80 border border-stone-700/80 text-xs text-stone-300">
-                Basado en un precio promedio de <strong>$250 MXN</strong> por corte y una tasa de recuperación del <strong>8%</strong> de citas perdidas gracias a recordatorios automáticos por WhatsApp. <span className="text-stone-400 block mt-1 text-[11px]">(Estimación ilustrativa configurable con los números reales de tu salón).</span>
+                Basado en un precio promedio de <strong>$250 MXN</strong> por corte y una tasa de recuperación del <strong>8%</strong> de citas perdidas en un escenario hipotético. No hay una tasa de recuperación comprobada; el envío automático requiere conexión externa. <span className="text-stone-400 block mt-1 text-[11px]">(Estimación ilustrativa configurable con los números reales de tu salón).</span>
               </div>
             </div>
 
@@ -341,12 +344,12 @@ export const LandingView: React.FC<LandingViewProps> = ({
                   +${dineroExtraMes.toLocaleString('es-MX')} MXN
                 </div>
                 <div className="text-[11px] text-stone-400 mt-0.5">
-                  Aprox. ~{noShowsRecuperadosMes} clientes que sí asistirán a su cita.
+                  Escenario: recuperar ~{noShowsRecuperadosMes} citas al mes. No es una garantía de resultados.
                 </div>
               </div>
 
               <div className="pt-4 border-t border-stone-700">
-                <div className="text-xs text-stone-400 font-medium">Tiempo ahorrado en cuadre de caja y WhatsApp:</div>
+                <div className="text-xs text-stone-400 font-medium">Estimación ilustrativa de tiempo recuperado:</div>
                 <div className="text-2xl font-bold font-mono text-white mt-1">
                   ~{horasAhorradasMes} horas al mes
                 </div>
@@ -375,160 +378,26 @@ export const LandingView: React.FC<LandingViewProps> = ({
               Planes simples, sin letras chiquitas
             </h2>
             <p className="text-stone-600 text-xs sm:text-sm mt-2">
-              Todas las suscripciones incluyen actualizaciones gratuitas, soporte y almacenamiento seguro de datos.
+              Revisa la capacidad y las funciones de cada plan. Las condiciones de soporte y conservación de datos se definirán antes de contratar.
             </p>
 
-            {/* Monthly / Annual Toggle */}
-            <div className="mt-6 inline-flex items-center p-1 rounded-xl bg-stone-100 border border-stone-200 text-xs font-semibold">
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-4 py-1.5 rounded-lg transition ${
-                  billingCycle === 'monthly'
-                    ? 'bg-white text-stone-900 shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900'
-                }`}
-              >
-                Pago Mensual
-              </button>
-              <button
-                onClick={() => setBillingCycle('annual')}
-                className={`px-4 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-                  billingCycle === 'annual'
-                    ? 'bg-white text-stone-900 shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900'
-                }`}
-              >
-                <span>Pago Anual</span>
-                <span className="bg-emerald-100 text-emerald-800 text-[10px] px-1.5 py-0.2 rounded font-bold">2 meses gratis</span>
-              </button>
-            </div>
+            <p className="text-xs text-stone-500 mt-6">Licencia mensual. Los servicios externos pueden tener costos adicionales.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            
-            {/* Plan Básico */}
-            <div className="rounded-2xl border border-stone-200 bg-white p-8 flex flex-col justify-between hover:border-stone-300 transition shadow-sm">
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-stone-500">Plan Inicial</div>
-                <h3 className="text-xl font-bold text-stone-900 mt-1">BÁSICO</h3>
-                <p className="text-xs text-stone-500 mt-1">Para barberías independientes de hasta 3 barberos.</p>
-
-                <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold font-mono text-stone-900">
-                    {billingCycle === 'monthly' ? '$499' : '$4,990'}
-                  </span>
-                  <span className="text-xs text-stone-500 font-medium">
-                    MXN {billingCycle === 'monthly' ? '/ mes' : '/ año'}
-                  </span>
-                </div>
-
-                <div className="mt-6 space-y-3 text-xs text-stone-700">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span><strong>1 Sucursal</strong> incluida</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Hasta <strong>3 Barberos</strong> registrados</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Terminal POS y cobros ilimitados</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Agenda y Portal de auto-reserva pública</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Arqueo ciego de caja y comisiones automáticas</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Inventario y trazabilidad Kardex</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Impresión térmica 58mm / 80mm y tickets WhatsApp</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8">
-                <button
-                  onClick={() => onStartTrial('BASICO')}
-                  className="w-full py-2.5 rounded-xl border border-stone-300 hover:bg-stone-50 text-stone-900 font-bold text-xs transition"
-                >
-                  Comenzar con Plan Básico
-                </button>
-              </div>
-            </div>
-
-            {/* Plan Pro (Featured) */}
-            <div className="rounded-2xl border-2 border-stone-900 bg-stone-900 text-white p-8 flex flex-col justify-between shadow-lg relative">
-              <div className="absolute -top-3 right-6 bg-amber-400 text-stone-950 text-[10px] font-extrabold uppercase px-3 py-0.5 rounded-full tracking-wider shadow-sm">
-                Más Elegido
-              </div>
-
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-400">Plan Profesional</div>
-                <h3 className="text-xl font-bold text-white mt-1">PRO COMPLETO</h3>
-                <p className="text-xs text-stone-400 mt-1">Para barberías en crecimiento y cadenas multi-sucursal.</p>
-
-                <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-4xl font-extrabold font-mono text-white">
-                    {billingCycle === 'monthly' ? '$999' : '$9,990'}
-                  </span>
-                  <span className="text-xs text-stone-400 font-medium">
-                    MXN {billingCycle === 'monthly' ? '/ mes' : '/ año'}
-                  </span>
-                </div>
-
-                <div className="mt-6 space-y-3 text-xs text-stone-200">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span><strong>Sucursales Ilimitadas</strong> (matriz y filiales)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span><strong>Barberos Ilimitados</strong> en el equipo</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Todo lo incluido en el Plan Básico</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span><strong>Notificaciones Pro WhatsApp</strong> (recordatorios 24h y 2h)</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span><strong>Analítica Financiera Avanzada</strong> y reporte por barbero</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Bitácora completa de auditoría de seguridad</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Soporte técnico prioritario por WhatsApp</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-8">
-                <button
-                  onClick={() => onStartTrial('PRO')}
-                  className="w-full py-2.5 rounded-xl bg-white hover:bg-stone-100 text-stone-900 font-bold text-xs transition shadow-sm flex items-center justify-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Prueba Gratis 14 Días del Plan Pro</span>
-                </button>
-              </div>
-            </div>
-
+          {catalogError && <p role="alert" className="text-red-700 text-center">{catalogError}</p>}
+          {!catalog && !catalogError && <p role="status" className="text-center">Cargando planes…</p>}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {catalog?.plans.map(plan => <article key={plan.code} className={`rounded-2xl p-7 flex flex-col border ${plan.code === 'PRO' ? 'bg-stone-900 text-white border-stone-800' : 'bg-white border-stone-200 text-stone-900'}`}>
+              <h3 className="text-2xl font-semibold">{plan.name}</h3>
+              <p className="text-sm mt-2 opacity-70">{plan.subtitle}</p>
+              <div className="mt-7"><span className="text-4xl font-semibold">{formatCurrency(plan.quote.totalMxn)}</span><span className="text-xs ml-2">MXN / mes</span></div>
+              <p className="text-xs mt-3 opacity-70">{plan.quote.label}</p>
+              <p className="text-sm font-medium mt-5">{capacityLabel(plan)}</p>
+              <ul className="space-y-3 my-6 flex-1">{plan.features.map(feature => <li key={feature} className="flex gap-2 text-sm"><CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />{feature}</li>)}</ul>
+              <button onClick={() => onStartTrial(plan.code)} className={`rounded-xl px-4 py-3 font-semibold ${plan.code === 'PRO' ? 'bg-white text-stone-900' : 'bg-stone-900 text-white'}`}>Conocer {plan.name}</button>
+            </article>)}
           </div>
-
+          <p className="text-xs text-stone-500 text-center mt-6">WhatsApp y facturación requieren conectar sus proveedores. Los consumos y condiciones se acuerdan antes de contratar.</p>
         </div>
       </section>
 
@@ -537,13 +406,13 @@ export const LandingView: React.FC<LandingViewProps> = ({
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold mb-3">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Exclusivo: Primeras 10 Barberías en México (Cupón FUNDADOR)</span>
+            <span>Primeras 10 Barberías · Piloto acompañado</span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-stone-900 tracking-tight">
             Programa de Barberías Fundadoras
           </h2>
           <p className="text-xs sm:text-sm text-stone-600 mt-2 leading-relaxed">
-            Buscamos 10 barberías pioneras para colaborar mano a mano. A cambio de tu retroalimentación semanal para perfeccionar el software, aseguramos beneficios de por vida.
+            Buscamos 10 barberías pioneras para colaborar mano a mano. A cambio de tu retroalimentación semanal para perfeccionar el software, definimos contigo un alcance y condiciones claros para el piloto.
           </p>
         </div>
 
@@ -553,14 +422,14 @@ export const LandingView: React.FC<LandingViewProps> = ({
               <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center text-stone-900 font-bold mb-4">
                 <DollarSign className="w-5 h-5 text-emerald-600" />
               </div>
-              <h3 className="text-sm font-bold text-stone-900 mb-1.5">Tarifa Congelada de por Vida</h3>
+              <h3 className="text-sm font-bold text-stone-900 mb-1.5">Oferta con condiciones claras</h3>
               <p className="text-xs text-stone-600 leading-relaxed">
-                Al activar tu cuenta hoy con el cupón <strong className="font-mono text-stone-900">FUNDADOR</strong>, mantendrás tu tarifa fija ($499 Básico / $999 Pro al mes) sin aumentos futuros, sin importar el volumen de citas.
+                Antes de contratar revisamos tu plan, capacidad, consumos y duración de la oferta. Recibes condiciones por escrito y el total antes de confirmar el pago.
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-stone-100 text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Garantía de precio congelado</span>
+              <span>Precio y alcance por escrito</span>
             </div>
           </div>
 
@@ -571,7 +440,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
               </div>
               <h3 className="text-sm font-bold text-stone-900 mb-1.5">Onboarding Asistido 1 a 1</h3>
               <p className="text-xs text-stone-600 leading-relaxed">
-                Sesión guiada personalizada por videollamada para cargar tu catálogo de servicios, inventario de productos y configurar las comisiones de tus barberos en menos de 15 minutos.
+                Sesión guiada personalizada por videollamada para cargar tu catálogo de servicios, inventario de productos y configurar las comisiones de tus barberos durante una sesión guiada.
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-stone-100 text-[11px] font-semibold text-stone-700 flex items-center gap-1">
@@ -587,12 +456,12 @@ export const LandingView: React.FC<LandingViewProps> = ({
               </div>
               <h3 className="text-sm font-bold text-stone-900 mb-1.5">Canal Directo de WhatsApp</h3>
               <p className="text-xs text-stone-600 leading-relaxed">
-                Acceso prioritario directo con el equipo técnico para resolver dudas operativas, solicitar funciones a medida y recibir soporte los 7 días de la semana.
+                Acompañamiento para revisar dudas operativas y recoger comentarios del piloto. Los horarios y canales se acordarán antes de comenzar.
               </p>
             </div>
             <div className="mt-5 pt-3 border-t border-stone-100 text-[11px] font-semibold text-blue-700 flex items-center gap-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Soporte prioritario garantizado</span>
+              <span>Acompañamiento con alcance acordado</span>
             </div>
           </div>
         </div>
@@ -666,7 +535,7 @@ export const LandingView: React.FC<LandingViewProps> = ({
           Lleva tu barbería al siguiente nivel hoy mismo.
         </h2>
         <p className="mt-3 text-sm text-stone-600 max-w-xl mx-auto">
-          Comienza hoy con 14 días de prueba gratis sin tarjeta de crédito. Configura tu catálogo, comisiones y agenda en menos de 10 minutos.
+          Comienza hoy con 14 días de prueba gratis sin tarjeta de crédito. Configura tu catálogo, comisiones y agenda paso a paso.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -705,27 +574,26 @@ export const LandingView: React.FC<LandingViewProps> = ({
             </Link>
             <span className="flex items-center gap-1 text-stone-400">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>SSL 256-bit</span>
+              <span>Demo local · publicación pendiente</span>
             </span>
-            <a href="mailto:soporte@systech.mx" className="hover:text-stone-900 font-medium">
-              soporte@systech.mx
-            </a>
+            <span className="font-medium">
+              Canal de soporte pendiente de definir
+            </span>
           </div>
         </div>
       </footer>
 
       {/* Floating WhatsApp Support Button */}
       <a
-        href="https://wa.me/523120000000?text=Hola%20SYSTECH,%20me%20gustar%C3%ADa%20conocer%20m%C3%A1s%20sobre%20el%20sistema%20para%20mi%20barber%C3%ADa"
-        target="_blank"
-        rel="noopener noreferrer"
+        href="#faq"
         className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 font-semibold text-xs tracking-tight group hover:scale-105"
-        aria-label="Contactar soporte por WhatsApp"
+        aria-label="Consultar preguntas frecuentes"
       >
         <MessageSquare className="w-4 h-4 fill-white text-white" />
-        <span className="inline">¿Dudas? WhatsApp</span>
+        <span className="inline">¿Dudas? Consulta aquí</span>
       </a>
 
     </div>
   );
 };
+

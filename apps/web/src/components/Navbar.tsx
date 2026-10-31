@@ -1,439 +1,89 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { FinancialStatus } from './FinancialStatus';
+import { WorkspaceSearch } from './WorkspaceSearch';
+import { hasLicenseCapability, licensePlan } from '../utils/licenseCatalog';
 import { UserRole, Tenant, Sucursal } from '../types';
-import {
-  Scissors,
-  Building2,
-  Calendar,
-  CreditCard,
-  Users,
-  Package,
-  BarChart3,
-  Bell,
-  ShieldAlert,
-  Sparkles,
-  ExternalLink,
-  ChevronDown,
-  Crown,
-  Settings,
-  LogOut,
-  Globe,
-  HelpCircle
-} from 'lucide-react';
+import { Scissors, Calendar, CreditCard, Users, Package, BarChart3, Bell, ShieldAlert, ExternalLink, Crown, Settings, LogOut, Globe, HelpCircle, Home, Plug, Menu, X, ArrowUpRight, ChevronRight } from 'lucide-react';
 
 interface NavbarProps {
-  tenants: Tenant[];
-  currentTenant: Tenant | null;
-  onSelectTenant: (tenant: Tenant) => void;
-  sucursales: Sucursal[];
-  currentSucursal: Sucursal | null;
-  onSelectSucursal: (sucursal: Sucursal) => void;
-  currentRole: UserRole;
-  onSelectRole: (role: UserRole) => void;
-  currentView: string;
-  onSelectView: (view: string) => void;
-  onOpenOnboarding: () => void;
-  onOpenPublicBooking: () => void;
-  currentUser?: any;
-  onOpenSettings?: () => void;
-  onOpenLanding?: () => void;
-  onOpenHelp?: () => void;
-  onLogout?: () => void;
+  tenants: Tenant[]; currentTenant: Tenant | null; onSelectTenant: (tenant: Tenant) => void;
+  sucursales: Sucursal[]; currentSucursal: Sucursal | null; onSelectSucursal: (sucursal: Sucursal) => void;
+  currentRole: UserRole; onSelectRole: (role: UserRole) => void; currentView: string; onSelectView: (view: string) => void;
+  onOpenOnboarding: () => void; onOpenPublicBooking: () => void; currentUser?: any;
+  onOpenSettings?: () => void; onOpenLanding?: () => void; onOpenHelp?: () => void; onLogout?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
-  tenants,
-  currentTenant,
-  onSelectTenant,
-  sucursales,
-  currentSucursal,
-  onSelectSucursal,
-  currentRole,
-  onSelectRole,
-  currentView,
-  onSelectView,
-  onOpenOnboarding,
-  onOpenPublicBooking,
-  currentUser,
-  onOpenSettings,
-  onOpenLanding,
-  onOpenHelp,
-  onLogout
-}) => {
-  return (
-    <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-stone-200/80">
-      {/* Subtle notification banner if in risk / suspended */}
-      {currentTenant?.estado === 'EN_RIESGO' && currentRole !== 'SUPER_ADMIN' && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-1.5 text-xs font-medium flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
-            <span>Pago pendiente detectado. Tienes <strong>3 días de gracia</strong> antes de la suspensión del servicio.</span>
-          </div>
-          <button
-            onClick={() => onSelectView('suscripcion')}
-            className="text-xs font-semibold text-amber-800 hover:text-amber-950 underline underline-offset-2 transition"
-          >
-            Regularizar Pago →
-          </button>
-        </div>
-      )}
+export const Navbar: React.FC<NavbarProps> = (props) => {
+  const { currentTenant, currentSucursal, sucursales, currentRole, currentView, onSelectView, currentUser } = props;
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileMenu = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const focusables = () => Array.from(mobileMenu.current?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], select:not(:disabled), summary') || []).filter(el => el.getClientRects().length);
+    focusables()[0]?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); setMobileOpen(false); }
+      if (event.key !== 'Tab') return;
+      const controls = focusables(), first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    const desktop = window.matchMedia('(min-width: 1024px)');
+    const onDesktop = () => { if (desktop.matches) setMobileOpen(false); };
+    desktop.addEventListener('change', onDesktop);
+    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKey); desktop.removeEventListener('change', onDesktop); previousFocus?.focus(); };
+  }, [mobileOpen]);
+  const owner = currentRole === 'DUENO';
+  const admin = currentRole === 'SUPER_ADMIN';
+  const barber = currentRole === 'BARBERO';
+  const cashier = currentRole === 'CAJERO';
+  const items = admin ? [
+    { id: 'superadmin', label: 'Negocios y licencias', icon: Crown, group: 'Plataforma' },
+    { id: 'auditoria', label: 'Auditoría', icon: ShieldAlert, group: 'Plataforma' },
+    { id: 'integraciones', label: 'Conexiones', icon: Plug, group: 'Plataforma' },
+  ] : [
+    ...(!barber && !cashier ? [{ id: 'inicio', label: 'Hoy', icon: Home, group: 'Tu barbería' }] : []),
+    { id: 'agenda', label: barber ? 'Mi agenda' : 'Agenda', icon: Calendar, group: 'Tu barbería' },
+    { id: 'pos', label: 'Cobrar', icon: CreditCard, group: 'Tu barbería' },
+    ...(!barber ? [{ id: 'clientes', label: 'Clientes', icon: Users, group: 'Tu barbería' }] : []),
+    ...(!barber ? [{ id: 'caja', label: 'Caja y cierres', icon: CreditCard, group: 'Gestión' }] : []),
+    ...(!cashier ? [{ id: 'barberos', label: barber ? 'Mi caja y comisiones' : 'Equipo y comisiones', icon: Scissors, group: 'Gestión' }] : []),
+    ...(!barber && !cashier ? [{ id: 'inventario', label: 'Inventario', icon: Package, group: 'Gestión' }, { id: 'reportes', label: 'Reportes', icon: BarChart3, group: 'Gestión' }] : []),
+    ...(owner && ['PRO', 'CADENA'].includes(currentTenant?.plan || '') ? [{ id: 'notificaciones', label: 'Mensajes', icon: Bell, group: 'Gestión' }] : []),
+    ...(owner ? [{ id: 'accesos', label: 'Accesos del equipo', icon: ShieldAlert, group: 'Tu negocio' }, { id: 'configuracion', label: 'Configuración', icon: Settings, group: 'Tu negocio' }, { id: 'integraciones', label: 'Conexiones', icon: Plug, group: 'Tu negocio' }, { id: 'suscripcion', label: 'Plan y licencia', icon: Crown, group: 'Tu negocio' }] : []),
+  ];
+  if (owner && hasLicenseCapability(currentTenant?.plan || '', 'AUDIT_TRAIL')) items.push({ id: 'historial-operacion', label: 'Historial de operaciones', icon: ShieldAlert, group: 'Tu negocio' });
+  if (owner || currentRole === 'GERENTE') items.push({ id: 'importacion', label: 'Importar y exportar', icon: Package, group: 'Tu negocio' });
+  const title = currentView === 'caja' ? 'Caja' : currentView === 'seguridad' ? 'Seguridad de mi cuenta' : items.find(i => i.id === currentView)?.label || 'SYSTECH Studio';
+  const mainItems = items.filter(item => item.group !== 'Tu negocio');
+  const moreItems = items.filter(item => item.group === 'Tu negocio');
+  const quickItems = barber || cashier ? [{id:'agenda',label:'Agenda',icon:Calendar},{id:'pos',label:'Cobrar',icon:CreditCard},{id:cashier?'caja':'barberos',label:cashier?'Caja':'Mi caja',icon:Scissors}] : [{id:'inicio',label:'Hoy',icon:Home},{id:'agenda',label:'Agenda',icon:Calendar},{id:'pos',label:'Cobrar',icon:CreditCard}];
+  const navigate = (id: string) => { onSelectView(id); setMobileOpen(false); };
+  const role = owner ? 'Propietario' : barber ? 'Barbero' : admin ? 'Administrador' : cashier ? 'Cajero' : 'Gerente';
+  const renderNavItem = (item: typeof items[number]) => <button aria-current={currentView === item.id ? 'page' : undefined} onClick={() => navigate(item.id)} className={`studio-nav-item flex w-full items-center gap-3 px-3 py-2.5 my-1 rounded-lg text-[13px] transition-colors ${currentView === item.id ? 'text-[#ead7bb] bg-white/[.09]' : 'text-[#a3b5ab] hover:bg-white/5 hover:text-white'}`}><item.icon className={`w-4 h-4 ${currentView === item.id ? 'text-[#cfb58d]' : 'text-[#80998b]'}`} /><span className="flex-1 text-left">{item.label}</span>{currentView === item.id && <ChevronRight className="w-3 h-3" />}</button>;
+  const sidebar = <>
+    <button onClick={() => navigate(admin ? 'superadmin' : barber || cashier ? 'agenda' : 'inicio')} className="studio-brand flex items-center gap-3 px-5 pt-8 pb-7 text-left w-full"><div className="studio-brand-symbol w-9 h-9 rounded-xl bg-[#cfb58d] text-[#19352c] flex items-center justify-center"><Scissors className="w-5 h-5" /></div><div><div className="studio-brand-name text-white tracking-[.14em] text-sm font-semibold">SYSTECH</div><div className="studio-brand-subtitle text-[#97a99f] text-[11px] tracking-[.3em] mt-1">STUDIO</div></div></button>
+    <div className="studio-business mx-4 mb-5 rounded-xl border border-white/10 p-3 bg-white/[.025]"><div className="flex gap-2 items-center"><span className="w-6 h-6 rounded-md bg-white/5 text-[#c8b392] flex items-center justify-center text-[10px] font-semibold shrink-0">{currentTenant?.nombre.slice(0, 2).toUpperCase() || 'ST'}</span><span className="text-xs text-[#e5ebe6] font-medium truncate">{currentTenant?.nombre || 'Mi barbería'}</span></div><span className="text-[11px] text-[#93a99d] mt-2 block pl-8">{currentTenant ? licensePlan(currentTenant.plan)?.name || currentTenant.plan : 'Licencia por elegir'}</span></div>
+    <nav aria-label="Navegación principal" className="px-3 flex-1 overflow-y-auto">{mainItems.map((item, i) => <React.Fragment key={item.id}>{(i === 0 || mainItems[i - 1].group !== item.group) && <div className="studio-nav-group text-[10px] tracking-[.18em] text-[#789184] font-medium px-3 pt-4 pb-2">{item.group}</div>}{renderNavItem(item)}</React.Fragment>)}{moreItems.length > 0 && <details className="studio-more-navigation" open={moreItems.some(item => item.id === currentView)}><summary>Mi negocio</summary>{moreItems.map(item => <React.Fragment key={item.id}>{renderNavItem(item)}</React.Fragment>)}</details>}</nav>
+    <div className="studio-sidebar-footer mx-4 mt-6 mb-5 border-t border-white/10 pt-4 space-y-1">
+      <button aria-current={currentView === 'seguridad' ? 'page' : undefined} onClick={() => navigate('seguridad')} className="text-[#9bb0a3] text-[13px] flex gap-3 items-center w-full p-2"><Settings className="w-4 h-4" />Seguridad de mi cuenta</button>
+      <button onClick={() => { setMobileOpen(false); props.onOpenHelp?.(); }} className="text-[#9bb0a3] text-[13px] flex gap-3 items-center w-full p-2"><HelpCircle className="w-4 h-4" />Ayuda y soporte</button>
+      <div className="flex gap-2 items-center pt-4 px-2"><span className="rounded-full bg-[#cfb58d] text-[#19352c] w-8 h-8 shrink-0 flex justify-center items-center text-[10px] font-semibold">{currentUser?.nombre?.slice(0, 2).toUpperCase() || 'US'}</span><div className="min-w-0 flex-1"><p className="text-[#e5ebe6] text-[13px] truncate">{currentUser?.nombre || 'Usuario'}</p><p className="text-[#b6c8bd] text-[11px] mt-1">{role}</p></div><button onClick={props.onLogout} title="Cerrar todas mis sesiones" aria-label="Cerrar todas mis sesiones" className="text-[#b6c8bd] hover:text-white p-1"><LogOut className="w-4 h-4" /></button></div>
+    </div>
+  </>;
+  return <>
+    <aside className="studio-sidebar hidden lg:flex fixed top-0 bottom-0 left-0 w-[232px] bg-[#17191c] flex-col z-40">{sidebar}</aside>
+    {mobileOpen && <div className="fixed inset-0 z-50 lg:hidden bg-black/40" onClick={() => setMobileOpen(false)}><aside ref={mobileMenu} role="dialog" aria-modal="true" aria-label="Menú móvil" className="w-[260px] max-w-[85vw] h-full bg-[#17191c] flex flex-col relative" onClick={e => e.stopPropagation()}><button onClick={() => setMobileOpen(false)} aria-label="Cerrar menú" className="absolute right-3 top-4 text-white p-2"><X className="w-4 h-4" /></button>{sidebar}</aside></div>}
+    <header className="studio-topbar sticky top-0 z-30 bg-[#fffefa]/95 backdrop-blur border-b border-[#e8ebe4] lg:ml-[232px]">
+      <div className="studio-topbar-inner h-[70px] px-4 sm:px-8 flex justify-between items-center gap-4"><div className="flex items-center gap-3"><button onClick={() => setMobileOpen(true)} aria-label="Abrir menú" className="lg:hidden studio-icon-button"><Menu className="w-4 h-4" /></button><span className="workspace-label text-[13px] text-stone-400 hidden sm:inline">Espacio de trabajo</span><ChevronRight className="w-3 h-3 text-stone-300 hidden sm:inline" /><span className="workspace-title text-xs font-medium">{title}</span></div><div className="studio-topbar-tools flex items-center gap-4">{!admin && <WorkspaceSearch sucursalId={currentSucursal?.id} rol={currentRole} onNavigate={path => onSelectView(path.replace(/^\/app\//, ''))} />}<label className="flex items-center gap-2"><span className="text-[10px] text-stone-400 hidden xl:inline">Sucursal</span><select aria-label="Seleccionar sucursal" className="bg-transparent text-xs text-stone-600 border border-[#e6e9e1] rounded-lg py-2 px-2 max-w-[170px]" value={currentSucursal?.id || ''} onChange={e => { const branch = sucursales.find(s => s.id === e.target.value); if (branch) props.onSelectSucursal(branch); }}>{!sucursales.length && <option value="">Sin sucursal</option>}{sucursales.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}</select></label><button onClick={props.onOpenPublicBooking} className="text-[13px] flex items-center gap-2 text-[#6b7c70]" title="Abrir página de reservas"><ExternalLink className="w-3.5 h-3.5" /><span className="hidden md:inline">Ver página de reservas</span><ArrowUpRight className="w-3 h-3 hidden md:block" /></button></div></div>
+      {['EN_RIESGO', 'SUSPENDIDO', 'CANCELADO'].includes(currentTenant?.estado || '') && !admin && <div className="bg-amber-50 text-amber-900 px-4 sm:px-8 py-3 text-xs flex flex-wrap gap-2 justify-between"><span>{currentTenant?.estado === 'EN_RIESGO' ? 'Hay un pago pendiente. Revisa el estado y la fecha de suspensión de tu licencia.' : 'Tu licencia no está activa. El propietario puede revisar la suscripción para recuperar el acceso.'}</span>{owner && <button className="underline font-semibold" onClick={() => navigate('suscripcion')}>Revisar licencia →</button>}</div>}
+      {!admin && !(currentUser?.verificationRequired && !currentUser?.emailVerifiedAt) && <FinancialStatus key={`${currentTenant?.id}:${currentUser?.id}`} owner={owner} tenantId={currentTenant?.id || ''} branchId={currentSucursal?.id} />}
 
-      {currentTenant?.estado === 'SUSPENDIDO' && currentRole !== 'SUPER_ADMIN' && (
-        <div className="bg-rose-50 border-b border-rose-200 text-rose-900 px-4 py-1.5 text-xs font-medium flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-            <span>Suscripción suspendida temporalmente por falta de pago. Los datos se mantienen aislados y seguros.</span>
-          </div>
-          <button
-            onClick={() => onSelectView('suscripcion')}
-            className="text-xs font-semibold text-rose-800 hover:text-rose-950 underline underline-offset-2 transition"
-          >
-            Reactivar Acceso →
-          </button>
-        </div>
-      )}
-
-      {/* Main Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 gap-4">
-          
-          {/* Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-stone-900 text-white flex items-center justify-center shadow-sm">
-              <Scissors className="w-4 h-4 stroke-[2]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold tracking-[0.18em] text-stone-900 uppercase font-sans">
-                  SYSTECH
-                </span>
-                <span className="text-[9px] font-semibold tracking-wider px-1.5 py-0.5 rounded bg-stone-100 text-stone-600 border border-stone-200">
-                  STUDIO
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Tenant Selector & Branch */}
-          <div className="flex items-center gap-2">
-            {/* Tenant display or Super Admin switcher */}
-            {currentRole === 'SUPER_ADMIN' && tenants.length > 1 ? (
-              <div className="relative">
-                <select
-                  value={currentTenant?.id || ''}
-                  onChange={(e) => {
-                    const t = tenants.find(x => x.id === e.target.value);
-                    if (t) onSelectTenant(t);
-                  }}
-                  className="bg-white border border-stone-200 hover:border-stone-300 text-stone-900 text-xs rounded-lg pl-3 pr-7 py-1.5 font-medium focus:outline-none appearance-none cursor-pointer transition shadow-sm"
-                >
-                  {tenants.map(t => (
-                    <option key={t.id} value={t.id} className="text-stone-900">
-                      {t.nombre} ({t.plan}) {t.estado !== 'ACTIVO' ? `— [${t.estado}]` : ''}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-stone-500 absolute right-2.5 top-2.5 pointer-events-none" />
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-stone-100/70 border border-stone-200 rounded-lg text-xs font-semibold text-stone-900">
-                <Building2 className="w-3.5 h-3.5 text-stone-500" />
-                <span>{currentTenant?.nombre || 'Mi Barbería'}</span>
-                <span className="text-[10px] bg-stone-900 text-white px-1.5 py-0.2 rounded font-bold uppercase tracking-wider">
-                  {currentTenant?.plan || 'PRO'}
-                </span>
-              </div>
-            )}
-
-            {/* Branch selector */}
-            {sucursales.length > 1 && currentRole !== 'SUPER_ADMIN' && (
-              <div className="relative hidden md:block">
-                <select
-                  value={currentSucursal?.id || ''}
-                  onChange={(e) => {
-                    const s = sucursales.find(x => x.id === e.target.value);
-                    if (s) onSelectSucursal(s);
-                  }}
-                  className="bg-stone-50 border border-stone-200 hover:border-stone-300 text-stone-700 text-xs rounded-lg pl-3 pr-7 py-1.5 font-normal focus:outline-none appearance-none cursor-pointer transition"
-                >
-                  {sucursales.map(s => (
-                    <option key={s.id} value={s.id} className="text-stone-900">
-                      {s.nombre}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-stone-400 absolute right-2.5 top-2.5 pointer-events-none" />
-              </div>
-            )}
-          </div>
-
-          {/* Quick Actions & Role Switcher */}
-          <div className="flex items-center gap-2">
-            
-            {/* Landing page link */}
-            {onOpenLanding && (
-              <button
-                onClick={onOpenLanding}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200/80 border border-stone-200 text-xs text-stone-700 hover:text-stone-950 font-medium transition"
-                title="Ver Página Web Comercial"
-              >
-                <Globe className="w-3.5 h-3.5 text-stone-600" />
-                <span className="hidden xl:inline">Web Comercial</span>
-              </button>
-            )}
-
-            {/* Shop Settings */}
-            {currentRole === 'DUENO' && onOpenSettings && (
-              <button
-                onClick={onOpenSettings}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200/80 border border-stone-200 text-xs text-stone-700 hover:text-stone-950 font-medium transition"
-                title="Configuración de Barbería"
-              >
-                <Settings className="w-3.5 h-3.5 text-stone-600" />
-                <span className="hidden xl:inline">Ajustes</span>
-              </button>
-            )}
-
-            {/* Help & Support Modal */}
-            {onOpenHelp && (
-              <button
-                onClick={onOpenHelp}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200/80 border border-stone-200 text-xs text-stone-700 hover:text-stone-950 font-medium transition"
-                title="Centro de Ayuda y Soporte por WhatsApp"
-              >
-                <HelpCircle className="w-3.5 h-3.5 text-stone-600" />
-                <span className="hidden md:inline">Ayuda</span>
-              </button>
-            )}
-
-            {/* Public Booking Link */}
-            <button
-              onClick={onOpenPublicBooking}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200/80 border border-stone-200 text-xs text-stone-700 hover:text-stone-900 font-medium transition"
-              title="Abrir Portal Público de Reservas"
-            >
-              <ExternalLink className="w-3 h-3 text-stone-600" />
-              <span className="hidden md:inline">Portal Reservas</span>
-            </button>
-
-            {/* New Shop Onboarding */}
-            <button
-              onClick={onOpenOnboarding}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold transition shadow-sm"
-            >
-              <Sparkles className="w-3 h-3 text-amber-300" />
-              <span className="hidden sm:inline">Nueva Barbería</span>
-            </button>
-
-            {/* Authenticated User Profile Badge */}
-            <div className="flex items-center gap-2 px-2.5 py-1 bg-stone-100 rounded-lg border border-stone-200 text-xs font-medium text-stone-800">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
-              <div className="truncate max-w-[120px] sm:max-w-[160px]">
-                <span className="font-semibold block leading-tight truncate">{currentUser?.nombre || 'Usuario'}</span>
-                <span className="text-[10px] text-stone-500 block leading-tight">
-                  {currentRole === 'DUENO' ? 'Dueño' : currentRole === 'GERENTE' ? 'Gerente' : currentRole === 'BARBERO' ? 'Barbero' : currentRole === 'SUPER_ADMIN' ? 'Super Admin' : 'Cliente'}
-                </span>
-              </div>
-            </div>
-
-            {/* Logout button */}
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="p-1.5 rounded-lg text-stone-500 hover:text-stone-900 hover:bg-stone-100 transition"
-                title="Cerrar Sesión"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
-
-          </div>
-        </div>
-
-        {/* Minimalist Tab Navigation */}
-        <nav className="flex items-center space-x-1 overflow-x-auto py-2 border-t border-stone-100 no-scrollbar text-xs font-medium">
-          {currentRole === 'SUPER_ADMIN' ? (
-            <>
-              <button
-                onClick={() => onSelectView('superadmin')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'superadmin'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <Crown className="w-3.5 h-3.5" />
-                Métricas SaaS & Cuentas
-              </button>
-              <button
-                onClick={() => onSelectView('auditoria')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'auditoria'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                Bitácora de Auditoría
-              </button>
-            </>
-          ) : currentRole === 'BARBERO' ? (
-            <>
-              <button
-                onClick={() => onSelectView('agenda')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'agenda'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                Mi Agenda del Día
-              </button>
-              <button
-                onClick={() => onSelectView('pos')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'pos'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                Terminal POS
-              </button>
-              <button
-                onClick={() => onSelectView('barberos')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'barberos'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                Mis Comisiones
-              </button>
-            </>
-          ) : (
-            // DUENO or GERENTE
-            <>
-              <button
-                onClick={() => onSelectView('agenda')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'agenda'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                Agenda & Citas
-              </button>
-
-              <button
-                onClick={() => onSelectView('pos')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'pos'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <CreditCard className="w-3.5 h-3.5" />
-                Terminal POS
-              </button>
-
-              <button
-                onClick={() => onSelectView('barberos')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'barberos'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <Users className="w-3.5 h-3.5" />
-                Barberos & Comisiones
-              </button>
-
-              <button
-                onClick={() => onSelectView('clientes')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'clientes'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                Clientes CRM
-              </button>
-
-              <button
-                onClick={() => onSelectView('inventario')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                  currentView === 'inventario'
-                    ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                    : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                }`}
-              >
-                <Package className="w-3.5 h-3.5" />
-                Inventario & Kardex
-              </button>
-
-              {currentRole === 'DUENO' && (
-                <button
-                  onClick={() => onSelectView('landing-config')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                    currentView === 'landing-config'
-                      ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                  }`}
-                >
-                  <Globe className="w-3.5 h-3.5" />
-                  Personalizar Web
-                </button>
-              )}
-
-              {currentRole === 'DUENO' && (
-                <button
-                  onClick={() => onSelectView('reportes')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                    currentView === 'reportes'
-                      ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                  }`}
-                >
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  Analítica Financiera
-                </button>
-              )}
-
-              {currentTenant?.plan === 'PRO' && (
-                <button
-                  onClick={() => onSelectView('notificaciones')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                    currentView === 'notificaciones'
-                      ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                  }`}
-                >
-                  <Bell className="w-3.5 h-3.5" />
-                  Notificaciones Pro
-                </button>
-              )}
-
-              {currentRole === 'DUENO' && (
-                <button
-                  onClick={() => onSelectView('suscripcion')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition ${
-                    currentView === 'suscripcion'
-                      ? 'bg-stone-900 text-white font-semibold shadow-sm'
-                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-                  }`}
-                >
-                  <Building2 className="w-3.5 h-3.5" />
-                  Suscripción & Plan
-                </button>
-              )}
-            </>
-          )}
-        </nav>
-      </div>
     </header>
-  );
+    {!admin && <nav className="studio-mobile-nav" aria-label="Navegación rápida">{quickItems.map(item => <button type="button" key={item.id} aria-current={currentView===item.id?'page':undefined} onClick={()=>navigate(item.id)}><item.icon size={20} aria-hidden="true"/><span>{item.label}</span></button>)}<button type="button" aria-current={!quickItems.some(item => item.id === currentView) ? 'page' : undefined} onClick={()=>setMobileOpen(true)} aria-label="Abrir menú completo"><Menu size={20} aria-hidden="true"/><span>Más</span></button></nav>}
+  </>;
 };

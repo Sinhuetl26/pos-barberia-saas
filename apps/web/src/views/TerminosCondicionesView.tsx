@@ -21,6 +21,7 @@ export const TerminosCondicionesView: React.FC = () => {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+        <p role="note" className="mb-6 rounded-xl bg-amber-50 p-4 text-amber-900">Borrador para la demo. La identidad del proveedor, condiciones comerciales y canales de contacto necesitan revisión antes de contratar.</p>
         <div className="bg-white rounded-2xl border border-stone-200/90 p-8 sm:p-12 shadow-sm space-y-8 text-stone-800 text-xs sm:text-sm leading-relaxed">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-stone-950 tracking-tight">
@@ -48,7 +49,7 @@ export const TerminosCondicionesView: React.FC = () => {
           <section className="space-y-3">
             <h2 className="text-base font-bold text-stone-900">3. Modelo de Suscripción, Pagos y Facturación</h2>
             <p>
-              Los precios de los planes (Básico $499 MXN/mes y Pro $999 MXN/mes) se cobran en Moneda Nacional (MXN) de forma recurrente. Las transacciones se procesan a través de Stripe Payments México con encriptación bancaria de 256 bits.
+              Los importes y la capacidad se consultan en el catálogo vigente de planes. La moneda, tratamiento fiscal, renovación y proveedor de cobro deberán quedar definidos en las condiciones revisadas antes de contratar. Esta demo no activa cobros reales.
             </p>
             <p>
               El usuario puede cancelar su suscripción en cualquier momento desde su panel de control; la cancelación surtirá efectos al concluir el ciclo de facturación pagado en curso.
@@ -59,7 +60,7 @@ export const TerminosCondicionesView: React.FC = () => {
             <h2 className="text-base font-bold text-stone-900">4. Responsabilidades de las Partes</h2>
             <ul className="list-disc pl-5 space-y-1.5 text-stone-700">
               <li><strong>El Dueño/Administrador de la Barbería</strong> funge como Responsable directo del tratamiento de los datos de sus clientes finales y del cumplimiento de las citas y cobros acordados con ellos.</li>
-              <li><strong>SYSTECH Studio</strong> funge exclusivamente como Encargado tecnológico de la infraestructura y almacenamiento de la información, garantizando la disponibilidad del sistema con un objetivo de servicio (SLA) del 99.5% de tiempo de actividad.</li>
+              <li>El alcance del servicio, las responsabilidades sobre datos y cualquier compromiso de disponibilidad están pendientes de acordar y revisar. La demo no garantiza un nivel de disponibilidad.</li>
             </ul>
           </section>
 
@@ -76,7 +77,7 @@ export const TerminosCondicionesView: React.FC = () => {
               Para cualquier controversia derivada del presente contrato, las partes se someten a la jurisdicción de los tribunales competentes en México y a las leyes federales aplicables.
             </p>
             <p>
-              Para dudas o aclaraciones legales, contáctenos en: <strong>legal@systech.mx</strong> o al teléfono de atención a clientes.
+              El canal real para dudas contractuales está pendiente de definir. No se proporciona una dirección de contacto ficticia.
             </p>
           </section>
         </div>

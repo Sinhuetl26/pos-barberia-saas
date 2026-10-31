@@ -1,6 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import '../styles/collections-workspace.css';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api';
+import { CashCustody } from '../components/CashCustody';
+import { CloseCashGuide } from '../components/CloseCashGuide';
+import { CommercialControls } from '../components/CommercialControls';
+import { OperationState } from '../components/OperationState';
+import { OperationDialog } from '../components/OperationDialog';
+import { hasLicenseCapability, LicensePlanCode, licensePlan } from '../utils/licenseCatalog';
 import { Barbero, Sucursal, Comision, CorteCaja } from '../types';
+import '../styles/team-experience.css';
 import {
   Users,
   Plus,
@@ -22,11 +32,32 @@ import {
   Sparkles
 } from 'lucide-react';
 
+export function commissionReviewRows(commissions: Comision[], ids: string[], branchId: string) {
+  if (!branchId || !ids.length || new Set(ids).size !== ids.length) throw new Error('Selecciona comisiones pendientes de una sucursal antes de revisar el pago.');
+  return ids.map(id => {
+    const row = commissions.find(item => item.id === id);
+    const amount = row?.monto;
+    if (!row || row.pagada || row.barbero?.sucursalId !== branchId || amount == null || typeof amount === 'boolean' || String(amount).trim() === '' || !Number.isFinite(Number(amount)) || Math.abs(Number(amount) * 100 - Math.round(Number(amount) * 100)) > 0.00001) throw new Error('La selección cambió. Actualiza las comisiones antes de revisar el pago.');
+    return { id, barberoId: row.barberoId, nombre: row.barbero?.nombre || 'Barbero', folio: row.venta?.folio || row.ventaId, monto: Number(amount) };
+  });
+}
+
+export function commissionReviewMatches(rows: ReturnType<typeof commissionReviewRows>, current: Comision[], branchId: string) {
+  try { return JSON.stringify(rows) === JSON.stringify(commissionReviewRows(current, rows.map(row => row.id), branchId)); }
+  catch { return false; }
+}
+
+export function commissionReviewPending(pending: any, ids: string[]) {
+  return pending?.path === '/comisiones/pagar' && pending.body?.metodoPagoComision === 'EFECTIVO'
+    && Array.isArray(pending.body.comisionIds) && JSON.stringify(pending.body.comisionIds) === JSON.stringify(ids);
+}
+
 interface BarberosViewProps {
   currentSucursal: Sucursal | null;
   currentRole: string;
   currentUser?: any;
-  plan: 'BASICO' | 'PRO';
+  plan: LicensePlanCode;
+  workspaceMode?: 'equipo' | 'caja';
   onNavigateToSubscription?: () => void;
 }
 
@@ -40,25 +71,45 @@ const BARBER_AVATARS = [
   'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80'
 ];
 
+function BarberPortrait({ barber }: { barber: Barbero }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [barber.avatarUrl]);
+  return barber.avatarUrl && !failed
+    ? <img src={barber.avatarUrl} alt={barber.nombre} loading="lazy" onError={() => setFailed(true)} />
+    : <div className="team-portrait-initial" aria-hidden="true">{barber.nombre.split(' ').filter(Boolean).map(part => part.charAt(0)).slice(0, 2).join('')}</div>;
+}
+
 export const BarberosView: React.FC<BarberosViewProps> = ({
   currentSucursal,
   currentRole,
   currentUser,
   plan,
+  workspaceMode = 'equipo',
   onNavigateToSubscription
 }) => {
   const isBarberoRole = currentRole === 'BARBERO';
+  const isCashier = currentRole === 'CAJERO';
+  const hasAdvancedCommercialControls = hasLicenseCapability(plan, 'PROFESSIONAL_PRICING');
+  const [searchParams] = useSearchParams();
 
   // Tabs: Barbero role gets only 'perfil' or 'comisiones'. Owner gets 'barberos', 'cortes', 'comisiones'.
-  const [activeTab, setActiveTab] = useState<'barberos' | 'cortes' | 'comisiones' | 'perfil'>(
-    isBarberoRole ? 'perfil' : 'barberos'
+  const [activeTab, setActiveTab] = useState<'barberos' | 'cortes' | 'comisiones' | 'perfil' | 'reglas'>(
+    isBarberoRole ? 'cortes' : workspaceMode === 'caja' || isCashier || searchParams.get('tab') === 'cortes' ? 'cortes' : 'barberos'
   );
+  const requestedTab = searchParams.get('tab');
+  useEffect(() => {
+    setActiveTab(isBarberoRole ? 'cortes' : workspaceMode === 'caja' || isCashier || requestedTab === 'cortes' ? 'cortes' : 'barberos');
+  }, [requestedTab, isBarberoRole, isCashier, workspaceMode]);
 
   const [barberos, setBarberos] = useState<Barbero[]>([]);
+  const [teamSearch, setTeamSearch] = useState('');
+  const [teamFilter, setTeamFilter] = useState<'todos' | 'activos' | 'inactivos'>('todos');
   const [comisiones, setComisiones] = useState<Comision[]>([]);
   const [cortes, setCortes] = useState<CorteCaja[]>([]);
   const [totalPendiente, setTotalPendiente] = useState<number>(0);
   const [totalPagado, setTotalPagado] = useState<number>(0);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   const [filterBarberoId, setFilterBarberoId] = useState<string>('');
 
@@ -66,18 +117,23 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
   const [showAddBarberoModal, setShowAddBarberoModal] = useState(false);
   const [showEditBarberoModal, setShowEditBarberoModal] = useState(false);
   const [editingBarbero, setEditingBarbero] = useState<Barbero | null>(null);
+  const teamBusy = useRef(false);
+  const [teamSubmitting, setTeamSubmitting] = useState(false);
+  const [teamError, setTeamError] = useState('');
+  const [teamNotice, setTeamNotice] = useState('');
 
   const [showOpenCorteModal, setShowOpenCorteModal] = useState(false);
   const [showArqueoModal, setShowArqueoModal] = useState(false);
   const [activeCorte, setActiveCorte] = useState<CorteCaja | null>(null);
+  const [cashScreen, setCashScreen] = useState<'turno' | 'historial'>('turno');
 
   // Form: Nuevo Barbero
   const [nombreBarbero, setNombreBarbero] = useState('');
   const [telefonoBarbero, setTelefonoBarbero] = useState('');
   const [emailBarbero, setEmailBarbero] = useState('');
   const [avatarBarbero, setAvatarBarbero] = useState('');
-  const [especialidadBarbero, setEspecialidadBarbero] = useState('Master Barber');
-  const [descripcionBarbero, setDescripcionBarbero] = useState('Especialista en cortes clásicos, fades y ritual de barba.');
+  const [especialidadBarbero, setEspecialidadBarbero] = useState('');
+  const [descripcionBarbero, setDescripcionBarbero] = useState('');
   const [visibleEnWebBarbero, setVisibleEnWebBarbero] = useState(true);
   const [comisionServicios, setComisionServicios] = useState<number>(50);
   const [comisionProductos, setComisionProductos] = useState<number>(10);
@@ -85,7 +141,6 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
   const [horarioInicio, setHorarioInicio] = useState('09:00');
   const [horarioFin, setHorarioFin] = useState('20:00');
   const [crearAccesoUsuario, setCrearAccesoUsuario] = useState(false);
-  const [passwordAcceso, setPasswordAcceso] = useState('');
 
   // Form: Apertura Caja
   const [fondoInicial, setFondoInicial] = useState<number>(1000);
@@ -116,19 +171,46 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
   const [miTelefono, setMiTelefono] = useState('');
   const [perfilSaved, setPerfilSaved] = useState(false);
 
+  const cashBusy = useRef(false);
+  const [cashSubmitting, setCashSubmitting] = useState(false);
+  const [cashError,setCashError]=useState('');
+  const [cashNotice,setCashNotice]=useState('');
+  const [cashNoticeWarning,setCashNoticeWarning]=useState(false);
   const [selectedComisiones, setSelectedComisiones] = useState<string[]>([]);
+  const [payrollReview, setPayrollReview] = useState<{ scope: string; rows: ReturnType<typeof commissionReviewRows> } | null>(null);
+  const payrollBusy = useRef(false);
+  const [payrollSubmitting, setPayrollSubmitting] = useState(false);
+  const [payrollUncertain, setPayrollUncertain] = useState(false);
+  const [payrollError, setPayrollError] = useState('');
+  const loadSerial = useRef(0);
+  const branchScope = `${api.getTenantId()}:${api.getUserId()}:${currentSucursal?.id}:${currentUser?.rol}`;
+  const activeBranchScope = useRef(branchScope); activeBranchScope.current = branchScope;
 
   useEffect(() => {
+    setBarberos([]); setComisiones([]); setCortes([]); setActiveCorte(null); setShowArqueoModal(false);
+    setShowAddBarberoModal(false); setShowEditBarberoModal(false); setTeamError(''); setTeamNotice('');
+    setPayrollReview(null); setPayrollUncertain(false); setPayrollError(''); setSelectedComisiones([]);
     loadData();
-  }, [currentSucursal?.id]);
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail?.completed) { setShowOpenCorteModal(false); if (detail.path !== '/cortes-caja/cerrar') setShowArqueoModal(false); }
+      void loadData();
+    };
+    window.addEventListener('systech:financial', refresh);
+    return () => { loadSerial.current++; window.removeEventListener('systech:financial', refresh); };
+  }, [branchScope]);
 
   const loadData = async () => {
+    const request = ++loadSerial.current, requestedScope = branchScope;
+    setDataLoading(true);
+    setLoadError('');
     try {
       const [barbs, comData, cortesData] = await Promise.all([
         api.getBarberos(currentSucursal?.id),
-        api.getComisiones(),
-        api.getCortesCaja(currentSucursal?.id)
+        isCashier ? Promise.resolve({ comisiones: [], totalPendiente: 0, totalPagado: 0 }) : api.getComisiones(currentSucursal?.id ? { sucursalId: currentSucursal.id } : {}),
+        isBarberoRole ? Promise.resolve([]) : api.getCortesCaja(currentSucursal?.id)
       ]);
+      if (request !== loadSerial.current || requestedScope !== activeBranchScope.current) return;
       setBarberos(barbs);
       setComisiones(comData.comisiones);
       setTotalPendiente(comData.totalPendiente);
@@ -140,22 +222,22 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
       // Si es rol BARBERO, buscar su propio perfil
       if (isBarberoRole) {
-        const myB = barbs.find((b: any) => b.email === currentUser?.email || b.id === currentUser?.barberoId);
+        const myB = barbs.find((b: any) => b.id === currentUser?.barberoId);
         if (myB) {
           setMiAvatar(myB.avatarUrl || '');
-          setMiEspecialidad(myB.especialidad || 'Master Barber');
+          setMiEspecialidad(myB.especialidad || '');
           setMiDescripcion(myB.descripcion || '');
           setMiTelefono(myB.telefono || '');
         }
       }
-    } catch (e) {
-      console.error('Error al cargar datos:', e);
-    }
+    } catch (e: any) {
+      if (request === loadSerial.current && requestedScope === activeBranchScope.current) setLoadError(e.message || 'No pudimos consultar el equipo, la caja y las comisiones.');
+    } finally { if (request === loadSerial.current && requestedScope === activeBranchScope.current) setDataLoading(false); }
   };
 
   // Denominations calculator logic
   const calculateTotalFisico = (): number => {
-    if (ajusteManualEfectivo !== null && ajusteManualEfectivo > 0) {
+    if (ajusteManualEfectivo !== null && ajusteManualEfectivo >= 0) {
       return ajusteManualEfectivo;
     }
     const total =
@@ -176,20 +258,18 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
   const totalFisicoContado = calculateTotalFisico();
   const fondoTurno = activeCorte ? Number(activeCorte.fondoInicial) : 0;
-  const ventasEfTurno = activeCorte ? Number(activeCorte.totalEfectivo) : 0;
-  const totalEsperado = fondoTurno + ventasEfTurno;
-  const diferenciaArqueo = Math.round((totalFisicoContado - totalEsperado) * 100) / 100;
 
   const handleCreateBarbero = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentSucursal?.id) return;
+    if (!currentSucursal?.id || teamBusy.current) return;
 
-    if (plan === 'BASICO' && barberos.length >= 3) {
-      alert('Límite de 3 barberos alcanzado en el Plan Básico. Actualiza a Plan Pro.');
+    if (barberos.filter(b => b.activo).length >= (licensePlan(plan)?.barbersPerBranch || 0)) {
+      alert(`Alcanzaste las ${licensePlan(plan)?.barbersPerBranch} plazas activas de esta sucursal. Desactiva personal o revisa tu licencia.`);
       if (onNavigateToSubscription) onNavigateToSubscription();
       return;
     }
 
+    teamBusy.current = true; setTeamSubmitting(true); setTeamError(''); setTeamNotice('');
     try {
       await api.createBarbero({
         sucursalId: currentSucursal.id,
@@ -205,7 +285,6 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
         diasDescanso,
         horarioInicio,
         horarioFin,
-        password: crearAccesoUsuario ? passwordAcceso : undefined,
         crearAcceso: crearAccesoUsuario
       });
 
@@ -214,19 +293,20 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
       setTelefonoBarbero('');
       setEmailBarbero('');
       setAvatarBarbero('');
-      setPasswordAcceso('');
+
       setCrearAccesoUsuario(false);
       loadData();
-      alert('¡Barbero registrado exitosamente!');
+      setTeamNotice('Barbero registrado. Si solicitaste una invitación, consulta su estado en Accesos.');
     } catch (e: any) {
-      alert(e.message);
-    }
+      setTeamError(e.message || 'No se confirmó el registro. Consulta el equipo antes de repetir el alta.');
+    } finally { teamBusy.current = false; setTeamSubmitting(false); }
   };
 
   const handleSaveBarberoEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingBarbero) return;
+    if (!editingBarbero || teamBusy.current) return;
 
+    teamBusy.current = true; setTeamSubmitting(true); setTeamError(''); setTeamNotice('');
     try {
       await api.updateBarbero(editingBarbero.id, {
         nombre: editingBarbero.nombre,
@@ -247,15 +327,15 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
       setShowEditBarberoModal(false);
       setEditingBarbero(null);
       loadData();
-      alert('¡Barbero actualizado exitosamente!');
+      setTeamNotice('Perfil del barbero actualizado.');
     } catch (e: any) {
-      alert(e.message);
-    }
+      setTeamError(e.message || 'No se confirmó la actualización. Conservamos los datos del formulario.');
+    } finally { teamBusy.current = false; setTeamSubmitting(false); }
   };
 
   const handleSaveMiPerfil = async (e: React.FormEvent) => {
     e.preventDefault();
-    const myB = barberos.find((b: any) => b.email === currentUser?.email || b.id === currentUser?.barberoId);
+    const myB = barberos.find((b: any) => b.id === currentUser?.barberoId);
     if (!myB) return alert('No se encontró tu perfil de barbero asociado.');
 
     try {
@@ -275,54 +355,77 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
   const handleOpenCorte = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentSucursal?.id) return;
+    if (!currentSucursal?.id || cashBusy.current) return;
+    cashBusy.current = true; setCashSubmitting(true);setCashError('');setCashNotice('');
     try {
       const corte = await api.abrirCorteCaja(currentSucursal.id, fondoInicial, notasApertura);
       setActiveCorte(corte);
       setShowOpenCorteModal(false);
       loadData();
     } catch (e: any) {
-      alert(e.message);
-    }
+      setCashError(api.pendingFinancial()?'Apertura por confirmar. Conserva esta pestaña; cancela esta ventana y usa Recuperar resultado antes de abrir otra caja.':e.message);
+    } finally { cashBusy.current = false; setCashSubmitting(false); }
   };
 
   const handleCloseCorteConArqueo = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeCorte) return;
+    if (!activeCorte || cashBusy.current) return;
+    cashBusy.current = true; setCashSubmitting(true);setCashError('');setCashNotice('');
     try {
       const res = await api.cerrarCorteCaja(activeCorte.id, totalFisicoContado, notasCierre);
       const msg = res.resumen.descuadrado
         ? `Caja cerrada con diferencia: $${res.resumen.descuadre} MXN`
         : '¡Caja perfectamente cuadrada!';
-      alert(msg);
-      
-      // Auto-abrir comprobante de arqueo
-      api.printCorteHtml(activeCorte.id);
+      setCashNoticeWarning(Boolean(res.resumen.descuadrado));
+      setCashNotice(msg+' Puedes abrir el comprobante desde el historial.');
 
       setShowArqueoModal(false);
       setActiveCorte(null);
       loadData();
     } catch (e: any) {
-      alert(e.message);
-    }
+      setCashError(api.pendingFinancial()?'Cierre por confirmar. Conserva esta pestaña; cancela esta ventana y usa Recuperar resultado antes de repetir el corte.':e.message);
+    } finally { cashBusy.current = false; setCashSubmitting(false); }
   };
 
   const handlePagarComisiones = async () => {
-    if (selectedComisiones.length === 0) return alert('Selecciona al menos una comisión');
+    if (!payrollReview || payrollBusy.current) return;
+    if (payrollReview.scope !== activeBranchScope.current) { setPayrollError('Cambió la cuenta o sucursal. Vuelve a revisar la selección antes de pagar.'); return; }
+    const ids = payrollReview.rows.map(row => row.id);
+    const scope = payrollReview.scope;
+    payrollBusy.current = true; setPayrollSubmitting(true); setPayrollError('');
     try {
-      await api.pagarComisiones(selectedComisiones, 'EFECTIVO');
-      alert(`Se liquidaron ${selectedComisiones.length} comisiones.`);
+      const pending = api.pendingFinancial();
+      if (pending && !commissionReviewPending(pending, ids)) {
+        setPayrollError('Hay otra operación pendiente. Vuelve sin pagar y recupera su resultado desde el aviso superior antes de revisar esta liquidación.');
+        return;
+      }
+      if (!pending) {
+        const latest = await api.getComisiones();
+        if (scope !== activeBranchScope.current || !commissionReviewMatches(payrollReview.rows, latest.comisiones, currentSucursal?.id || '')) {
+          setPayrollError('La selección, destinatario o importe cambió. Vuelve sin pagar, actualiza las comisiones y revisa de nuevo.');
+          return;
+        }
+      }
+      if (scope !== activeBranchScope.current) { setPayrollError('Cambió la cuenta o sucursal antes de confirmar. No enviamos este pago.'); return; }
+      await api.pagarComisiones(ids, 'EFECTIVO');
+      if (scope !== activeBranchScope.current) return;
+      setTeamNotice(`Se liquidaron ${ids.length} comisiones.`);
+      setPayrollReview(null); setPayrollUncertain(false);
       setSelectedComisiones([]);
       loadData();
     } catch (e: any) {
-      alert(e.message);
-    }
+      if (scope !== activeBranchScope.current) return;
+      const pending = api.pendingFinancial();
+      const samePending = commissionReviewPending(pending, ids);
+      setPayrollUncertain(samePending);
+      setPayrollError(samePending ? 'El resultado del pago no está confirmado. Conservamos esta misma selección. Recupera el resultado antes de intentar otra liquidación.' : e.message || 'No se confirmó la liquidación.');
+    } finally { payrollBusy.current = false; setPayrollSubmitting(false); }
   };
 
   const filteredComisiones = comisiones.filter(c => {
     if (isBarberoRole) {
       // Barbero can only see their own commissions
-      const myB = barberos.find((b: any) => b.email === currentUser?.email || b.id === currentUser?.barberoId);
+      const myB = barberos.find((b: any) => b.id === currentUser?.barberoId);
       if (myB && c.barberoId !== myB.id) return false;
     } else if (filterBarberoId && c.barberoId !== filterBarberoId) {
       return false;
@@ -330,33 +433,45 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
     return true;
   });
 
+  const visibleTeam = barberos.filter(barber =>
+    (teamFilter === 'todos' || (teamFilter === 'activos' ? barber.activo : !barber.activo)) &&
+    `${barber.nombre} ${barber.especialidad || ''}`.toLocaleLowerCase('es-MX').includes(teamSearch.toLocaleLowerCase('es-MX'))
+  );
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-luxury-in">
-      
+    <div className={`studio-page operation-page team-page team-workspace ${activeTab === 'cortes' ? 'cash-simple-page' : ''}`}>
+      {teamNotice && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-900">{teamNotice}</p>}
+      {cashNotice&&<p role="status" className={`mb-4 rounded-xl p-3 text-sm ${cashNoticeWarning ? 'bg-amber-50 text-amber-900' : 'bg-emerald-50 text-emerald-900'}`}>{cashNotice}</p>}
+      {cashError&&!showArqueoModal&&!showOpenCorteModal&&<p role="alert" className="mb-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">{cashError}</p>}
+      {loadError && <div role="alert" className="operation-error"><div><p className="font-semibold">No pudimos actualizar esta sucursal</p><p>{loadError}</p></div><button onClick={loadData} className="studio-button-secondary">Reintentar</button></div>}
+      {dataLoading && <p role="status" className="text-sm operation-muted mb-4">Consultando equipo, caja y comisiones…</p>}
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+      <div className="team-heading">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-stone-900">
-              {isBarberoRole ? 'Mi Perfil & Nómina de Barbero' : 'Barberos, Comisiones & Arqueo de Caja'}
+            <h1 className="studio-title">
+              {isBarberoRole ? activeTab === 'cortes' ? 'Mi caja' : activeTab === 'comisiones' ? 'Mis comisiones' : 'Mi perfil' : isCashier || activeTab === 'cortes' ? 'Caja' : activeTab === 'comisiones' ? 'Comisiones del equipo' : 'Equipo'}
             </h1>
             <span className="text-[10px] font-semibold tracking-wide px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">
-              {currentSucursal?.nombre || 'Matriz'}
+              {currentSucursal?.nombre || 'Sin sucursal seleccionada'}
             </span>
           </div>
-          <p className="text-xs text-stone-500 mt-1">
+          <p className="team-heading-copy" hidden={activeTab === 'cortes'}>
             {isBarberoRole
               ? 'Personaliza tu foto de perfil, especialidad y consulta tus comisiones y propinas acumuladas.'
-              : 'Gestión de equipo, perfiles públicos de barberos, arqueo físico de caja y liquidación de nómina.'}
+               : isCashier || workspaceMode === 'caja' ? 'Entregas de efectivo, turnos y cierres de tu sucursal. Las ventas y el efectivo en caja se revisan por separado.' : 'Perfiles, horarios y comisiones de tu sucursal.'}
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center bg-stone-100 border border-stone-200 rounded-xl p-1 gap-1">
+        {workspaceMode !== 'caja' && <div className="operation-tabs" role="group" aria-label="Secciones de equipo y caja">
           {isBarberoRole ? (
             <>
+              <button type="button" className="cash-barber-tab" aria-pressed={activeTab === 'cortes'} onClick={() => setActiveTab('cortes')}>Mi efectivo</button>
               <button
                 onClick={() => setActiveTab('perfil')}
+                aria-pressed={activeTab === 'perfil'}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
                   activeTab === 'perfil' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
                 }`}
@@ -364,53 +479,71 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                 <UserCheck className="w-3.5 h-3.5 text-stone-700" />
                 <span>Mi Perfil</span>
               </button>
-              <button
+              {!isCashier && (<button
                 onClick={() => setActiveTab('comisiones')}
+                aria-pressed={activeTab === 'comisiones'}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
                   activeTab === 'comisiones' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 <DollarSign className="w-3.5 h-3.5 text-stone-700" />
-                <span>Mis Comisiones & Propinas</span>
-              </button>
+                <span>Comisiones</span>
+              </button>)}
             </>
           ) : (
             <>
-              <button
+              {!isCashier && (<button
                 onClick={() => setActiveTab('barberos')}
+                aria-pressed={activeTab === 'barberos'}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
                   activeTab === 'barberos' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 <Users className="w-3.5 h-3.5 text-stone-700" />
-                <span>Equipo ({barberos.length})</span>
-              </button>
+                <span>Equipo{!dataLoading && !loadError ? ` (${barberos.length})` : ''}</span>
+              </button>)}
+              {['DUENO', 'GERENTE'].includes(currentRole) && (
+                <button
+                  type="button"
+                  onClick={() => hasAdvancedCommercialControls ? setActiveTab('reglas') : onNavigateToSubscription?.()}
+                  aria-pressed={hasAdvancedCommercialControls && activeTab === 'reglas'}
+                  title={hasAdvancedCommercialControls ? 'Configurar precios por profesional y autorizaciones' : 'Disponible en Pro'}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${hasAdvancedCommercialControls && activeTab === 'reglas' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'}`}
+                >
+                  <span>Tarifas y descuentos</span>
+                  {!hasAdvancedCommercialControls && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-900">Pro</span>}
+                </button>
+              )}
               <button
                 onClick={() => setActiveTab('cortes')}
+                aria-pressed={activeTab === 'cortes'}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
                   activeTab === 'cortes' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 <Calculator className="w-3.5 h-3.5 text-stone-700" />
-                <span>Arqueo de Caja</span>
+                <span>Caja y entregas</span>
               </button>
-              <button
+              {!isCashier && (<button
                 onClick={() => setActiveTab('comisiones')}
+                aria-pressed={activeTab === 'comisiones'}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
                   activeTab === 'comisiones' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600 hover:text-stone-900'
                 }`}
               >
                 <DollarSign className="w-3.5 h-3.5 text-stone-700" />
-                <span>Nómina & Comisiones</span>
-              </button>
+                <span>Comisiones y propinas</span>
+              </button>)}
             </>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* ======================================================== */}
       {/* 1. MI PERFIL DE BARBERO (ROL BARBERO ONLY) */}
       {/* ======================================================== */}
+      {currentSucursal && activeTab === 'reglas' && hasAdvancedCommercialControls && ['DUENO', 'GERENTE'].includes(currentRole) && <CommercialControls key={currentSucursal.id} branchId={currentSucursal.id} barbers={barberos} zone={currentSucursal.zonaHoraria || 'America/Mexico_City'} />}
+      {currentSucursal && isBarberoRole && activeTab === 'cortes' && <CashCustody key={currentSucursal.id} branchId={currentSucursal.id} barber />}
       {activeTab === 'perfil' && isBarberoRole && (
         <div className="max-w-2xl bg-white border border-stone-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-stone-100">
@@ -510,181 +643,68 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
       {/* 2. DIRECTORIO DE EQUIPO (DUENO / GERENTE ONLY) */}
       {/* ======================================================== */}
       {activeTab === 'barberos' && !isBarberoRole && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-stone-500 font-medium">
-            <span>
-              {plan === 'BASICO' ? `Plan Básico: ${barberos.length}/3 barberos ocupados` : 'Plan Pro: Barberos ilimitados'}
-            </span>
-
-            <button
-              onClick={() => setShowAddBarberoModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold transition shadow-sm"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Registrar Barbero</span>
-            </button>
+        <section className="team-directory" aria-label="Directorio del equipo">
+          <div className="team-directory-intro">
+            <p>{dataLoading ? 'Consultando plazas…' : loadError ? 'Plazas no disponibles' : `${barberos.filter(b => b.activo).length} de ${licensePlan(plan)?.barbersPerBranch} plazas`}</p>
+            <button onClick={() => setShowAddBarberoModal(true)} className="studio-button"><Plus size={18} />Añadir barbero</button>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {barberos.map(b => (
-              <div key={b.id} className="bg-white border border-stone-200 rounded-2xl p-5 flex flex-col justify-between shadow-xs hover:border-stone-300 transition">
-                <div>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      {b.avatarUrl ? (
-                        <img src={b.avatarUrl} alt={b.nombre} className="w-12 h-12 rounded-full object-cover border border-stone-300 shadow-xs" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-stone-900 text-white font-bold flex items-center justify-center text-sm shadow-xs">
-                          {b.nombre.charAt(0)}
-                        </div>
-                      )}
-                      <div>
-                        <h3 className="font-bold text-stone-900 text-sm">{b.nombre}</h3>
-                        <p className="text-[11px] text-stone-500">{b.especialidad || 'Master Barber'}</p>
-                      </div>
-                    </div>
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-                      b.activo ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-stone-100 text-stone-500 border-stone-200'
-                    }`}>
-                      {b.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                  </div>
-
-                  {b.descripcion && (
-                    <p className="text-xs text-stone-600 italic bg-stone-50 p-2 rounded-lg border border-stone-100 mb-3 line-clamp-2">
-                      "{b.descripcion}"
-                    </p>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-2 bg-stone-50 p-3 rounded-xl border border-stone-200/80 mb-3 text-xs">
-                    <div>
-                      <span className="text-[10px] uppercase font-semibold text-stone-500 block">Comisión Servicios</span>
-                      <span className="text-sm font-extrabold text-stone-900">{b.comisionServiciosPct}%</span>
-                    </div>
-                    <div className="border-l border-stone-200 pl-3">
-                      <span className="text-[10px] uppercase font-semibold text-stone-500 block">Comisión Productos</span>
-                      <span className="text-sm font-extrabold text-stone-700">{b.comisionProductosPct}%</span>
-                    </div>
-                  </div>
-
-                  <div className="text-xs text-stone-600 space-y-1">
-                    <div className="flex justify-between">
-                      <span>Horario:</span>
-                      <span className="font-semibold text-stone-900">{b.horarioInicio} - {b.horarioFin}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Descanso:</span>
-                      <span className="font-semibold text-stone-900">{b.diasDescanso}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Web Pública:</span>
-                      <span className={`font-semibold ${b.visibleEnWeb !== false ? 'text-emerald-700' : 'text-stone-400'}`}>
-                        {b.visibleEnWeb !== false ? 'Visible' : 'Oculto'}
-                      </span>
-                    </div>
-                  </div>
+          <div className="team-directory-tools">
+            <label><span>Buscar</span><input type="search" value={teamSearch} onChange={event => setTeamSearch(event.target.value)} placeholder="Nombre o especialidad" /></label>
+            <label><span>Estado</span><select value={teamFilter} onChange={event => setTeamFilter(event.target.value as typeof teamFilter)}><option value="todos">Todo el equipo</option><option value="activos">Activos</option><option value="inactivos">Inactivos</option></select></label>
+          </div>
+          {!dataLoading && !loadError && barberos.length === 0 && <OperationState title="Tu equipo empieza aquí">Agrega a los profesionales, sus horarios y sus comisiones. Sus perfiles pueden aparecer en tu página de reservas.</OperationState>}
+          {barberos.length > 0 && visibleTeam.length === 0 && <p role="status" className="team-empty">No encontramos perfiles con estos filtros. Prueba otro nombre o muestra todo el equipo.</p>}
+          <div className="team-profile-grid team-directory-rows">
+            {visibleTeam.map(b => (
+              <article key={b.id} className={`team-profile ${!b.activo ? 'is-inactive' : ''}`}>
+                <div className="team-portrait">
+                  <BarberPortrait barber={b} />
+                  <span className="team-profile-state">{b.activo ? 'Activo' : 'Inactivo'}</span>
                 </div>
+                <div className="team-profile-content">
+                  <h3>{b.nombre}</h3><p className="team-specialty">{b.especialidad || 'Profesional de barbería'}</p>
 
-                <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="text-[10px] text-stone-400 block uppercase">Pendiente</span>
-                    <span className="font-extrabold text-emerald-700 text-sm">
-                      ${(b.comisionesPendientes || 0).toLocaleString('es-MX')} MXN
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setEditingBarbero(b);
-                      setShowEditBarberoModal(true);
-                    }}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold text-xs transition"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    <span>Editar</span>
-                  </button>
+                  <dl className="team-shift"><div><dt>Horario</dt><dd>{b.horarioInicio} – {b.horarioFin}</dd></div><div><dt>Descanso</dt><dd>{b.diasDescanso || 'Sin definir'}</dd></div><div><dt>Reservas públicas</dt><dd>{b.activo && b.visibleEnWeb !== false ? 'Perfil visible' : 'Perfil oculto'}</dd></div></dl>
+                  <details className="team-private-details"><summary>Comisiones y datos del perfil</summary>{b.descripcion && <p className="team-bio">{b.descripcion}</p>}<div className="team-commission"><div><span>Servicios</span><strong>{b.comisionServiciosPct}%</strong></div><div><span>Productos</span><strong>{b.comisionProductosPct}%</strong></div></div><p>Comisiones pendientes: {b.comisionesPendientes == null ? 'Sin consultar' : new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(Number(b.comisionesPendientes))}</p></details>
+                  <div className="team-profile-footer"><span>Perfil y horario</span><button onClick={() => {setEditingBarbero(b);setShowEditBarberoModal(true);}} className="studio-button-secondary" aria-label={`Editar perfil de ${b.nombre}`}><Edit2 size={16} />Editar</button></div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* ======================================================== */}
       {/* 3. ARQUEO Y CONTEO FÍSICO DE CAJA (DUENO / GERENTE ONLY) */}
       {/* ======================================================== */}
-      {activeTab === 'cortes' && !isBarberoRole && (
-        <div className="space-y-6">
-          {activeCorte ? (
-            <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <h3 className="text-base font-bold text-stone-900">Caja en Operación (Turno Activo)</h3>
-                  </div>
-                  <p className="text-xs text-stone-500 mt-1">
-                    Fondo inicial: <strong>${Number(activeCorte.fondoInicial).toFixed(2)} MXN</strong> • Abierto el {new Date(activeCorte.fechaApertura).toLocaleString('es-MX')}
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => setShowArqueoModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs sm:text-sm transition shadow-sm"
-                >
-                  <Calculator className="w-4 h-4" />
-                  <span>Realizar Arqueo & Conteo de Efectivo</span>
-                </button>
-              </div>
-
-              {/* Turn Metrics Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-200/80">
-                  <span className="text-[10px] uppercase font-bold text-stone-500 block mb-0.5">Fondo Inicial</span>
-                  <span className="text-base font-black text-stone-900">${Number(activeCorte.fondoInicial).toFixed(2)}</span>
-                </div>
-                <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-200/80">
-                  <span className="text-[10px] uppercase font-bold text-stone-500 block mb-0.5">Ventas Efectivo</span>
-                  <span className="text-base font-black text-emerald-700">+${Number(activeCorte.totalEfectivo).toFixed(2)}</span>
-                </div>
-                <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-200/80">
-                  <span className="text-[10px] uppercase font-bold text-stone-500 block mb-0.5">Tarjeta & SPEI</span>
-                  <span className="text-base font-black text-stone-900">
-                    ${(Number(activeCorte.totalTarjeta) + Number(activeCorte.totalTransferencia)).toFixed(2)}
-                  </span>
-                </div>
-                <div className="bg-stone-50 p-3.5 rounded-xl border border-stone-200/80">
-                  <span className="text-[10px] uppercase font-bold text-stone-500 block mb-0.5">Efectivo Esperado</span>
-                  <span className="text-base font-black text-stone-900 font-mono">
-                    ${totalEsperado.toFixed(2)}
-                  </span>
-                </div>
-              </div>
+      {activeTab === 'cortes' && !isBarberoRole && <>
+        <nav className="cash-view-nav" aria-label="Vistas de caja">
+          <button type="button" hidden={cashScreen === 'turno'} onClick={() => setCashScreen('turno')}>Volver al turno</button>
+          <button type="button" hidden={cashScreen === 'historial'} onClick={() => setCashScreen('historial')}>Ver cierres</button>
+        </nav>
+        {cashScreen === 'turno' ? <div className="cash-desk">
+          <section className="cash-shift-surface" aria-label="Turno actual">
+            <div className="cash-shift-main">
+              <h2>Tu turno</h2>
+              <p className="cash-shift-status">{dataLoading ? 'Consultando turno' : loadError ? 'No pudimos consultar el turno' : activeCorte ? 'Caja abierta' : 'Caja cerrada'}</p>
+              {activeCorte && <p className="cash-shift-meta">Abierto {new Date(activeCorte.fechaApertura).toLocaleString('es-MX', { timeZone: currentSucursal?.zonaHoraria || 'America/Mexico_City', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · Fondo inicial ${Number(activeCorte.fondoInicial).toFixed(2)}</p>}
+              <button type="button" disabled={dataLoading || Boolean(loadError)} className="studio-button cash-main-action" onClick={() => activeCorte ? setShowArqueoModal(true) : setShowOpenCorteModal(true)}>{activeCorte ? 'Contar y cerrar' : 'Abrir caja'}</button>
             </div>
-          ) : (
-            <div className="bg-white border border-stone-200 rounded-2xl p-8 text-center space-y-4 shadow-xs">
-              <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center mx-auto text-stone-400">
-                <Unlock className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-stone-900">Sin caja abierta en este momento</h3>
-                <p className="text-xs text-stone-500 max-w-sm mx-auto mt-1">
-                  Abre un turno con fondo inicial en efectivo para registrar ventas y habilitar el arqueo ciego.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowOpenCorteModal(true)}
-                className="px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs sm:text-sm transition shadow-sm"
-              >
-                Abrir Turno de Caja
-              </button>
-            </div>
-          )}
-
-          {/* Historial de Cortes de Caja con Botón de Imprimir Acta */}
-          <div className="bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-4">
-            <h3 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Historial de Turnos y Arqueos</h3>
+            {!dataLoading && !loadError && cortes.some(c => c.estado === 'CERRADO') && <div className="cash-last-close">
+              <h3>Último cierre</h3>
+              {cortes.filter(c => c.estado === 'CERRADO').slice(0, 1).map(c => <div key={c.id}>
+                <span>{new Date(c.fechaCierre || c.fechaApertura).toLocaleDateString('es-MX', { timeZone: currentSucursal?.zonaHoraria || 'America/Mexico_City', day: 'numeric', month: 'short' })}</span>
+                <strong>Conteo ${Number(c.conteoEfectivoReal || 0).toFixed(2)}</strong>
+                <button type="button" onClick={() => api.printCorteHtml(c.id).catch(e => setCashError(e.message))}>Ver comprobante</button>
+              </div>)}
+            </div>}
+          </section>
+          {currentSucursal && <CashCustody key={currentSucursal.id} branchId={currentSucursal.id} barber={false} cashOpen={Boolean(activeCorte) && !dataLoading && !loadError} />}
+        </div> : <section aria-label="Historial de caja">
+          <div className="cash-history bg-white border border-stone-200 rounded-2xl p-6 shadow-xs space-y-4">
+            <div className="operation-section-heading"><div><h3>Historial de turnos</h3><p>El esperado y la diferencia se muestran después de confirmar el conteo. Abre el comprobante de un turno cerrado.</p></div></div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="operation-table w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase text-[10px]">
                     <th className="py-2.5">ID / Fecha</th>
@@ -697,17 +717,18 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 text-stone-700">
+                  {!dataLoading && !loadError && cortes.length === 0 && <tr><td colSpan={7}><OperationState title="Aún no hay turnos registrados">Abre un turno con el fondo físico que recibiste para empezar el historial de caja.</OperationState></td></tr>}
                   {cortes.map(c => (
                     <tr key={c.id} className="hover:bg-stone-50/60">
-                      <td className="py-3 font-mono font-medium">
-                        <div>{new Date(c.fechaApertura).toLocaleDateString('es-MX')}</div>
-                        <div className="text-[10px] text-stone-400">{new Date(c.fechaApertura).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                      <td data-label="Apertura" className="py-3 font-mono font-medium">
+                        <div>{new Date(c.fechaApertura).toLocaleDateString('es-MX', { timeZone: currentSucursal?.zonaHoraria || 'America/Mexico_City' })}</div>
+                        <div className="text-[10px] text-stone-400">{new Date(c.fechaApertura).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: currentSucursal?.zonaHoraria || 'America/Mexico_City' })}</div>
                       </td>
-                      <td className="py-3 font-mono">${Number(c.fondoInicial).toFixed(2)}</td>
-                      <td className="py-3 font-mono font-semibold text-emerald-700">+${Number(c.totalEfectivo).toFixed(2)}</td>
-                      <td className="py-3 font-mono font-bold text-stone-900">${Number(c.conteoEfectivoReal || 0).toFixed(2)}</td>
-                      <td className="py-3 font-mono">
-                        {Math.abs(Number(c.descuadre || 0)) < 0.05 ? (
+                      <td data-label="Fondo inicial" className="py-3 font-mono">${Number(c.fondoInicial).toFixed(2)}</td>
+                      <td data-label="Ventas en efectivo" className="py-3 font-mono font-semibold text-emerald-700">{c.estado === 'ABIERTO' ? 'Al cerrar' : `$${Number(c.totalEfectivo).toFixed(2)}`}</td>
+                      <td data-label="Conteo real" className="py-3 font-mono font-bold text-stone-900">{c.estado === 'ABIERTO' ? 'Pendiente' : `$${Number(c.conteoEfectivoReal || 0).toFixed(2)}`}</td>
+                      <td data-label="Diferencia" className="py-3 font-mono">
+                        {c.estado === 'ABIERTO' ? <span>Pendiente</span> : Number(c.descuadre || 0) === 0 ? (
                           <span className="text-emerald-700 font-bold">Cuadrada</span>
                         ) : Number(c.descuadre || 0) < 0 ? (
                           <span className="text-rose-600 font-bold">Faltante -${Math.abs(Number(c.descuadre)).toFixed(2)}</span>
@@ -715,21 +736,22 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                           <span className="text-amber-600 font-bold">Sobrante +${Number(c.descuadre).toFixed(2)}</span>
                         )}
                       </td>
-                      <td className="py-3">
+                      <td data-label="Estado" className="py-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           c.estado === 'ABIERTO' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-stone-100 text-stone-600'
                         }`}>
                           {c.estado}
                         </span>
                       </td>
-                      <td className="py-3 text-right">
+                      <td data-label="Comprobante" className="py-3 text-right">
                         <button
-                          onClick={() => api.printCorteHtml(c.id)}
+                          onClick={() => api.printCorteHtml(c.id).catch(e=>setCashError(e.message))}
+                          disabled={c.estado !== 'CERRADO'}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 text-[11px] font-semibold transition"
-                          title="Imprimir Acta Oficial de Arqueo"
+                          title="Imprimir comprobante de cierre"
                         >
                           <Printer className="w-3 h-3" />
-                          <span>Acta</span>
+                          <span>Comprobante</span>
                         </button>
                       </td>
                     </tr>
@@ -738,8 +760,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               </table>
             </div>
           </div>
-        </div>
-      )}
+        </section>}
+      </>}
 
       {/* ======================================================== */}
       {/* 4. NÓMINA & COMISIONES */}
@@ -749,26 +771,28 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs">
-              <span className="text-[10px] uppercase font-bold text-stone-500 block mb-1">Total por Liquidar</span>
+              <span className="text-sm text-stone-500 block mb-2">Pendiente de liquidar</span>
               <div className="text-2xl font-black text-emerald-700">
-                ${totalPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN
+                {dataLoading ? 'Consultando…' : loadError ? 'Sin actualizar' : `$${totalPendiente.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`}
               </div>
             </div>
             <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs">
-              <span className="text-[10px] uppercase font-bold text-stone-500 block mb-1">Histórico Liquidado</span>
+              <span className="text-sm text-stone-500 block mb-2">Histórico liquidado</span>
               <div className="text-2xl font-black text-stone-900">
-                ${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN
+                {dataLoading ? 'Consultando…' : loadError ? 'Sin actualizar' : `$${totalPagado.toLocaleString('es-MX', { minimumFractionDigits: 2 })} MXN`}
               </div>
             </div>
           </div>
 
           {/* Action and Filter Bar */}
           <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="operation-section-heading"><div><h2>Comisiones y propinas</h2><p>Revisa el profesional, la venta y el estado. Liquidar una comisión no registra una entrega de efectivo.</p></div></div>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               {!isBarberoRole && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-stone-500 font-semibold">Filtrar por Barbero:</span>
+                  <label htmlFor="commission-professional" className="text-sm text-stone-500 font-semibold">Profesional:</label>
                   <select
+                    id="commission-professional"
                     value={filterBarberoId}
                     onChange={(e) => setFilterBarberoId(e.target.value)}
                     className="bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-900 font-medium focus:outline-none focus:border-stone-900"
@@ -783,7 +807,10 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
               {!isBarberoRole && selectedComisiones.length > 0 && (
                 <button
-                  onClick={handlePagarComisiones}
+                  onClick={() => {
+                    try { setPayrollReview({ scope: branchScope, rows: commissionReviewRows(comisiones, selectedComisiones, currentSucursal?.id || '') }); setPayrollError(''); setPayrollUncertain(false); }
+                    catch (error: any) { setTeamNotice(error.message); }
+                  }}
                   className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs"
                 >
                   Liquidar {selectedComisiones.length} Comisiones Seleccionadas
@@ -793,7 +820,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
             {/* Commissions Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="operation-table w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase text-[10px]">
                     {!isBarberoRole && <th className="py-2.5 w-8"></th>}
@@ -805,6 +832,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100 text-stone-700">
+                  {!dataLoading && !loadError && filteredComisiones.length === 0 && <tr><td colSpan={isBarberoRole ? 5 : 6}><OperationState title="Sin comisiones para esta selección">Las ventas atendidas por un profesional generan aquí sus comisiones y propinas. Revisa otro profesional o conserva el filtro actual.</OperationState></td></tr>}
                   {filteredComisiones.map(c => (
                     <tr key={c.id} className="hover:bg-stone-50/60">
                       {!isBarberoRole && (
@@ -812,6 +840,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                           {!c.pagada && (
                             <input
                               type="checkbox"
+                              aria-label={`Seleccionar comisión de ${c.barbero?.nombre || 'barbero'}, $${Number(c.monto).toFixed(2)} MXN`}
                               checked={selectedComisiones.includes(c.id)}
                               onChange={(e) => {
                                 if (e.target.checked) setSelectedComisiones([...selectedComisiones, c.id]);
@@ -824,7 +853,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                       )}
                       <td className="py-2.5 font-bold text-stone-900">{c.barbero?.nombre || 'Barbero'}</td>
                       <td className="py-2.5 text-stone-500 font-mono">
-                        Venta #{c.ventaId ? c.ventaId.slice(0, 8) : 'N/A'}
+                        Venta {c.venta?.folio || 'sin folio disponible'}
                       </td>
                       <td className="py-2.5 font-bold text-emerald-700 font-mono">
                         +${Number(c.monto).toFixed(2)} MXN
@@ -851,16 +880,16 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
       {/* ======================================================== */}
       {/* MODAL: REGISTRAR BARBERO */}
       {/* ======================================================== */}
-      {showAddBarberoModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+      {showAddBarberoModal && <OperationDialog open={true} busy={teamSubmitting} titleId="team-add-title" onClose={() => { setShowAddBarberoModal(false); setTeamError(''); }} className="max-w-lg">
           <div className="bg-white border border-stone-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-luxury-in max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold text-stone-900 mb-1">Registrar Nuevo Barbero</h3>
+            <h3 id="team-add-title" tabIndex={-1} className="text-base font-bold text-stone-900 mb-1">Registrar Nuevo Barbero</h3>
             <p className="text-xs text-stone-500 mb-4">Ingresa sus datos profesionales, comisiones y opcionalmente su acceso al sistema.</p>
 
-            <form onSubmit={handleCreateBarbero} className="space-y-4">
+            {teamError && <p role="alert" className="mb-4 text-sm text-rose-800">{teamError}</p>}
+            <form onSubmit={handleCreateBarbero} aria-busy={teamSubmitting}><fieldset disabled={teamSubmitting} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Nombre Completo *</label>
-                <input
+                <label htmlFor="team-nombreBarbero" className="block text-[11px] font-bold text-stone-700 mb-1">Nombre Completo *</label>
+                <input id="team-nombreBarbero"
                   type="text"
                   required
                   value={nombreBarbero}
@@ -872,8 +901,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-stone-700 mb-1">Teléfono</label>
-                  <input
+                  <label htmlFor="team-telefonoBarbero" className="block text-[11px] font-bold text-stone-700 mb-1">Teléfono privado</label>
+                  <input id="team-telefonoBarbero"
                     type="tel"
                     value={telefonoBarbero}
                     onChange={(e) => setTelefonoBarbero(e.target.value)}
@@ -882,8 +911,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-stone-700 mb-1">Correo Electrónico</label>
-                  <input
+                  <label htmlFor="team-emailBarbero" className="block text-[11px] font-bold text-stone-700 mb-1">Correo privado</label>
+                  <input id="team-emailBarbero"
                     type="email"
                     value={emailBarbero}
                     onChange={(e) => setEmailBarbero(e.target.value)}
@@ -894,8 +923,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Especialidad o Título</label>
-                <input
+                <label htmlFor="team-especialidadBarbero" className="block text-[11px] font-bold text-stone-700 mb-1">Especialidad o Título</label>
+                <input id="team-especialidadBarbero"
                   type="text"
                   value={especialidadBarbero}
                   onChange={(e) => setEspecialidadBarbero(e.target.value)}
@@ -905,8 +934,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Biografía Breve para Clientes</label>
-                <textarea
+                <label htmlFor="team-descripcionBarbero" className="block text-[11px] font-bold text-stone-700 mb-1">Biografía Breve para Clientes</label>
+                <textarea id="team-descripcionBarbero"
                   rows={2}
                   value={descripcionBarbero}
                   onChange={(e) => setDescripcionBarbero(e.target.value)}
@@ -922,6 +951,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                     <button
                       type="button"
                       key={idx}
+                      aria-label={`Seleccionar foto de perfil ${idx + 1}`}
+                      aria-pressed={avatarBarbero === av}
                       onClick={() => setAvatarBarbero(av)}
                       className={`w-8 h-8 rounded-full overflow-hidden border-2 transition flex-shrink-0 ${
                         avatarBarbero === av ? 'border-stone-900 scale-110' : 'border-stone-200 opacity-60 hover:opacity-100'
@@ -933,6 +964,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                 </div>
                 <input
                   type="url"
+                  aria-label="URL de foto de perfil personalizada"
                   value={avatarBarbero}
                   onChange={(e) => setAvatarBarbero(e.target.value)}
                   placeholder="O ingresa URL de foto personalizada"
@@ -943,8 +975,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               {/* Comisiones */}
               <div className="grid grid-cols-2 gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Servicios (%)</label>
-                  <input
+                  <label htmlFor="team-comisionServicios" className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Servicios (%)</label>
+                  <input id="team-comisionServicios"
                     type="number"
                     min="0"
                     max="100"
@@ -954,8 +986,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Productos (%)</label>
-                  <input
+                  <label htmlFor="team-comisionProductos" className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Productos (%)</label>
+                  <input id="team-comisionProductos"
                     type="number"
                     min="0"
                     max="100"
@@ -975,27 +1007,15 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                     onChange={(e) => setCrearAccesoUsuario(e.target.checked)}
                     className="rounded border-stone-300 text-stone-900 focus:ring-stone-900"
                   />
-                  <span className="text-xs font-bold text-stone-800">Crear cuenta de acceso para el barbero</span>
+                  <span className="text-xs font-bold text-stone-800">Invitar al barbero por correo (solo propietario)</span>
                 </label>
-                {crearAccesoUsuario && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-stone-600 mb-1">Contraseña de Acceso (mínimo 6 caracteres)</label>
-                    <input
-                      type="password"
-                      required={crearAccesoUsuario}
-                      value={passwordAcceso}
-                      onChange={(e) => setPasswordAcceso(e.target.value)}
-                      placeholder="Contraseña para iniciar sesión"
-                      className="w-full bg-white border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-900 font-mono focus:outline-none focus:border-stone-900"
-                    />
-                  </div>
-                )}
+                {crearAccesoUsuario && <p className="text-xs text-stone-600">Usaremos el correo del perfil para enviar una invitación. El barbero elegirá su contraseña. Consulta el envío en Accesos.</p>}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setShowAddBarberoModal(false)}
+                  onClick={() => { setShowAddBarberoModal(false); setTeamError(''); }}
                   className="px-3.5 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold"
                 >
                   Cancelar
@@ -1004,27 +1024,26 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition shadow-sm"
                 >
-                  Registrar Barbero
+                  {teamSubmitting ? 'Registrando…' : 'Registrar Barbero'}
                 </button>
               </div>
-            </form>
+            </fieldset></form>
           </div>
-        </div>
-      )}
+      </OperationDialog>}
 
       {/* ======================================================== */}
       {/* MODAL: EDITAR BARBERO (DUENO / GERENTE ONLY) */}
       {/* ======================================================== */}
-      {showEditBarberoModal && editingBarbero && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+      {showEditBarberoModal && editingBarbero && <OperationDialog open={true} busy={teamSubmitting} titleId="team-edit-title" onClose={() => { setShowEditBarberoModal(false); setTeamError(''); }} className="max-w-lg">
           <div className="bg-white border border-stone-200 rounded-2xl max-w-lg w-full p-6 shadow-2xl animate-luxury-in max-h-[90vh] overflow-y-auto">
-            <h3 className="text-base font-bold text-stone-900 mb-1">Editar Barbero: {editingBarbero.nombre}</h3>
+            <h3 id="team-edit-title" tabIndex={-1} className="text-base font-bold text-stone-900 mb-1">Editar Barbero: {editingBarbero.nombre}</h3>
             <p className="text-xs text-stone-500 mb-4">Actualiza foto, biografía, comisiones o estado.</p>
 
-            <form onSubmit={handleSaveBarberoEdit} className="space-y-4">
+            {teamError && <p role="alert" className="mb-4 text-sm text-rose-800">{teamError}</p>}
+            <form onSubmit={handleSaveBarberoEdit} aria-busy={teamSubmitting}><fieldset disabled={teamSubmitting} className="space-y-4">
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Nombre Completo</label>
-                <input
+                <label htmlFor="team-editingBarbero-nombre" className="block text-[11px] font-bold text-stone-700 mb-1">Nombre público</label>
+                <input id="team-editingBarbero-nombre"
                   type="text"
                   required
                   value={editingBarbero.nombre}
@@ -1035,8 +1054,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-bold text-stone-700 mb-1">Teléfono</label>
-                  <input
+                  <label htmlFor="team-editingBarbero-telefono" className="block text-[11px] font-bold text-stone-700 mb-1">Teléfono privado</label>
+                  <input id="team-editingBarbero-telefono"
                     type="tel"
                     value={editingBarbero.telefono || ''}
                     onChange={(e) => setEditingBarbero({ ...editingBarbero, telefono: e.target.value })}
@@ -1044,8 +1063,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-stone-700 mb-1">Correo Electrónico</label>
-                  <input
+                  <label htmlFor="team-editingBarbero-email" className="block text-[11px] font-bold text-stone-700 mb-1">Correo privado</label>
+                  <input id="team-editingBarbero-email"
                     type="email"
                     value={editingBarbero.email || ''}
                     onChange={(e) => setEditingBarbero({ ...editingBarbero, email: e.target.value })}
@@ -1055,8 +1074,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Especialidad</label>
-                <input
+                <label htmlFor="team-editingBarbero-especialidad" className="block text-[11px] font-bold text-stone-700 mb-1">Especialidad</label>
+                <input id="team-editingBarbero-especialidad"
                   type="text"
                   value={editingBarbero.especialidad || ''}
                   onChange={(e) => setEditingBarbero({ ...editingBarbero, especialidad: e.target.value })}
@@ -1065,8 +1084,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Biografía para Clientes</label>
-                <textarea
+                <label htmlFor="team-editingBarbero-descripcion" className="block text-[11px] font-bold text-stone-700 mb-1">Biografía para Clientes</label>
+                <textarea id="team-editingBarbero-descripcion"
                   rows={2}
                   value={editingBarbero.descripcion || ''}
                   onChange={(e) => setEditingBarbero({ ...editingBarbero, descripcion: e.target.value })}
@@ -1075,8 +1094,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Foto de Perfil (Avatar URL)</label>
-                <input
+                <label htmlFor="team-editingBarbero-avatarUrl" className="block text-[11px] font-bold text-stone-700 mb-1">Foto pública (URL)</label>
+                <input id="team-editingBarbero-avatarUrl"
                   type="url"
                   value={editingBarbero.avatarUrl || ''}
                   onChange={(e) => setEditingBarbero({ ...editingBarbero, avatarUrl: e.target.value })}
@@ -1086,8 +1105,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3 bg-stone-50 p-3 rounded-xl border border-stone-200">
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Servicios (%)</label>
-                  <input
+                  <label htmlFor="team-editingBarbero-comisionServiciosPct" className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Servicios (%)</label>
+                  <input id="team-editingBarbero-comisionServiciosPct"
                     type="number"
                     min="0"
                     max="100"
@@ -1097,8 +1116,8 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Productos (%)</label>
-                  <input
+                  <label htmlFor="team-editingBarbero-comisionProductosPct" className="block text-[10px] uppercase font-bold text-stone-700 mb-1">Comisión Productos (%)</label>
+                  <input id="team-editingBarbero-comisionProductosPct"
                     type="number"
                     min="0"
                     max="100"
@@ -1134,7 +1153,7 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-100">
                 <button
                   type="button"
-                  onClick={() => setShowEditBarberoModal(false)}
+                  onClick={() => { setShowEditBarberoModal(false); setTeamError(''); }}
                   className="px-3.5 py-2 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold"
                 >
                   Cancelar
@@ -1143,27 +1162,35 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                   type="submit"
                   className="px-5 py-2 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition shadow-sm"
                 >
-                  Guardar Cambios
+                  {teamSubmitting ? 'Guardando…' : 'Guardar Cambios'}
                 </button>
               </div>
-            </form>
+            </fieldset></form>
           </div>
-        </div>
-      )}
+      </OperationDialog>}
 
       {/* ======================================================== */}
       {/* MODAL: APERTURA DE CAJA */}
       {/* ======================================================== */}
-      {showOpenCorteModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-stone-200 rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-luxury-in">
-            <h3 className="text-base font-bold text-stone-900 mb-1">Abrir Turno de Caja</h3>
+      <OperationDialog open={Boolean(payrollReview)} busy={payrollSubmitting || payrollUncertain} titleId="commission-payment-title" onClose={() => setPayrollReview(null)} className="max-w-lg">
+        <section className="studio-panel p-6"><h2 id="commission-payment-title" tabIndex={-1} className="text-xl font-semibold">Revisar pago de comisiones</h2><p className="text-sm text-stone-600 mt-3">El pago se registrará en efectivo para las siguientes comisiones. La validación y salida de caja se realizan al confirmar.</p>
+          <ul className="divide-y mt-4">{payrollReview?.rows.map(row => <li key={row.id} className="py-3 text-sm"><strong>{row.nombre}</strong><span className="block text-stone-600 break-all">Venta {row.folio} · ${row.monto.toFixed(2)} MXN</span></li>)}</ul>
+          <p className="font-semibold mt-4">Total de comisiones seleccionadas: ${(payrollReview?.rows.reduce((sum, row) => sum + row.monto, 0) || 0).toFixed(2)} MXN</p><p className="text-sm text-stone-600 mt-2">Método: efectivo. Este paso conserva los importes y ajustes de las comisiones; no añade un pago separado de propinas.</p>
+          {payrollError && <p role="alert" className="text-sm text-rose-800 mt-4">{payrollError}</p>}
+          <div className="flex flex-wrap gap-3 mt-6"><button type="button" disabled={payrollSubmitting || payrollUncertain} className="studio-button-secondary" onClick={() => setPayrollReview(null)}>Volver sin pagar</button><button type="button" disabled={payrollSubmitting} className="studio-button" onClick={() => void handlePagarComisiones()}>{payrollSubmitting ? 'Confirmando pago…' : payrollUncertain ? 'Recuperar resultado del mismo pago' : 'Confirmar pago en efectivo'}</button></div>
+        </section>
+      </OperationDialog>
+      <OperationDialog open={showOpenCorteModal} busy={cashSubmitting} titleId="open-register-title" onClose={() => setShowOpenCorteModal(false)} className="max-w-sm">
+          <div className="bg-white border border-stone-200 rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-luxury-in max-h-[90dvh] overflow-y-auto">
+            <h3 id="open-register-title" tabIndex={-1} className="text-lg font-semibold text-stone-900 mb-1">Abrir turno de caja</h3>
             <p className="text-xs text-stone-500 mb-4">Ingresa el fondo inicial en efectivo para iniciar operaciones.</p>
 
             <form onSubmit={handleOpenCorte} className="space-y-3.5">
+              {cashError&&<p role="alert" className="text-sm text-amber-900">{cashError}</p>}
               <div>
-                <label className="block text-[11px] font-semibold text-stone-700 mb-1">Fondo Inicial ($ MXN)</label>
+                <label htmlFor="register-opening-fund" className="block text-sm font-semibold text-stone-700 mb-1">Fondo inicial ($ MXN)</label>
                 <input
+                  id="register-opening-fund"
                   type="number"
                   required
                   value={fondoInicial}
@@ -1173,8 +1200,9 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-stone-700 mb-1">Notas de Apertura</label>
+                <label htmlFor="register-opening-notes" className="block text-sm font-semibold text-stone-700 mb-1">Notas de apertura</label>
                 <input
+                  id="register-opening-notes"
                   type="text"
                   value={notasApertura}
                   onChange={(e) => setNotasApertura(e.target.value)}
@@ -1186,162 +1214,26 @@ export const BarberosView: React.FC<BarberosViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowOpenCorteModal(false)}
+                  disabled={cashSubmitting}
                   className="px-3.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold"
                 >
                   Cancelar
                 </button>
                 <button
-                  type="submit"
+                  type="submit" disabled={cashSubmitting}
                   className="px-4 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition shadow-sm"
                 >
-                  Iniciar Turno
+                  {cashSubmitting ? 'Abriendo…' : 'Iniciar Turno'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+      </OperationDialog>
 
       {/* ======================================================== */}
       {/* MODAL: ARQUEO FÍSICO Y DESGLOSE DE EFECTIVO (CIERRE) */}
       {/* ======================================================== */}
-      {showArqueoModal && activeCorte && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white border border-stone-200 rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-luxury-in max-h-[92vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-stone-200 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-stone-900">Arqueo y Conteo Físico de Caja</h3>
-                <p className="text-xs text-stone-500">Cuenta los billetes y monedas físicos en la gaveta para cuadrar el turno.</p>
-              </div>
-              <span className="p-2 rounded-xl bg-stone-100 text-stone-800">
-                <Calculator className="w-5 h-5" />
-              </span>
-            </div>
-
-            <form onSubmit={handleCloseCorteConArqueo} className="space-y-5">
-              
-              {/* Desglose de Billetes y Monedas */}
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-stone-600 mb-2">Desglose de Denominaciones</h4>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-stone-50 p-3.5 rounded-xl border border-stone-200 text-xs">
-                  
-                  {/* Billetes */}
-                  {[
-                    { key: '1000', label: 'Billete $1,000' },
-                    { key: '500', label: 'Billete $500' },
-                    { key: '200', label: 'Billete $200' },
-                    { key: '100', label: 'Billete $100' },
-                    { key: '50', label: 'Billete $50' },
-                    { key: '20', label: 'Billete $20' }
-                  ].map(b => (
-                    <div key={b.key} className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
-                      <span className="font-semibold text-stone-700">{b.label}</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={denominaciones[b.key] || ''}
-                        onChange={(e) => setDenominaciones({ ...denominaciones, [b.key]: Number(e.target.value) || 0 })}
-                        placeholder="0"
-                        className="w-14 text-right font-mono font-bold text-stone-900 border-b border-stone-300 focus:outline-none focus:border-stone-900"
-                      />
-                    </div>
-                  ))}
-
-                  {/* Monedas */}
-                  {[
-                    { key: 'moneda_20', label: 'Moneda $20' },
-                    { key: 'moneda_10', label: 'Moneda $10' },
-                    { key: 'moneda_5', label: 'Moneda $5' },
-                    { key: 'moneda_2', label: 'Moneda $2' },
-                    { key: 'moneda_1', label: 'Moneda $1' },
-                    { key: 'moneda_05', label: 'Moneda $0.50' }
-                  ].map(m => (
-                    <div key={m.key} className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-stone-200">
-                      <span className="font-medium text-stone-600">{m.label}</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={denominaciones[m.key] || ''}
-                        onChange={(e) => setDenominaciones({ ...denominaciones, [m.key]: Number(e.target.value) || 0 })}
-                        placeholder="0"
-                        className="w-14 text-right font-mono font-bold text-stone-900 border-b border-stone-300 focus:outline-none focus:border-stone-900"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Comparación Teórica vs Real */}
-              <div className="bg-stone-50 border border-stone-200 rounded-xl p-4 text-xs space-y-2">
-                <div className="flex justify-between text-stone-600">
-                  <span>Fondo Inicial de Caja:</span>
-                  <span className="font-mono font-bold">${fondoTurno.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-emerald-700">
-                  <span>Ventas en Efectivo del Turno:</span>
-                  <span className="font-mono font-bold">+${ventasEfTurno.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-stone-900 font-bold border-t border-stone-200 pt-2">
-                  <span>Efectivo Teórico Esperado en Caja:</span>
-                  <span className="font-mono text-sm">${totalEsperado.toFixed(2)} MXN</span>
-                </div>
-                <div className="flex justify-between text-stone-900 font-black border-t border-stone-300 pt-2 text-sm bg-white p-2 rounded-lg border">
-                  <span>Total Efectivo Contado Físico:</span>
-                  <span className="font-mono text-base">${totalFisicoContado.toFixed(2)} MXN</span>
-                </div>
-                
-                {/* Badge de Cuadre */}
-                <div className="pt-1">
-                  {Math.abs(diferenciaArqueo) < 0.05 ? (
-                    <div className="p-2.5 rounded-lg bg-emerald-100 text-emerald-900 font-bold flex items-center justify-between">
-                      <span>✓ CAJA PERFECTAMENTE CUADRADA</span>
-                      <span>$0.00</span>
-                    </div>
-                  ) : diferenciaArqueo < 0 ? (
-                    <div className="p-2.5 rounded-lg bg-rose-100 text-rose-900 font-bold flex items-center justify-between">
-                      <span>⚠️ FALTANTE EN CAJA DETECTADO:</span>
-                      <span className="font-mono">-${Math.abs(diferenciaArqueo).toFixed(2)} MXN</span>
-                    </div>
-                  ) : (
-                    <div className="p-2.5 rounded-lg bg-amber-100 text-amber-900 font-bold flex items-center justify-between">
-                      <span>ℹ️ SOBRANTE EN CAJA DETECTADO:</span>
-                      <span className="font-mono">+${diferenciaArqueo.toFixed(2)} MXN</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-stone-700 mb-1">Notas u Observaciones del Cierre</label>
-                <textarea
-                  rows={2}
-                  value={notasCierre}
-                  onChange={(e) => setNotasCierre(e.target.value)}
-                  placeholder="Detalles sobre retiros, billetes rotos o motivos del descuadre..."
-                  className="w-full bg-white border border-stone-200 rounded-lg p-2.5 text-xs text-stone-900 focus:outline-none focus:border-stone-900"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-stone-200">
-                <button
-                  type="button"
-                  onClick={() => setShowArqueoModal(false)}
-                  className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs transition shadow-sm"
-                >
-                  <Check className="w-4 h-4" />
-                  <span>Cerrar Turno e Imprimir Acta de Arqueo</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {currentSucursal && !isBarberoRole && <CloseCashGuide open={showArqueoModal} cut={activeCorte} branchId={currentSucursal.id} zone={currentSucursal.zonaHoraria || 'America/Mexico_City'} onClose={() => setShowArqueoModal(false)} onClosed={() => { setActiveCorte(null); void loadData(); }} onGoToCustody={() => { setShowArqueoModal(false); window.requestAnimationFrame(() => { const section = document.getElementById(`cash-custody-${currentSucursal.id}`); section?.scrollIntoView({ block: 'start', behavior: 'smooth' }); section?.focus(); }); }} />}
 
     </div>
   );

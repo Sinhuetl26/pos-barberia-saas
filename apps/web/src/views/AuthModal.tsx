@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import { LicensePlanSelector } from '../components/LicensePlanSelector';
+import { OperationDialog } from '../components/OperationDialog';
 import {
   X,
   Scissors,
@@ -15,12 +17,13 @@ import {
   ShieldAlert,
   Crown
 } from 'lucide-react';
+import '../styles/secondary-workspaces.css';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: 'login' | 'register';
-  defaultPlan?: 'BASICO' | 'PRO';
+  defaultPlan?: 'BASICO' | 'PRO' | 'CADENA';
   onSuccess: (data: { user: any; tenant: any; sucursales: any[] }) => void;
 }
 
@@ -33,6 +36,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const [mode, setMode] = useState<'login' | 'register'>(defaultMode);
   const [loading, setLoading] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  useEffect(() => { setShowLoginPassword(false); setShowRegisterPassword(false); }, [isOpen, mode]);
   const [error, setError] = useState<string | null>(null);
 
   // Login Form
@@ -45,12 +51,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [regEmail, setRegEmail] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [telefono, setTelefono] = useState('');
-  const [plan, setPlan] = useState<'BASICO' | 'PRO'>(defaultPlan);
+  const [plan, setPlan] = useState<'BASICO' | 'PRO' | 'CADENA'>(defaultPlan);
+
+  useEffect(() => {
+    if (isOpen) { setMode(defaultMode); setPlan(defaultPlan); setError(null); }
+  }, [isOpen, defaultMode, defaultPlan]);
 
   if (!isOpen) return null;
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
 
@@ -60,7 +71,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         password: loginPassword
       });
       onSuccess(res);
-      onClose();
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {
@@ -70,6 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
     setLoading(true);
 
@@ -83,7 +94,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         plan
       });
       onSuccess(res);
-      onClose();
     } catch (err: any) {
       setError(err.message || 'Error al registrar la barbería');
     } finally {
@@ -92,11 +102,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/40 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in font-sans">
-      <div className="bg-white border border-stone-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl relative my-8">
+    <OperationDialog open={isOpen} busy={loading} titleId="auth-modal-title" onClose={onClose}>
+      <div className="auth-workbench bg-white border border-stone-200 rounded-2xl w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl relative">
         
         {/* Close Button */}
         <button
+          type="button"
+          aria-label="Cerrar acceso"
+          disabled={loading}
           onClick={onClose}
           className="absolute top-4 right-4 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition z-10"
         >
@@ -111,7 +124,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </div>
             <span className="text-xs font-bold tracking-wider uppercase text-stone-900">SYSTECH STUDIO</span>
           </div>
-          <h2 className="text-xl font-bold text-stone-900">
+          <h2 id="auth-modal-title" tabIndex={-1} className="text-xl font-bold text-stone-900">
             {mode === 'login' ? 'Iniciar Sesión' : 'Registrar Mi Barbería'}
           </h2>
           <p className="text-xs text-stone-500 mt-1">
@@ -124,6 +137,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           <div className="grid grid-cols-2 gap-1 p-1 bg-stone-200/60 rounded-xl mt-4 text-xs font-semibold">
             <button
               type="button"
+              disabled={loading}
+              aria-pressed={mode === 'login'}
               onClick={() => { setMode('login'); setError(null); }}
               className={`py-1.5 rounded-lg transition ${
                 mode === 'login' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'
@@ -133,6 +148,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </button>
             <button
               type="button"
+              disabled={loading}
+              aria-pressed={mode === 'register'}
               onClick={() => { setMode('register'); setError(null); }}
               className={`py-1.5 rounded-lg transition ${
                 mode === 'register' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-600 hover:text-stone-900'
@@ -146,7 +163,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Content Body */}
         <div className="p-6">
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
+            <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
               <span>{error}</span>
             </div>
@@ -154,12 +171,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
           {mode === 'login' ? (
             /* Login Form */
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} aria-busy={loading} className="space-y-4">
+              <div className="mb-4 text-right"><a href="/cuenta/recuperar" className="text-xs underline">Olvidé mi contraseña</a></div>
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Correo Electrónico</label>
+                <label htmlFor="login-email" className="block text-xs font-medium text-stone-700 mb-1">Correo electrónico</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                   <input
+                    id="login-email"
+                    autoComplete="username"
                     type="email"
                     required
                     value={loginEmail}
@@ -171,11 +191,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Contraseña</label>
+                <label htmlFor="login-password" className="block text-xs font-medium text-stone-700 mb-1">Contraseña</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                   <input
-                    type="password"
+                    id="login-password"
+                    autoComplete="current-password"
+                    type={showLoginPassword ? 'text' : 'password'}
                     required
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
@@ -183,6 +205,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     className="w-full bg-white border border-stone-200 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900"
                   />
                 </div>
+                <button type="button" className="mt-2 text-xs underline text-stone-700 min-h-[44px]" aria-controls="login-password" aria-pressed={showLoginPassword} onClick={() => setShowLoginPassword(v => !v)}>{showLoginPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}</button>
               </div>
 
               <button
@@ -199,6 +222,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>¿No tienes cuenta aún?</span>
                 <button
                   type="button"
+                  disabled={loading}
                   onClick={() => setMode('register')}
                   className="font-bold text-stone-900 hover:underline"
                 >
@@ -208,15 +232,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             </form>
           ) : (
             /* Register Form */
-            <form onSubmit={handleRegister} className="space-y-3.5">
+            <form onSubmit={handleRegister} aria-busy={loading} className="space-y-3.5">
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Nombre de la Barbería</label>
+                <label htmlFor="register-shop" className="block text-xs font-medium text-stone-700 mb-1">Nombre de la barbería</label>
                 <div className="relative">
                   <Building className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={nombreBarberia}
+                    id="register-shop"
+                    autoComplete="organization"
                     onChange={(e) => setNombreBarberia(e.target.value)}
                     placeholder="Ej. The Gentleman Studio"
                     className="w-full bg-white border border-stone-200 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900"
@@ -226,13 +252,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs font-medium text-stone-700 mb-1">Tu Nombre</label>
+                  <label htmlFor="register-owner" className="block text-xs font-medium text-stone-700 mb-1">Tu nombre</label>
                   <div className="relative">
                     <User className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                     <input
                       type="text"
                       required
                       value={nombreDueno}
+                      id="register-owner"
+                      autoComplete="name"
                       onChange={(e) => setNombreDueno(e.target.value)}
                       placeholder="Dueño"
                       className="w-full bg-white border border-stone-200 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900"
@@ -241,13 +269,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-stone-700 mb-1">WhatsApp / Teléfono</label>
+                  <label htmlFor="register-phone" className="block text-xs font-medium text-stone-700 mb-1">WhatsApp / teléfono</label>
                   <div className="relative">
                     <Phone className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                     <input
                       type="tel"
                       required
                       value={telefono}
+                      id="register-phone"
+                      autoComplete="tel"
                       onChange={(e) => setTelefono(e.target.value)}
                       placeholder="55 1234 5678"
                       className="w-full bg-white border border-stone-200 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900"
@@ -257,13 +287,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Correo Electrónico</label>
+                <label htmlFor="register-email" className="block text-xs font-medium text-stone-700 mb-1">Correo electrónico</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                   <input
                     type="email"
                     required
                     value={regEmail}
+                    id="register-email"
+                    autoComplete="email"
                     onChange={(e) => setRegEmail(e.target.value)}
                     placeholder="contacto@mibarberia.com"
                     className="w-full bg-white border border-stone-200 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900"
@@ -272,51 +304,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">Crea tu Contraseña</label>
+                <label htmlFor="register-password" className="block text-xs font-medium text-stone-700 mb-1">Crea tu contraseña</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-2.5 pointer-events-none" />
                   <input
-                    type="password"
+                    id="register-password"
+                    autoComplete="new-password"
+                    type={showRegisterPassword ? 'text' : 'password'}
                     required
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
-                    placeholder="Al menos 6 caracteres"
+                    minLength={12} maxLength={72}
+                    placeholder="Al menos 12 caracteres"
                     className="w-full bg-white border border-stone-200 rounded-xl pl-9 pr-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-stone-900/10 focus:border-stone-900"
                   />
                 </div>
+                <button type="button" className="mt-2 text-xs underline text-stone-700 min-h-[44px]" aria-controls="register-password" aria-pressed={showRegisterPassword} onClick={() => setShowRegisterPassword(v => !v)}>{showRegisterPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}</button>
               </div>
 
               {/* Plan Choice */}
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">Plan de Prueba (14 Días Gratis)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div
-                    onClick={() => setPlan('BASICO')}
-                    className={`p-2.5 rounded-xl border cursor-pointer transition ${
-                      plan === 'BASICO'
-                        ? 'border-stone-900 bg-stone-900 text-white'
-                        : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-800'
-                    }`}
-                  >
-                    <div className="text-xs font-bold">BÁSICO</div>
-                    <div className="text-[10px] opacity-80">$499 MXN/mes</div>
-                    <div className="text-[9px] opacity-70 mt-1">1 Sucursal • 3 Barberos</div>
-                  </div>
-
-                  <div
-                    onClick={() => setPlan('PRO')}
-                    className={`p-2.5 rounded-xl border cursor-pointer transition relative ${
-                      plan === 'PRO'
-                        ? 'border-stone-900 bg-stone-900 text-white'
-                        : 'border-stone-200 bg-stone-50 hover:bg-stone-100 text-stone-800'
-                    }`}
-                  >
-                    <span className="absolute -top-1.5 right-2 bg-amber-400 text-stone-950 text-[8px] font-extrabold px-1.5 py-0.2 rounded">Recomendado</span>
-                    <div className="text-xs font-bold">PRO COMPLETO</div>
-                    <div className="text-[10px] opacity-80">$999 MXN/mes</div>
-                    <div className="text-[9px] opacity-70 mt-1">Ilimitado + WhatsApp Pro</div>
-                  </div>
-                </div>
+                <LicensePlanSelector value={plan} onChange={setPlan} />
               </div>
 
               <button
@@ -332,6 +341,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </OperationDialog>
   );
 };

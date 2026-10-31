@@ -1,0 +1,186 @@
+/* Approved counter direction. Scope these rules to checkout, never public booking or print. */
+.pos-carbon.counter-studio {font-family:'Studio Text',sans-serif;background:#fafaf7;max-width:1600px;padding:24px;color:#202322}
+.pos-carbon.counter-studio .counter-workbench {grid-template-columns:minmax(0,1.35fr) minmax(340px,1fr);gap:28px;align-items:start}
+.pos-carbon.counter-studio .counter-catalog {padding-top:0;min-width:0}
+.pos-carbon.counter-studio .counter-masthead {margin-bottom:20px}
+.pos-carbon.counter-studio .counter-masthead h1,.pos-carbon.counter-studio .pos-cart-context h2 {font:600 30px/1.15 'Studio Text',sans-serif;text-transform:none;letter-spacing:-.025em}
+.pos-carbon.counter-studio .silla-counter-actions {position:relative;inset:auto}
+.pos-carbon.counter-studio .silla-catalog-tools {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;margin-bottom:20px}
+.pos-carbon.counter-studio .carbon-search {display:flex;align-items:center;gap:10px;padding:0 14px;min-height:48px;background:#fff;border:1px solid #c8ccc9;border-radius:8px;min-width:0}
+.pos-carbon.counter-studio .carbon-search svg {flex-shrink:0;color:#646b68}
+.pos-carbon.counter-studio .carbon-search input {border:0!important;background:transparent;min-width:0;width:100%;min-height:46px;font:400 16px 'Studio Text',sans-serif;outline:none}
+.pos-carbon.counter-studio .carbon-search:focus-within {outline:3px solid #be6435;outline-offset:2px}
+.pos-carbon.counter-studio .silla-search>summary {width:auto;min-width:80px;padding:0 12px;gap:8px;font-size:14px;background:#fff}
+.pos-carbon.counter-studio .silla-search-panel {left:auto;right:0}
+.pos-carbon.counter-studio .silla-kind {grid-column:1/-1;justify-self:start;background:transparent;border:0;border-radius:0;padding:0;gap:24px}
+.pos-carbon.counter-studio .silla-kind button {border-radius:0;border-bottom:3px solid transparent;padding:8px 2px;color:#646b68;min-height:44px}
+.pos-carbon.counter-studio .silla-kind button[aria-pressed=true] {background:transparent;color:#9d431e;border-color:#be6435}
+.pos-carbon.counter-studio .counter-shelf-grid {grid-template-columns:minmax(0,1fr);gap:10px}
+.pos-carbon.counter-studio .counter-product {display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:14px;align-items:center;min-height:96px;padding:12px;background:#fff;border:1px solid #deded8;border-radius:10px}
+.pos-carbon.counter-studio .counter-product .silla-service-photo {grid-column:1;width:72px;height:72px;aspect-ratio:auto;border-radius:6px;object-fit:cover}
+.pos-carbon.counter-studio .counter-product .silla-product-name {grid-column:2;padding:0;gap:4px;min-width:0}
+.pos-carbon.counter-studio .counter-product h4 {font:600 18px/1.25 'Studio Text',sans-serif;overflow-wrap:anywhere}
+.pos-carbon.counter-studio .counter-product-meta {font-size:14px;color:#646b68}
+.pos-carbon.counter-studio .counter-product>div:last-child {grid-column:3;margin:0;padding:0;gap:14px;flex-wrap:wrap;justify-content:flex-end}
+.pos-carbon.counter-studio .counter-product>div:last-child>span:first-child {font:600 19px 'Studio Text',sans-serif;white-space:nowrap}
+.pos-carbon.counter-studio .counter-add {width:44px;height:44px;border-radius:8px;background:#f0f0ed;color:#202322;display:flex;align-items:center;justify-content:center}
+.pos-carbon.counter-studio .counter-product:hover,.pos-carbon.counter-studio .counter-product.is-selected {background:#fff8f1;border-color:#be6435;outline:0;box-shadow:none}
+.pos-carbon.counter-studio .counter-product.is-selected .counter-add {background:#ad4e24;color:#fff}
+.pos-carbon.counter-studio .silla-selected-count {top:5px;left:5px;right:auto;width:22px;height:22px;font-size:12px;background:#252525;color:#fff}
+.pos-carbon.counter-studio .counter-product:not(.has-illustration) {grid-template-columns:minmax(0,1fr) auto}
+.pos-carbon.counter-studio .counter-product:not(.has-illustration) .silla-product-name {grid-column:1}
+.pos-carbon.counter-studio .counter-product:not(.has-illustration)>div:last-child {grid-column:2}
+.pos-carbon.counter-studio .counter-stock-warning {position:static;grid-column:1/-1;padding:0;color:#9b411f;font-size:13px}
+.pos-carbon.counter-studio .counter-ticket {height:auto;max-height:calc(100dvh - 132px);top:108px;overflow:auto;padding:24px;border:0;border-left:5px solid #b65b30;border-radius:12px;background:#262626 url('/studio-materials/carbon-leather.webp') center/cover;color:#f7f7f2;box-shadow:none;min-width:0}
+.pos-carbon.counter-studio .pos-cart-context {border-color:#53534f;padding-bottom:16px}
+.pos-carbon.counter-studio .pos-cart-context h2 {font-size:26px;color:#fff}
+.pos-carbon.counter-studio .pos-cart-context>div:first-child {gap:12px}
+.pos-carbon.counter-studio .pos-cart-context>div:first-child>button {font-size:14px;color:#deded5;min-height:44px}
+.pos-carbon.counter-studio .carbon-ticket-toggle {display:none}
+.pos-carbon.counter-studio .pos-visit-context summary {margin-top:12px;padding:10px 0;min-height:44px;border:0;font-size:15px;color:#f4f4ee;flex-wrap:wrap}
+.pos-carbon.counter-studio .pos-visit-context summary strong {font-size:16px;color:inherit}
+.pos-carbon.counter-studio .silla-context-client {font-size:14px;color:#cecec5;overflow-wrap:anywhere}
+.pos-carbon.counter-studio .pos-visit-fields :is(label,summary) {color:#deded5;font-size:14px}
+.pos-carbon.counter-studio .pos-visit-fields :is(input,select) {background:#fafaf7!important;color:#202322!important}
+.pos-carbon.counter-studio .pos-cart-body {overflow:visible;min-height:0;flex:none}
+.pos-carbon.counter-studio .operation-cart-items {padding:16px 0;min-height:0;overflow:visible}
+.pos-carbon.counter-studio .operation-cart-items>div:not(.operation-cart-empty) {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:16px 0;border:0;border-bottom:1px solid #53534f;border-radius:0;background:transparent}
+.pos-carbon.counter-studio .operation-cart-items>div:not(.operation-cart-empty)>div:first-child {grid-column:1/-1;min-width:0}
+.pos-carbon.counter-studio .operation-cart-items h5 {font-size:17px;color:#fff;white-space:normal}
+.pos-carbon.counter-studio .operation-cart-items>div>div>span {color:#dadad1;font-size:14px}
+.pos-carbon.counter-studio .operation-cart-items>div>span {color:#fff;font-size:18px}
+.pos-carbon.counter-studio .operation-quantity {height:44px;width:44px;min-height:44px;background:#3c3c39;color:#fff;border-color:#72726b}
+.pos-carbon.counter-studio .operation-cart-empty {padding:28px 8px!important;min-height:130px;color:#deded5;background:transparent;border:0}
+.pos-carbon.counter-studio .pos-cart-checkout {background:transparent;overflow:visible;max-height:none;padding-top:8px;display:flex;flex-direction:column;gap:12px}
+.pos-carbon.counter-studio .pos-price-options {border:0;border-bottom:1px solid #53534f;padding:0 0 12px;color:#f4f4ee;order:0}
+.pos-carbon.counter-studio .pos-price-options summary {font-size:15px;min-height:44px;display:flex;align-items:center;color:#f4b08a;cursor:pointer}
+.pos-carbon.counter-studio .pos-price-options :is(label,p) {font-size:14px;color:#e0e0d8}
+.pos-carbon.counter-studio .pos-price-options>div {grid-template-columns:1fr;gap:16px}
+.pos-carbon.counter-studio .pos-price-options input {background:#fafaf7;color:#202322;min-height:44px;font-size:16px;padding:8px 12px}
+.pos-carbon.counter-studio .pos-price-options button {min-height:44px;font-size:14px;background:#393936;color:#f5f5ee;border:1px solid #74746c;padding:7px}
+.pos-carbon.counter-studio .pos-price-options button[aria-pressed=true] {background:#ad4e24;color:#fff;border-color:#d48251}
+.pos-carbon.counter-studio .pos-price-options .carbon-adjust-actions {display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:16px}
+.pos-carbon.counter-studio .carbon-adjust-actions button {padding:8px 12px}
+.pos-carbon.counter-studio .carbon-adjust-actions button:last-child {background:#ad4e24;color:#fff;border-color:#d48251}
+.pos-carbon.counter-studio .pos-cart-totals {order:1;padding:4px 0;background:transparent;border:0;font-size:15px}
+.pos-carbon.counter-studio .pos-cart-totals>div {color:#deded5}
+.pos-carbon.counter-studio .pos-cart-totals>div:last-child {color:#fff;border-color:#53534f;align-items:center;padding-top:12px;font-size:18px}
+.pos-carbon.counter-studio .pos-cart-totals>div:last-child>span:last-child {font:600 32px 'Studio Text',sans-serif;overflow-wrap:anywhere}
+.pos-carbon.counter-studio .silla-payment-method {order:2;background:#30302e;color:#f7f7f2;border-color:#74746c;min-height:48px;font-size:16px;margin:0}
+.pos-carbon.counter-studio .pos-cart-checkout>.studio-button {order:3;background:#ad4e24;border-color:#ad4e24;color:#fff;min-height:52px;font-size:18px;box-shadow:none}
+.pos-carbon.counter-studio .pos-cart-checkout>.studio-button:disabled {background:#454541;border-color:#65655e;color:#d3d3c9;opacity:1}
+.pos-carbon :is(button,a,input,select,summary):focus-visible,.carbon-payment :is(button,input,summary):focus-visible,.carbon-sale-confirmation :is(button,a,summary):focus-visible {outline:3px solid #e9a278;outline-offset:3px}
+.studio-checkout-page .studio-nav-item[aria-current=page] {background:#ad4e24}
+.studio-checkout-page .studio-nav-item[aria-current=page] svg {color:#fff}
+.carbon-payment-dialog {max-width:480px}
+.carbon-payment.operation-payment-silla {font-family:'Studio Text',sans-serif;background:#262626 url('/studio-materials/carbon-leather.webp') center/cover;color:#f4f4ee;border:0;border-left:4px solid #b65b30;padding:24px;border-radius:12px}
+.carbon-payment :is(h3,p,span,label) {color:inherit}
+.carbon-payment h3 {font-size:26px;line-height:1.2}
+.carbon-payment #payment-dialog-description {font-size:14px;color:#cecec5;line-height:1.5}
+.carbon-payment #payment-dialog-description:empty {display:none}
+.carbon-payment .operation-payment-total {padding:12px 0 20px;margin-bottom:12px;border-bottom:1px solid #53534f;background:transparent}
+.carbon-payment .operation-payment-total>div {color:#fff;font-size:36px;line-height:1.3;font-weight:600}
+.carbon-payment .operation-payment-total>div span {color:#cecec5}
+.carbon-payment .carbon-payment-methods {grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.carbon-payment .operation-payment-method {min-height:52px;flex-direction:row;justify-content:center;gap:8px;background:#30302e;border-color:#74746c;color:#f4f4ee}
+.carbon-payment .operation-payment-method span {font-size:15px}
+.carbon-payment .operation-payment-method[aria-pressed=true] {background:#ad4e24;border-color:#d48251;color:#fff}
+.carbon-payment fieldset>div:not(.carbon-payment-methods) {padding:16px 0;background:transparent;border:0}
+.carbon-payment fieldset label {font-size:15px}
+.carbon-payment fieldset input {background:#fafaf7;color:#202322;font-size:20px;min-height:52px;padding:10px 12px}
+.carbon-payment fieldset>div>div.flex.gap-2 {flex-wrap:wrap}
+.carbon-payment fieldset>div>div.flex.gap-2 button {min-width:64px;min-height:44px;font-size:14px;background:#393936;color:#fff;border-color:#74746c}
+.carbon-payment fieldset>div>div.flex.gap-2 button[aria-pressed=true] {background:#ad4e24;border-color:#d48251}
+.carbon-payment fieldset>div>div:last-child.border-t {border-color:#53534f;padding-top:16px}
+.carbon-payment fieldset>div>div:last-child.border-t span:last-child {font-size:26px;color:#fff}
+.carbon-payment p[role=alert],.carbon-payment fieldset>p {color:#ffcfb4;font-size:14px;line-height:1.5}
+.carbon-payment .carbon-payment-actions {flex-direction:column-reverse;align-items:stretch;gap:8px;margin-top:8px}
+.carbon-payment .carbon-payment-actions button {min-height:48px;font-size:16px;border-radius:8px}
+.carbon-payment .carbon-payment-actions button:last-child {background:#ad4e24;color:#fff;font-weight:600;box-shadow:none}
+.carbon-payment .carbon-payment-actions button:first-child {background:transparent;color:#e8b493}
+.carbon-confirmation-dialog {max-width:440px}
+.carbon-sale-confirmation {padding:28px 24px;background:#262626 url('/studio-materials/carbon-leather.webp') center/cover;color:#f7f7f2;border-left:4px solid #b65b30;border-radius:12px;font:400 16px/1.5 'Studio Text',sans-serif;text-align:center}
+.carbon-sale-confirmation .carbon-success-icon {width:44px;height:44px;margin:0 auto 16px;color:#e9a278}
+.carbon-sale-confirmation h2 {font-size:26px;font-weight:600;margin:0}
+.carbon-success-total {font-size:36px;font-weight:600;margin:8px 0 24px}
+.carbon-success-total span {font-size:14px;font-weight:400;color:#cecec5}
+.carbon-success-facts {background:#fafaf7;color:#202322;border-radius:8px;padding:16px;text-align:left;margin:0 0 24px}
+.carbon-success-facts>div {display:flex;justify-content:space-between;gap:16px;margin:6px 0}
+.carbon-success-facts dt {color:#646b68}
+.carbon-success-facts dd {font-weight:600;text-align:right;overflow-wrap:anywhere;min-width:0;font-variant-numeric:tabular-nums}
+.carbon-sale-confirmation .carbon-new-sale {width:100%;min-height:52px;padding:12px;background:#ad4e24;color:#fff;border-radius:8px;font-size:17px;font-weight:600}
+.carbon-receipt-detail {text-align:left;margin-top:8px}
+.carbon-receipt-detail>summary {min-height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#efb18c;font-weight:600}
+.carbon-receipt-detail #thermal-receipt {max-height:none;overflow:visible}
+.carbon-receipt-detail button,.carbon-receipt-detail a {min-height:44px;font-size:14px}
+.carbon-rebook {min-height:44px;color:#deded5;font-size:14px;margin-top:12px}
+.carbon-print-error {text-align:left;padding:12px;border:1px solid #d49267;color:#ffcfb4;border-radius:8px;font-size:14px;margin-bottom:16px}
+@media(max-width:1000px){
+  .pos-carbon.counter-studio .counter-workbench {grid-template-columns:minmax(0,1fr);gap:24px}
+  .pos-carbon.counter-studio .counter-ticket {position:static;max-height:none}
+}
+@media(max-width:760px){
+  .pos-carbon.counter-studio {padding:20px 16px 180px}
+  .pos-carbon.counter-studio .counter-workbench {align-items:stretch}
+  .pos-carbon.counter-studio .counter-masthead h1 {font-size:28px}
+  .pos-carbon.counter-studio .counter-product {grid-template-columns:52px minmax(0,1fr) auto;padding:10px;gap:10px;min-height:80px}
+  .pos-carbon.counter-studio .counter-product .silla-service-photo {width:52px;height:60px}
+  .pos-carbon.counter-studio .counter-product h4 {font-size:16px}
+  .pos-carbon.counter-studio .counter-product>div:last-child {flex-direction:column;gap:4px;align-items:flex-end}
+  .pos-carbon.counter-studio .counter-product>div:last-child>span:first-child {font-size:16px}
+  .pos-carbon.counter-studio .counter-add {width:44px;height:44px}
+  .pos-carbon.counter-studio .counter-product-meta {font-size:13px}
+  .pos-carbon.counter-studio .silla-kind {gap:24px}
+  .pos-carbon.counter-studio .counter-ticket {padding:20px;border-left:4px solid #b65b30;border-top:0;scroll-margin-top:120px}
+  .pos-carbon.counter-studio .carbon-ticket-toggle {display:block;margin-left:auto}
+  .pos-carbon.counter-studio .counter-ticket:not(.is-expanded) :is(.pos-visit-context,.operation-cart-items,.pos-price-options,.pos-cart-checkout) {display:none}
+  .pos-carbon.counter-studio .pos-cart-checkout {padding-top:0}
+  .pos-carbon.counter-studio .pos-mobile-checkout {background:#262626;color:#f7f7f2;border-top:1px solid #66665e;gap:12px}
+  .pos-carbon.counter-studio .pos-mobile-checkout button {background:#ad4e24;color:#fff;min-width:104px;padding:10px 22px}
+  .pos-carbon.counter-studio .pos-mobile-checkout button:disabled {background:#454541;color:#d3d3c9}
+  .pos-carbon.counter-studio .pos-mobile-checkout a {font-size:14px}
+  dialog.carbon-payment-dialog {width:100%;max-width:100%;height:100dvh;max-height:100dvh;margin:0;border-radius:0}
+  .carbon-payment.operation-payment-silla {display:flex;flex-direction:column;max-width:none;min-height:100dvh;max-height:100dvh;border-radius:0;padding:20px;overflow-y:auto}
+  .carbon-payment .carbon-payment-actions {margin-top:auto;padding-top:16px;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  .carbon-confirmation-dialog {width:calc(100% - 24px);max-height:calc(100dvh - 24px)}
+}
+@media(prefers-reduced-motion:reduce){.pos-carbon *, .carbon-payment *, .carbon-sale-confirmation * {transition:none;scroll-behavior:auto}}
+
+/* Empty-ticket guidance must not inherit the light-catalog ink color. */
+.pos-carbon.counter-studio .operation-cart-empty p {color:#ededdf;font-size:16px;line-height:1.5}
+.pos-carbon.counter-studio .operation-cart-empty svg {color:#d7b299}
+.pos-carbon.counter-studio .counter-ticket,.carbon-payment.operation-payment-silla,.carbon-sale-confirmation {background-color:#262626;background-blend-mode:soft-light}
+.pos-carbon.counter-studio .pos-cart-checkout>* {margin-top:0}
+.pos-carbon.counter-studio .pos-cart-context {margin-bottom:4px;padding-bottom:8px}
+.pos-carbon.counter-studio .pos-mobile-checkout a,.pos-carbon.counter-studio .pos-mobile-checkout a strong {color:#f7f7f2}
+.studio-shell.studio-checkout-page .studio-mobile-nav button[aria-current=page] {color:#9d431e}
+.studio-shell.studio-checkout-page .studio-mobile-nav button[aria-current=page] svg {color:inherit}
+
+.carbon-payment .discount-approval {background:#fff7e9;color:#3c2e24;border:1px solid #d5bda2;border-radius:8px;padding:16px;margin:16px 0}
+.carbon-payment .discount-approval h4 {font-size:16px;line-height:1.4}
+.carbon-payment .discount-approval p {font-size:14px;line-height:1.5;color:#574637}
+.carbon-payment .discount-approval p[role=status] {font-weight:600;color:#3c2e24}
+.carbon-payment .discount-approval p[role=alert] {color:#8c2e19}
+.carbon-payment .discount-approval button {width:100%;min-height:44px;padding:10px 12px;font-size:15px;background:#fff;color:#3c2e24;border:1px solid #947a65;border-radius:6px}
+.carbon-payment .discount-approval[data-state=RECHAZADA] {border-color:#b5533b}
+.carbon-payment .discount-approval[data-state=APROBADA] {border-color:#477555}
+.carbon-recovery {max-width:480px;margin:32px auto;padding:28px 24px;background:#262626 url('/studio-materials/carbon-leather.webp') center/cover;background-blend-mode:soft-light;border-left:4px solid #b65b30;border-radius:12px;color:#f7f7f2;font:400 16px/1.5 'Studio Text',sans-serif}
+.carbon-recovery>svg {color:#e9a278;margin-bottom:16px}
+.studio-workspace .carbon-recovery h1 {font:600 26px/1.2 'Studio Text',sans-serif;color:#fff;margin-bottom:12px;letter-spacing:0}
+.carbon-recovery>p {color:#deded5}
+.carbon-recovery dl {padding:16px 0;border-top:1px solid #64645c;border-bottom:1px solid #64645c;margin:24px 0}
+.carbon-recovery dl>div {display:flex;justify-content:space-between;gap:16px;margin:8px 0}
+.carbon-recovery dt {color:#cecec5}
+.carbon-recovery dd {font-weight:600;text-align:right;overflow-wrap:anywhere}
+.carbon-recovery>button {width:100%;min-height:48px;border-radius:8px;background:#ad4e24;color:#fff;padding:12px;font-size:16px;font-weight:600;margin-top:8px}
+.carbon-recovery>button:disabled {background:#454541;color:#d3d3c9}
+.carbon-recovery .carbon-recovery-error {padding:12px;border:1px solid #d49267;border-radius:6px;color:#ffcfb4;font-size:14px}
+.carbon-recovery .carbon-recovery-note {font-size:14px;margin-top:16px;color:#cecec5}
+.carbon-recovery button:focus-visible {outline:3px solid #e9a278;outline-offset:3px}
+@media(max-width:600px){.carbon-recovery {margin:20px 16px 100px;padding:24px 20px}}
+
+.carbon-payment .discount-approval[data-state=VENCIDA]{border-color:#b5533b}
+.pos-carbon.counter-studio .silla-counter-actions-menu>button{min-height:48px;background:#fff;color:#202322;font-size:14px}
+.pos-carbon.counter-studio .silla-counter-actions-menu>button:hover{background:#fff3e9}
+.pos-carbon.counter-studio .silla-counter-actions-menu>button>svg{color:#646b68;flex-shrink:0}
+.pos-carbon.counter-studio .silla-counter-actions-menu>button:focus-visible{outline:3px solid #be6435;outline-offset:1px}

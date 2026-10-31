@@ -1,0 +1,39 @@
+.team-heading { display: flex; flex-direction: column; align-items: stretch; gap: 24px; margin-bottom: 30px; }
+.team-heading > div:first-child > div { flex-wrap: wrap; gap: 16px; }
+.team-heading-copy { color: #58665e; font-size: 15px; line-height: 1.65; margin-top: 12px; max-width: 75ch; }
+.team-page .operation-tabs { width: fit-content; flex-wrap: wrap; gap: 4px; padding: 5px; background: #e6eae2; border: 1px solid #d7dfd2; border-radius: 12px; }
+.team-page .operation-tabs button { min-height: 44px; padding: 10px 18px; font-size: 14px; border-radius: 8px; }
+.team-page .operation-tabs button[aria-pressed=true] { background: #19352c; color: #fff; box-shadow: none; }
+.team-page .operation-tabs button[aria-pressed=true] svg { color: #dfbf80; }
+.team-directory-intro { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 25px; }
+.team-directory-intro h2 { font-size: 21px; font-weight: 600; color: #25352e; }
+.team-directory-intro p { font-size: 14px; line-height: 1.6; color: #58665e; max-width: 60ch; margin-top: 8px; }
+.team-directory-intro button { min-height: 46px; flex-shrink: 0; gap: 8px; }
+.team-directory-tools { display: flex; gap: 18px; padding: 20px 0; border-top: 1px solid #d9ded5; border-bottom: 1px solid #d9ded5; margin-bottom: 28px; }
+.team-directory-tools label { display: flex; flex-direction: column; gap: 7px; font-size: 13px; color: #4d5d53; }
+.team-directory-tools label:first-child { flex: 1; max-width: 440px; }
+.team-directory-tools input,.team-directory-tools select { min-height: 46px; border: 1px solid #c9d2c6; border-radius: 8px; background: white; padding: 10px 14px; font-size: 15px; color: #25352e; width: 100%; }
+.team-profile-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 24px; }
+.team-profile { min-width: 0; background: #fff; border: 1px solid #d9ded5; border-radius: 16px; overflow: hidden; }
+.team-portrait { position: relative; aspect-ratio: 4 / 3; background: #19352c; overflow: hidden; }
+.team-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: center 30%; }
+.team-portrait-initial { height: 100%; display: flex; align-items: center; justify-content: center; color: #d9bc81; font-family: 'Studio Display', 'Booking Display', sans-serif; font-size: clamp(84px,9vw,130px); letter-spacing: -.025em; background: #19352c; }
+.team-profile-state { position: absolute; top: 16px; right: 16px; padding: 7px 11px; font-size: 12px; background: #f5f3ed; border-radius: 20px; color: #19352c; font-weight: 600; }
+.team-profile.is-inactive .team-portrait { filter: grayscale(1); }
+.team-profile-content { padding: 24px; }
+.team-profile h3 { font-family: 'Studio Display', 'Booking Display', sans-serif; color: #19352c; font-size: 34px; font-weight: 600; line-height: 1.1; }
+.team-specialty { font-size: 13px; color: #786137; margin-top: 8px; }
+.team-bio { font-size: 14px; line-height: 1.6; color: #58665e; margin-top: 16px; }
+.team-shift { margin: 20px 0; font-size: 13px; }
+.team-shift > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eef0ea; }
+.team-shift dt { color: #657167; }.team-shift dd { color: #25352e; font-weight: 500; text-align: right; }
+.team-commission { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; border-radius: 8px; background: #f5f3ed; }
+.team-commission span,.team-profile-footer span { display: block; color: #58665e; font-size: 12px; line-height: 1.5; }
+.team-commission strong { display: block; font-size: 24px; color: #25352e; margin-top: 5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.team-profile-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 22px; }
+.team-profile-footer strong { display: block; color: #19352c; font-size: 20px; margin-top: 5px; font-weight: 600; }
+.team-profile-footer small { font-size: 11px; font-weight: 400; }.team-profile-footer button { min-height: 44px; gap: 6px; font-size: 13px; }
+.team-empty { padding: 30px; background: #fff; border: 1px solid #d9ded5; border-radius: 10px; color: #58665e; margin-bottom: 24px; }
+.team-page :is(input,select,button):focus-visible { outline: 3px solid #19352c; outline-offset: 3px; }
+@media(max-width:1200px) { .team-profile-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .team-profile-grid { grid-template-columns: minmax(0,1fr); gap: 20px; }.team-directory-intro { flex-direction: column; align-items: start; gap: 16px; }.team-directory-tools { flex-direction: column; gap: 14px; }.team-directory-tools label:first-child { max-width: none; }.team-heading .operation-tabs { width: 100%; }.team-page .operation-tabs button { flex: 1; padding: 10px; }.team-portrait { aspect-ratio: 5 / 4; }.team-profile-content { padding: 22px; } }

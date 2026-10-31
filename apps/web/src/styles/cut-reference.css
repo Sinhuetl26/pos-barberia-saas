@@ -1,0 +1,21 @@
+.cut-reference-fields { min-width: 0; margin: 24px 0 8px; padding: 20px 0 0; border: 0; border-top: 1px solid #dce2dd; }
+.cut-reference-fields legend { padding: 0 10px 0 0; font-size: 17px; font-weight: 600; color: #25332a; }
+.cut-reference-fields legend span { font-size: 13px; font-weight: 400; color: #59665d; margin-left: 6px; }
+.cut-reference-help { font-size: 14px; color: #59665d; line-height: 1.6; margin: 6px 0 12px; }
+.cut-reference-fields > label, .cut-reference-photo-row label:not(.cut-reference-file-button) { display: block; font-size: 14px; font-weight: 600; margin: 12px 0 6px; }
+.cut-reference-fields > input { width: 100%; min-height: 48px; border: 1px solid #cdd7ce; border-radius: 8px; padding: 10px 12px; font-size: 16px; background: white; }
+.cut-reference-suggestions { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0; }
+.cut-reference-suggestions button { min-height: 44px; border: 1px solid #cdd7ce; border-radius: 8px; padding: 8px 12px; font-size: 14px; background: white; color: #25332a; }
+.cut-reference-suggestions button[aria-pressed=true] { background: var(--booking-primary, #19352c); border-color: var(--booking-primary, #19352c); color: white; }
+.cut-reference-photo-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-top: 12px; }
+.cut-reference-photo-row .cut-reference-help { margin-bottom: 0; }
+.cut-reference-file-button { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 10px 14px; border: 1px solid #cdd7ce; border-radius: 8px; font-size: 14px; font-weight: 600; flex-shrink: 0; cursor: pointer; background: white; color: #25332a; }
+.cut-reference-file-button input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.cut-reference-file-button:focus-within, .cut-reference-fields :is(button,input):focus-visible { outline: 3px solid var(--booking-primary, #19352c); outline-offset: 3px; }
+.cut-reference-fields:disabled .cut-reference-file-button, .cut-reference-fields :disabled { opacity: .6; cursor: not-allowed; }
+.cut-reference-preview { display: flex; align-items: flex-start; gap: 14px; margin-top: 16px; }
+.cut-reference-preview img { width: 180px; max-width: 60%; height: 180px; object-fit: contain; background: #f3f6f2; border: 1px solid #dce2dd; border-radius: 8px; }
+.cut-reference-preview button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 8px 10px; font-size: 14px; color: #7d3535; border-radius: 7px; }
+.cut-reference-error { color: #9e2832; font-size: 14px; line-height: 1.6; margin-top: 12px; }
+.cut-reference-view-photo { display: block; max-width: 100%; max-height: 60dvh; margin: 16px auto; object-fit: contain; border-radius: 8px; background: #f3f6f2; }
+@media (max-width: 480px) { .cut-reference-photo-row { flex-direction: column; align-items: stretch; gap: 12px; } .cut-reference-file-button { align-self: flex-start; } }

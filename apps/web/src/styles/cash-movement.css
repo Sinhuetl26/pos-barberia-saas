@@ -1,0 +1,23 @@
+.cash-movement-dialog{background:#fff;color:#202322;border:1px solid #deded8;border-radius:14px;padding:24px;font-family:'Studio Text',sans-serif}
+.cash-movement-dialog header{display:flex;justify-content:space-between;align-items:start;gap:12px;padding-bottom:20px;border-bottom:1px solid #deded8;margin-bottom:20px}
+.cash-movement-dialog h3{font-size:23px;font-weight:600;line-height:1.25;letter-spacing:-.02em}
+.cash-movement-dialog p{font-size:14px;line-height:1.5;margin-top:10px;color:#646b68}
+.cash-movement-dialog button{min-height:44px;border:1px solid #c8ccc9;border-radius:8px;padding:10px 14px;font-size:14px;font-weight:600;background:#fff;color:#202322;cursor:pointer}
+.cash-movement-dialog button:hover{background:#f4f4f0}
+.cash-movement-dialog button:disabled{opacity:.5;cursor:not-allowed}
+.cash-movement-dialog legend,.cash-movement-dialog label{font-size:14px;font-weight:500}
+.cash-movement-types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 20px}
+.cash-movement-types button[aria-pressed=true]{background:#fff3e9;border-color:#ad4e24;color:#80401e}
+.cash-movement-dialog label{display:grid;gap:8px;margin-top:18px}
+.cash-movement-dialog input{min-height:48px;width:100%;border:1px solid #c8ccc9;border-radius:8px;padding:10px 12px;font-size:16px;background:#fff;color:#202322}
+.cash-movement-actions{display:flex;justify-content:end;flex-wrap:wrap;gap:10px;margin-top:24px}
+.cash-movement-dialog .cash-movement-primary{background:#ad4e24;color:#fff;border-color:#ad4e24;min-height:48px}
+.cash-movement-summary{padding:18px;background:#f6f6f2;border:1px solid #deded8;border-radius:10px}
+.cash-movement-summary>div{display:flex;justify-content:space-between;gap:16px;align-items:baseline}
+.cash-movement-summary>div+div{border-top:1px solid #deded8;margin-top:16px;padding-top:16px;font-size:14px}
+.cash-movement-summary dt{color:#646b68;font-size:14px}
+.cash-movement-summary dd{text-align:right;overflow-wrap:anywhere;min-width:0;font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.cash-movement-summary>div+div dd{font-size:14px;font-weight:400}
+.cash-movement-dialog .cash-movement-error{background:#fff1f0;border:1px solid #ecc6c0;color:#943b38;padding:12px;border-radius:8px;margin-bottom:16px}
+.cash-movement-dialog :focus-visible{outline:3px solid #be6435;outline-offset:2px}
+@media(max-width:600px){.cash-movement-dialog{padding:20px 16px}.cash-movement-dialog h3{font-size:21px}.cash-movement-types button{padding:10px 8px}.cash-movement-actions{display:grid;grid-template-columns:1fr;width:100%}.cash-movement-actions button{width:100%}}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useLicenseCatalog } from '../utils/useLicenseCatalog';
+import { capacityLabel } from '../utils/licenseCatalog';
 import {
   DollarSign,
   Building,
@@ -11,6 +13,7 @@ import {
 } from 'lucide-react';
 
 export const SuperAdminView: React.FC = () => {
+  const { catalog } = useLicenseCatalog();
   const [metrics, setMetrics] = useState<any>(null);
   const [tenants, setTenants] = useState<any[]>([]);
   const [auditorias, setAuditorias] = useState<any[]>([]);
@@ -145,7 +148,11 @@ export const SuperAdminView: React.FC = () => {
               </div>
               <div className="border-l border-stone-200 pl-4">
                 <span className="text-xl font-extrabold text-stone-600">{metrics.plansBreakdown.basico}</span>
-                <span className="text-[10px] text-stone-500 block uppercase font-semibold">Básico</span>
+                <span className="text-[10px] text-stone-500 block uppercase font-semibold">Esencial</span>
+              </div>
+              <div className="border-l border-stone-200 pl-4">
+                <span className="text-xl font-extrabold text-stone-600">{metrics.plansBreakdown.cadena || 0}</span>
+                <span className="text-[10px] text-stone-500 block uppercase font-semibold">Cadena</span>
               </div>
             </div>
           </div>
@@ -372,8 +379,8 @@ export const SuperAdminView: React.FC = () => {
                     onChange={(e) => setNewPlan(e.target.value)}
                     className="w-full bg-stone-50 border border-stone-200 rounded-lg px-3 py-1.5 text-xs text-stone-900 focus:outline-none focus:bg-white"
                   >
-                    <option value="BASICO">Plan Básico ($499 MXN/mes)</option>
-                    <option value="PRO">Plan Pro ($999 MXN/mes)</option>
+                    {!catalog && <option value="">Cargando planes…</option>}
+                    {catalog?.plans.map(plan => <option key={plan.code} value={plan.code}>{plan.name} (${plan.quote.totalMxn} MXN/mes) · {capacityLabel(plan)}</option>)}
                   </select>
                 </div>
 

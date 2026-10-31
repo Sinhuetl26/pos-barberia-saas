@@ -1,10 +1,10 @@
-export type UserRole = 'SUPER_ADMIN' | 'DUENO' | 'GERENTE' | 'BARBERO' | 'CLIENTE_FINAL';
+export type UserRole = 'SUPER_ADMIN' | 'DUENO' | 'GERENTE' | 'CAJERO' | 'BARBERO' | 'CLIENTE_FINAL';
 
 export interface Tenant {
   id: string;
   nombre: string;
   slug?: string;
-  plan: 'BASICO' | 'PRO';
+  plan: 'BASICO' | 'PRO' | 'CADENA';
   estado: 'ACTIVO' | 'EN_RIESGO' | 'SUSPENDIDO' | 'CANCELADO';
   telefono?: string;
   emailContacto?: string;
@@ -17,6 +17,7 @@ export interface Tenant {
   facebook?: string;
   tiktok?: string;
   whatsappPublico?: string;
+  personalizacionWeb?: import('./utils/bookingAppearance').BookingAppearance;
   limiteSucursales: number;
   limiteBarberos: number;
   fechaCreacion?: string;
@@ -42,6 +43,7 @@ export interface Sucursal {
   nombre: string;
   direccion?: string;
   telefono?: string;
+  zonaHoraria?: string;
   horarioApertura?: string;
   horarioCierre?: string;
   diasLaborales?: string;
@@ -96,12 +98,18 @@ export interface Producto {
   tenantId: string;
   sucursalId: string;
   nombre: string;
+  imagen?: string | null;
   tipo: 'PRODUCTO' | 'SERVICIO';
   categoria: string;
   duracionMinutos: number;
   sku?: string;
   precioVenta: number;
+  tasaImpuesto?: number;
   costo?: number;
+  naturaleza?: 'REVENTA' | 'INSUMO';
+  unidad?: 'PIEZA' | 'ML' | 'G';
+  presentacionNombre?: string | null;
+  presentacionCantidad?: number;
   stockActual: number;
   stockMinimo: number;
   activo: boolean;
@@ -116,10 +124,14 @@ export interface Cita {
   clienteId: string;
   servicioId?: string;
   nombreServicio?: string;
+  serviciosJson?: string | null;
+  conflictos?: { tipo: string; mensaje: string; id?: string }[];
   fechaHora: string;
   duracionMinutos: number;
   estado: 'PENDIENTE' | 'CONFIRMADA' | 'EN_CURSO' | 'COMPLETADA' | 'CANCELADA' | 'NO_SHOW';
   notas?: string;
+  tipoCorte?: string | null;
+  tieneFotoReferencia?: boolean;
   precioEstimado?: number;
   codigoReserva?: string;
   cliente?: ClienteFinal;
