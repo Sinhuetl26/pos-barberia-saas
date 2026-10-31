@@ -21,7 +21,10 @@ export async function financialTransaction<T>(action: (tx: Prisma.TransactionCli
   for (let attempt = 0; ; attempt++) {
     try { return await prisma.$transaction(action, { maxWait: 15000, timeout: 20000 }); }
     catch (error: any) {
-      const retry = ['P2034', 'P2002'].includes(error.code) || (['P2028', 'P1008'].includes(error.code) && /locked|write conflict|timed out|expired/i.test(error.message));
+      // P2028 cubre cualquier cierre anómalo de la transacción («already closed»,
+      // «expired», «timed out»). Clasificarlo por código, no por el texto, evita
+      // que una variante de mensaje escape como 500 con el código crudo de Prisma.
+      const retry = ['P2034', 'P2002', 'P2028', 'P1008'].includes(error.code);
       if (!retry) throw error;
       if (attempt >= 4) fail('FINANCIAL_RESULT_UNKNOWN', 'Reintenta la misma operación para consultar su resultado.', 503);
       await new Promise(resolve => setTimeout(resolve, 60 * 2 ** attempt));
