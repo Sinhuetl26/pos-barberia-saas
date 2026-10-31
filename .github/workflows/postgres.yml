@@ -1,13 +1,22 @@
-name: PostgreSQL migration and regression
+name: Verificación completa (build, suites y PostgreSQL)
+
 on:
   push:
   pull_request:
   workflow_dispatch:
+
 permissions:
   contents: read
+
+concurrency:
+  group: verify-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  postgres:
+  verify:
+    name: Build, suites aisladas y PostgreSQL 16
     runs-on: ubuntu-24.04
+    timeout-minutes: 45
     services:
       postgres:
         image: postgres:16
@@ -21,25 +30,53 @@ jobs:
           --health-cmd "pg_isready -U systech_test -d systech_test_ci"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      SYSTECH_TEST_PG_URL: postgresql://systech_test:ci-disposable-test-only@127.0.0.1:5432/systech_test_ci
-      SYSTECH_ANON_SOURCE: .tools/ci-source.db
       PYTHON_BIN: python3
       PG_BIN: /usr/lib/postgresql/16/bin
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: npm ci
-      - run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
-      - run: npm run db:generate && npm run build:db
-      - run: npm run test:postgres:snapshot
-      - run: npm run test:postgres
-      - uses: actions/upload-artifact@v4
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Cliente PostgreSQL para respaldo y restauración
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client-16
+
+      # Compila base de datos, API y web en un solo paso (db:generate, build:db,
+      # build:api y build:web). Un fallo de TypeScript o de Vite detiene el CI.
+      - name: Build completo
+        run: npm run build
+
+      # 13 suites de producto sobre SQLite aislado (279 comprobaciones).
+      # SYSTECH_TEST_PG_URL no se define en este paso a propósito: el runner
+      # elegiría PostgreSQL pero el cliente Prisma seguiría siendo SQLite.
+      - name: Suites de producto (SQLite aislado)
+        run: npm test
+
+      - name: Instantánea sintética para la validación de migraciones
+        run: npm run test:postgres:snapshot
+        env:
+          SYSTECH_ANON_SOURCE: .tools/ci-source.db
+
+      # Migraciones, preflight, copia anonimizada, recuperación y regresión
+      # completa de la API sobre PostgreSQL 16 real.
+      - name: Migraciones y regresión (PostgreSQL 16)
+        run: npm run test:postgres
+        env:
+          SYSTECH_TEST_PG_URL: postgresql://systech_test:ci-disposable-test-only@127.0.0.1:5432/systech_test_ci
+          SYSTECH_ANON_SOURCE: .tools/ci-source.db
+
+      - name: Evidencia PostgreSQL
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: postgres-validation
           path: |
@@ -49,3 +86,15 @@ jobs:
             docs/ST07_RESULTADOS_POSTGRES.json
             docs/ST08_RESULTADOS_POSTGRES.json
             docs/ST09_RESULTADOS_POSTGRES.json
+
+      - name: Evidencia SQLite
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sqlite-suites
+          path: |
+            docs/scrum/ST05_RESULTADOS_sqlite.json
+            docs/ST06_RESULTADOS_SQLITE.json
+            docs/ST07_RESULTADOS_SQLITE.json
+            docs/ST08_RESULTADOS_SQLITE.json
+            docs/ST09_RESULTADOS_SQLITE.json

@@ -23,12 +23,45 @@ async function main() {
   const envFor = name => ({ ...baseEnv, DATABASE_URL: helper.isolatedUrl(running.url, name) });
   const connect = env => { const value = new PrismaClient({ datasources: { db: { url: env.DATABASE_URL } } }); clients.push(value); return value; };
   const deploy = (env, file = helper.schema) => helper.prisma(['migrate', 'deploy', '--schema=' + file], env);
+  // Deterministic row order for snapshots. The primary key is read from the
+  // catalog, so composite keys (and future tables) work without assuming an
+  // "id" column; tables without a key fall back to every orderable column and,
+  // as a last resort, to the physical position.
+  const orderPlan = async client => {
+    const [primary, scalar] = await Promise.all([
+      client.$queryRaw`
+        SELECT c.relname AS "table", a.attname AS "column"
+        FROM pg_index i
+        JOIN pg_class c ON c.oid = i.indrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        CROSS JOIN LATERAL unnest(i.indkey::int2[]) WITH ORDINALITY AS k(attnum, ord)
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
+        WHERE n.nspname = current_schema() AND i.indisprimary
+        ORDER BY c.relname, k.ord`,
+      client.$queryRaw`
+        SELECT table_name AS "table", column_name AS "column"
+        FROM information_schema.columns
+        WHERE table_schema = current_schema() AND is_generated = 'NEVER'
+          AND data_type IN ('text','character varying','character','uuid','smallint','integer','bigint','numeric','real','double precision','boolean','date','timestamp without time zone','timestamp with time zone','time without time zone')
+        ORDER BY table_name, ordinal_position`
+    ]);
+    const plan = new Map();
+    const entry = table => { if (!plan.has(table)) plan.set(table, { primary: [], scalar: [] }); return plan.get(table); };
+    for (const { table, column } of primary) entry(table).primary.push(column);
+    for (const { table, column } of scalar) entry(table).scalar.push(column);
+    return plan;
+  };
   const compare = async (env, client) => {
     const result = {};
+    const plan = await orderPlan(client);
     const tables = await client.$queryRaw`SELECT tablename FROM pg_tables WHERE schemaname=current_schema() AND tablename <> '_prisma_migrations' ORDER BY tablename`;
     for (const { tablename } of tables) {
       assert(/^[A-Za-z0-9_]+$/.test(tablename));
-      result[tablename] = await client.$queryRawUnsafe(`SELECT * FROM "${tablename}" ORDER BY "id"`);
+      const known = plan.get(tablename);
+      const columns = known && known.primary.length ? known.primary : known ? known.scalar : [];
+      for (const column of columns) assert(/^[A-Za-z0-9_]+$/.test(column));
+      const order = columns.length ? `ORDER BY ${columns.map(column => `"${column}"`).join(', ')}` : 'ORDER BY ctid';
+      result[tablename] = await client.$queryRawUnsafe(`SELECT * FROM "${tablename}" ${order}`);
     }
     return JSON.parse(JSON.stringify(result));
   };

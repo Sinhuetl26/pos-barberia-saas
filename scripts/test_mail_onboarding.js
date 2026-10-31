@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path');
 const {createTestFixture,cleanTestFixture}=require('./test_fixture');
 async function main(){
- const work=path.resolve(__dirname,'../packages/database/prisma/dev.db'),hash=()=>crypto.createHash('sha256').update(fs.readFileSync(work)).digest('hex'),before=hash();
+ const work=path.resolve(__dirname,'../packages/database/prisma/dev.db'),hash=()=>fs.existsSync(work)?crypto.createHash('sha256').update(fs.readFileSync(work)).digest('hex'):null,before=hash();
  const fixture=createTestFixture();Object.assign(process.env,fixture.env,{APP_URL:'http://127.0.0.1:5179'});
  const {prisma}=require('@systech/database'),jwt=require('jsonwebtoken'),{default:app}=require('../apps/api/dist/index'),security=require('../apps/api/dist/services/account-security.service');
  const {EmailService}=require('../apps/api/dist/services/email.service'),{recipientKey,recordEmailEvent}=require('../apps/api/dist/services/email-delivery.service');

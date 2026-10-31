@@ -9,11 +9,11 @@ Este informe no certifica producción: describe qué se comprobó, con qué evid
 |---|---|---|
 | Integridad del código y la documentación | Verde | 0 archivos perdidos; clon limpio compila API y web |
 | Comportamiento del producto (13 suites) | Verde | 279/279 en SQLite y 279/279 en PostgreSQL |
-| Compatibilidad PostgreSQL y migraciones | Ámbar | Instalación limpia y sin drift; la suite de migraciones/recuperación no termina tal como está escrita |
-| Ingeniería de entrega (CI, lint, monitoreo) | Rojo | CI de PostgreSQL en rojo; sin linter; sin monitoreo |
+| Compatibilidad PostgreSQL y migraciones | Verde | 13/13 comprobaciones de migraciones y recuperación (R1 corregido) |
+| Ingeniería de entrega (CI, lint, monitoreo) | Ámbar | CI ampliado y simulado en local; sin linter; sin monitoreo |
 | Integraciones y cumplimiento comercial | Rojo | Stripe live, WhatsApp, CFDI, correo y hardware sin validar |
 
-**Conclusión:** el producto está listo para un piloto controlado con datos ficticios o de un solo negocio acompañado; **no** está listo para venta general con cobros automáticos hasta cerrar R1, R2, R3 y R7.
+**Conclusión:** el producto está listo para un piloto controlado con datos ficticios o de un solo negocio acompañado; **no** está listo para venta general con cobros automáticos hasta cerrar R2 y R7 (R1 y R3 ya están corregidos; ver §9).
 
 ## 2. Integridad de los 8 commits
 
@@ -70,9 +70,9 @@ Fuera de las 279: el repositorio tiene **90 scripts `test_*`/`qa_*`** y solo 13 
 
 | # | Severidad | Riesgo | Evidencia | Qué lo cierra |
 |---|---|---|---|---|
-| R1 | **Bloqueante** | `scripts/test_postgres.js` no termina: `compare()` ordena por `"id"` y la tabla `CitaReferencia` no tiene esa columna (`42703 column "id" does not exist`) | `output/verificacion-20261030/postgres-migraciones.log` | Ordenar por `ctid` cuando no exista `id` (1 línea; validada en `postgres-migraciones-diagnostico.log` y revertida) |
-| R2 | Alta | Migraciones no verificadas sobre datos reales desde el 9-oct (13 checks); hoy hay 19 migraciones | `docs/scrum/POSTGRES_RESULTADOS_ACTUALES.json` (fecha 2026-10-09) | Aplicar el procedimiento ya probado: respaldo, `npm run db:migrate`, conciliación |
-| R3 | Alta | CI solo ejecuta PostgreSQL: no corre `npm test` (SQLite), ni `build:web`, ni lint | `.github/workflows/postgres.yml` | Añadir pasos de build y suites SQLite al workflow |
+| R1 | ~~Bloqueante~~ **Resuelto** | `scripts/test_postgres.js` no terminaba: `compare()` ordenaba por `"id"` y `CitaReferencia` no tiene esa columna (`42703`) | `output/verificacion-20261030/postgres-migraciones.log` (antes) · `postgres-migraciones-r1.log` (después: 13/13) | Hecho: el orden se lee del catálogo y admite claves compuestas (§9) |
+| R2 | Alta | Migraciones no verificadas sobre datos reales desde el 9-oct (13 checks); hoy hay 19 migraciones | `docs/scrum/POSTGRES_RESULTADOS_ACTUALES.json` | Aplicar el procedimiento ya probado: respaldo, `npm run db:migrate`, conciliación |
+| R3 | ~~Alta~~ **Resuelto** | CI solo ejecutaba PostgreSQL: ni `npm test`, ni build de web | `.github/workflows/postgres.yml` | Hecho: build completo, suites SQLite y PostgreSQL en un job (§9) |
 | R4 | Alta | 57 MB de capturas en el historial; repo de 68.4 MB | `git count` sobre los 8 commits | Decidir antes del push: mantener, Git LFS o excluir |
 | R5 | Media | Sin linter: ESLint no está instalado y `npm run lint` falla | `npm run lint --workspace=@systech/web` | Instalar ESLint + configuración, o retirar el script |
 | R6 | Media | El build web cae a `http://localhost:3001/api` si falta `VITE_API_URL` | `apps/web/src/api.ts:7` | Fallar el build cuando falte en modo producción |
@@ -115,7 +115,29 @@ La base operativa no se toca en ninguno de los tres caminos: cada corrida usa su
 
 - `output/verificacion-20261030/SUITES.md` y `SUITES.json` — 13/13 suites en SQLite, 279 comprobaciones.
 - `output/verificacion-20261030/SUITES_POSTGRES.md` — 13/13 suites en PostgreSQL 16, 279 comprobaciones.
-- `output/verificacion-20261030/postgres-migraciones.log` — fallo R1 con el error exacto.
-- `output/verificacion-20261030/postgres-migraciones-diagnostico.log` — 13/13 comprobaciones con R1 corregido temporalmente (parche revertido; `git diff` vacío).
+- `output/verificacion-20261030/postgres-migraciones.log` — fallo R1 con el error exacto (antes).
+- `output/verificacion-20261030/postgres-migraciones-r1.log` — 13/13 comprobaciones con la corrección definitiva.
 - `docs/scrum/POSTGRES_RESULTADOS_ACTUALES.json` — última corrida registrada: 2026-10-30, 13 comprobaciones, 19 migraciones, base operativa intacta.
 - Los archivos `.log` no se versionan (`*.log` en `.gitignore`); los informes `.md` y `.json` sí.
+
+## 9. Corrección de R1 y R3 (30/oct/2026)
+
+### R1 — instantáneas sin suponer una columna `id`
+
+`compare()` de `scripts/test_postgres.js` ahora obtiene la clave primaria del catálogo (`pg_index` + `pg_attribute`, respetando el orden de columnas) y ordena por ella. Si una tabla futura no tuviera clave, ordena por todas sus columnas ordenables y, como último recurso, por posición física (`ctid`). Nombres de tabla y columna se validan con el mismo patrón antes de interpolarse.
+
+Verificación: `npm run test:postgres` → **13/13 comprobaciones**, sin `42703`, incluida la regresión completa de la API sobre PostgreSQL (13 suites, 279 comprobaciones) y el respaldo/restauración.
+
+### Preparación para un checkout limpio
+
+Cinco suites huellaban `packages/database/prisma/dev.db`, que no existe en un checkout limpio (está en `.gitignore`). Ahora la huella es `null` antes y después cuando el archivo no existe; la aserción se conserva y sigue detectando que el archivo aparezca durante la corrida.
+
+Demostrado en un clon limpio de HEAD: con la versión anterior, `npm test` falla en ST-09 con `ENOENT … prisma\dev.db`; con la corrección, **13/13 suites**.
+
+### R3 — CI ampliado
+
+`.github/workflows/postgres.yml` ejecuta en un solo job: `npm ci` → **build completo** (base de datos, API y web) → **13 suites SQLite** → instantánea sintética → **batería PostgreSQL 16** (migraciones, preflight, copia anonimizada, recuperación y regresión). Añade artefactos de evidencia de ambos motores con `if: always()`, concurrencia por referencia y límite de 45 minutos.
+
+`SYSTECH_TEST_PG_URL` se define solo en el paso de PostgreSQL: si estuviera a nivel de job, el runner elegiría PostgreSQL mientras el cliente Prisma seguiría siendo SQLite.
+
+Simulación local del job (clon limpio + build + suites + PostgreSQL): build correcto y 13/13 suites sin base de datos local. La primera ejecución real en GitHub queda pendiente de que se haga push.

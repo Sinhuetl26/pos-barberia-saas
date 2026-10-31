@@ -1,5 +1,5 @@
 {
-  "date": "2026-10-09",
+  "date": "2026-10-31",
   "engine": "PostgreSQL 16",
   "passed": 13,
   "checks": [
@@ -28,6 +28,16 @@
     "20261007_booking_integrity",
     "20261007_cash_traceability",
     "20261007_pos_integrity",
-    "20261008_mail_onboarding"
+    "20261008_mail_onboarding",
+    "20261009_durable_jobs",
+    "20261010_booking_personalization",
+    "20261011_cut_reference",
+    "20261011_inventory_consumption",
+    "20261011_inventory_counts",
+    "20261011_inventory_intentions",
+    "20261011_queue_schedules",
+    "20261012_commercial_rules",
+    "20261013_operating_expenses",
+    "20261029_catalog_images"
   ]
 }

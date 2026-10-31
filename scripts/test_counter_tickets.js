@@ -3,7 +3,7 @@ const {createTestFixture,cleanTestFixture}=require('./test_fixture');
 const {createTestEvidence}=require('./test_evidence');
 async function main(){
  const evidence=createTestEvidence();
- const work=path.resolve(__dirname,'../packages/database/prisma/dev.db'),hash=()=>crypto.createHash('sha256').update(fs.readFileSync(work)).digest('hex'),before=hash();
+ const work=path.resolve(__dirname,'../packages/database/prisma/dev.db'),hash=()=>fs.existsSync(work)?crypto.createHash('sha256').update(fs.readFileSync(work)).digest('hex'):null,before=hash();
  const fixture=createTestFixture();Object.assign(process.env,fixture.env);
  const {prisma}=require('@systech/database'),jwt=require('jsonwebtoken'),{default:app}=require('../apps/api/dist/index');
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));const base='http://127.0.0.1:'+server.address().port+'/api',checks=[];

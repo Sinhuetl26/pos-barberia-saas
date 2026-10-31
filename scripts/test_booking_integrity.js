@@ -1,7 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {fork}=require('node:child_process');const {createTestFixture,cleanTestFixture}=require('./test_fixture');const root=path.resolve(__dirname,'..');
-const hash=()=>crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'packages/database/prisma/dev.db'))).digest('hex');
+const workDb=path.join(root,'packages/database/prisma/dev.db');
+// Clean checkout (CI) without a local SQLite file: null before and after is still "unchanged".
+const hash=()=>fs.existsSync(workDb)?crypto.createHash('sha256').update(fs.readFileSync(workDb)).digest('hex'):null;
 async function main(){
  const before=hash(),fixture=createTestFixture();Object.assign(process.env,fixture.env);const {prisma}=require('@systech/database'),jwt=require('jsonwebtoken');const servers=[],checks=[];
  const check=async(name,fn)=>{await fn();checks.push(name);console.log('PASS '+name);};

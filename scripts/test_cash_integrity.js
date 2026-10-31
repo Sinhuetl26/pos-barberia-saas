@@ -4,7 +4,10 @@ const fs = require('node:fs'), path = require('node:path'), crypto = require('no
 const { fork } = require('node:child_process');
 const { createTestFixture, cleanTestFixture } = require('./test_fixture');
 const root = path.resolve(__dirname, '..');
-const workingHash = () => crypto.createHash('sha256').update(fs.readFileSync(path.join(root, 'packages/database/prisma/dev.db'))).digest('hex');
+const workDb = path.join(root, 'packages/database/prisma/dev.db');
+// A clean checkout (CI) has no local SQLite database: the fingerprint is null
+// on both sides of the assertion, so "unchanged" still means unchanged.
+const workingHash = () => fs.existsSync(workDb) ? crypto.createHash('sha256').update(fs.readFileSync(workDb)).digest('hex') : null;
 async function main() {
   const before = workingHash(), fixture = createTestFixture(); Object.assign(process.env, fixture.env);
   const { prisma } = require('@systech/database'), jwt = require('jsonwebtoken');
